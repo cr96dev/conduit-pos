@@ -3,7 +3,7 @@ import { useRouter } from 'next/router'
 import { supabase } from '../lib/supabase'
 import Layout from '../components/Layout'
 import { SkeletonRow } from '../components/Skeleton'
-import { calcularCostoReceta, calcularMargen } from '../lib/recetas'
+import { calcularMargen } from '../lib/recetas'
 
 async function apiFetch(path, opts = {}) {
   const { data: { session } } = await supabase.auth.getSession()
@@ -58,7 +58,7 @@ export default function Recetas({ session }) {
   }
 
   async function recalcular() {
-    if (!confirm('¿Refrescar costos de TODAS las recetas con los costos actuales de insumos?')) return
+    if (!confirm('¿Refrescar costos de TODAS las recetas con los costos actuales de insumos? (incluye sub-recetas en orden correcto)')) return
     setRecalculando(true)
     const res = await apiFetch('/api/recetas/recalcular', { method: 'POST' })
     setRecalculando(false)
@@ -161,7 +161,7 @@ export default function Recetas({ session }) {
             recetaId={modal.tipo === 'editar' ? modal.id : null}
             loyverseItems={loyverseItems}
             insumos={insumos}
-            recetasExistentes={items}
+            recetas={items}
             onClose={() => setModal(null)}
             onSaved={() => { setModal(null); cargarTodo() }}
           />
@@ -186,7 +186,7 @@ function KpiBox({ label, value, tone = 'gray' }) {
 
 // ============================================================================
 
-function ModalReceta({ recetaId, loyverseItems, insumos, recetasExistentes, onClose, onSaved }) {
+function ModalReceta({ recetaId, loyverseItems, insumos, recetas, onClose, onSaved }) {
   const edicion = !!recetaId
   const [loading, setLoading] = useState(edicion)
   const [cab, setCab] = useState({
@@ -199,7 +199,8 @@ function ModalReceta({ recetaId, loyverseItems, insumos, recetasExistentes, onCl
     notas: '',
     activa: true,
   })
-  const [ings, setIngs] = useState([{ insumo_id: '', cantidad: '', unidad: '', notas: '' }])
+  // Cada linea: componente_id con prefijo 'i:' (insumo) o 'r:' (sub-receta)
+  const [ings, setIngs] = useState([{ componente_id: '', cantidad: '', unidad: '', notas: '' }])
   const [err, setErr] = useState(null)
   const [guardando, setGuardando] = useState(false)
   const [borrando, setBorrando] = useState(false)
@@ -221,7 +222,7 @@ function ModalReceta({ recetaId, loyverseItems, insumos, recetasExistentes, onCl
         activa: json.receta.activa,
       })
       setIngs((json.receta.ingredientes || []).map(i => ({
-        insumo_id: i.insumo_id,
+        componente_id: i.insumo_id ? 'i:' + i.insumo_id : 'r:' + i.sub_receta_id,
         cantidad: i.cantidad,
         unidad: i.unidad || '',
         notas: i.notas || '',
@@ -231,19 +232,44 @@ function ModalReceta({ recetaId, loyverseItems, insumos, recetasExistentes, onCl
   }, [recetaId])
 
   const itemsDisponibles = useMemo(() => {
-    const conReceta = new Set(recetasExistentes
+    const conReceta = new Set(recetas
       .filter(r => r.id !== recetaId && r.loyverse_item_id)
       .map(r => r.loyverse_item_id))
     return loyverseItems.filter(it => !conReceta.has(it.loyverse_id) || it.loyverse_id === cab.loyverse_item_id)
-  }, [loyverseItems, recetasExistentes, cab.loyverse_item_id, recetaId])
+  }, [loyverseItems, recetas, cab.loyverse_item_id, recetaId])
+
+  // Opciones del dropdown: insumos + recetas (excepto la actual).
+  // Para sub-recetas, costo unitario = costo_calculado / rinde (precio por gramo o unidad de la sub-receta).
+  const opcionesComponente = useMemo(() => {
+    const ins = insumos.map(x => ({
+      value: 'i:' + x.id, label: x.nombre,
+      tipo: 'insumo', unidad: x.unidad,
+      costo: Number(x.costo_unitario) || 0,
+      sin_costo: x.costo_unitario == null,
+    }))
+    const rec = recetas
+      .filter(r => r.id !== recetaId && r.activa)
+      .map(r => {
+        const rinde = Math.max(Number(r.rinde_cantidad) || 1, 0.0001)
+        const costoTotalSub = Number(r.costo_calculado) || 0
+        return {
+          value: 'r:' + r.id, label: r.nombre,
+          tipo: 'receta', unidad: r.rinde_unidad || 'unidad',
+          costo: costoTotalSub / rinde,
+          sin_costo: !r.costo_calculado,
+          rinde,
+        }
+      })
+    return [...ins, ...rec].sort((a, b) => a.label.localeCompare(b.label))
+  }, [insumos, recetas, recetaId])
 
   function setLin(i, k, v) {
     setIngs(arr => arr.map((l, idx) => {
       if (idx !== i) return l
       const next = { ...l, [k]: v }
-      if (k === 'insumo_id' && v) {
-        const ins = insumos.find(x => x.id === v)
-        if (ins && !l.unidad) next.unidad = ins.unidad
+      if (k === 'componente_id' && v) {
+        const op = opcionesComponente.find(o => o.value === v)
+        if (op && !l.unidad) next.unidad = op.unidad
       }
       return next
     }))
@@ -258,42 +284,52 @@ function ModalReceta({ recetaId, loyverseItems, insumos, recetasExistentes, onCl
     }))
   }
 
-  // Costeo en vivo: completar costo_unitario_snapshot con costo actual del insumo
+  // Costeo en vivo
   const costeoVivo = useMemo(() => {
-    const ingsConCosto = ings.filter(i => i.insumo_id && Number(i.cantidad) > 0).map(i => {
-      const ins = insumos.find(x => x.id === i.insumo_id)
+    const detalle = ings.filter(i => i.componente_id && Number(i.cantidad) > 0).map(i => {
+      const op = opcionesComponente.find(o => o.value === i.componente_id)
+      const cant = Number(i.cantidad) || 0
+      const subtotal = cant * (op?.costo || 0)
       return {
-        cantidad: Number(i.cantidad),
-        costo_unitario_snapshot: ins?.costo_unitario != null ? Number(ins.costo_unitario) : 0,
-        nombre: ins?.nombre || '',
-        unidad: i.unidad || ins?.unidad,
-        sin_costo: ins?.costo_unitario == null,
+        cantidad: cant,
+        costo_unit: op?.costo || 0,
+        nombre: op?.label || '',
+        tipo: op?.tipo,
+        unidad: i.unidad || op?.unidad,
+        sin_costo: !op || op.sin_costo,
+        subtotal,
       }
     })
-    const totalCostoReceta = ingsConCosto.reduce((s, i) => s + i.cantidad * i.costo_unitario_snapshot, 0)
-    const costoUnidad = calcularCostoReceta({
-      ingredientes: ingsConCosto,
-      rinde_cantidad: cab.rinde_cantidad,
-      merma_pct: cab.merma_pct,
-    })
+    const totalReceta = detalle.reduce((s, i) => s + i.subtotal, 0)
+    const rinde = Math.max(Number(cab.rinde_cantidad) || 1, 0.0001)
+    const merma = (Number(cab.merma_pct) || 0) / 100
+    const costoUnidad = (totalReceta / rinde) * (1 + merma)
     const precio = cab.precio_venta !== '' ? Number(cab.precio_venta) : null
     const margen = precio ? calcularMargen(costoUnidad, precio) : null
-    return { ingsConCosto, totalCostoReceta, costoUnidad, precio, margen }
-  }, [ings, cab.rinde_cantidad, cab.merma_pct, cab.precio_venta, insumos])
+    return { detalle, totalReceta, costoUnidad, precio, margen }
+  }, [ings, cab.rinde_cantidad, cab.merma_pct, cab.precio_venta, opcionesComponente])
 
   async function guardar(e) {
     e.preventDefault()
     setErr(null); setGuardando(true)
+    const ingredientesPayload = ings
+      .filter(i => i.componente_id && Number(i.cantidad) > 0)
+      .map(i => {
+        const isInsumo = i.componente_id.startsWith('i:')
+        const id = i.componente_id.slice(2)
+        return {
+          insumo_id: isInsumo ? id : null,
+          sub_receta_id: isInsumo ? null : id,
+          cantidad: Number(i.cantidad),
+          unidad: i.unidad || null,
+          notas: i.notas || null,
+        }
+      })
     const payload = {
       ...cab,
       precio_venta: cab.precio_venta === '' ? null : Number(cab.precio_venta),
       loyverse_item_id: cab.loyverse_item_id || null,
-      ingredientes: ings.filter(i => i.insumo_id && Number(i.cantidad) > 0).map(i => ({
-        insumo_id: i.insumo_id,
-        cantidad: Number(i.cantidad),
-        unidad: i.unidad || null,
-        notas: i.notas || null,
-      })),
+      ingredientes: ingredientesPayload,
     }
     const res = await apiFetch(
       edicion ? `/api/recetas/${recetaId}` : '/api/recetas',
@@ -307,10 +343,12 @@ function ModalReceta({ recetaId, loyverseItems, insumos, recetasExistentes, onCl
 
   async function borrar() {
     if (!confirm('¿Dar de baja esta receta?')) return
-    setBorrando(true)
+    setBorrando(true); setErr(null)
     const res = await apiFetch(`/api/recetas/${recetaId}`, { method: 'DELETE' })
+    const json = await res.json()
     setBorrando(false)
-    if (res.ok) onSaved()
+    if (!res.ok) { setErr(json.error || 'Error'); return }
+    onSaved()
   }
 
   if (loading) {
@@ -328,7 +366,7 @@ function ModalReceta({ recetaId, loyverseItems, insumos, recetasExistentes, onCl
         <div className="grid grid-cols-2 gap-3">
           <Campo label="Producto en Loyverse">
             <select value={cab.loyverse_item_id} onChange={e => eligeProductoLoyverse(e.target.value)} className="input">
-              <option value="">— sin enlace (receta libre) —</option>
+              <option value="">— sin enlace (intermedio / sub-receta) —</option>
               {itemsDisponibles.map(it => <option key={it.loyverse_id} value={it.loyverse_id}>{it.item_name}</option>)}
             </select>
           </Campo>
@@ -342,7 +380,7 @@ function ModalReceta({ recetaId, loyverseItems, insumos, recetasExistentes, onCl
             <input type="number" step="any" required value={cab.rinde_cantidad} onChange={e => setCab({...cab, rinde_cantidad: e.target.value})} className="input" />
           </Campo>
           <Campo label="Unidad">
-            <input type="text" value={cab.rinde_unidad} onChange={e => setCab({...cab, rinde_unidad: e.target.value})} className="input" />
+            <input type="text" value={cab.rinde_unidad} onChange={e => setCab({...cab, rinde_unidad: e.target.value})} className="input" placeholder="unidad, g, ml…" />
           </Campo>
           <Campo label="Merma %">
             <input type="number" step="any" value={cab.merma_pct} onChange={e => setCab({...cab, merma_pct: e.target.value})} className="input" placeholder="0" />
@@ -350,21 +388,22 @@ function ModalReceta({ recetaId, loyverseItems, insumos, recetasExistentes, onCl
         </div>
 
         <Campo label="Precio de venta (Q por unidad)">
-          <input type="number" step="any" value={cab.precio_venta} onChange={e => setCab({...cab, precio_venta: e.target.value})} className="input" placeholder="opcional" />
+          <input type="number" step="any" value={cab.precio_venta} onChange={e => setCab({...cab, precio_venta: e.target.value})} className="input" placeholder="opcional (intermedios no llevan precio)" />
         </Campo>
 
         {/* Ingredientes */}
         <div>
           <div className="flex justify-between items-baseline mb-1">
             <div className="text-xs uppercase tracking-wide text-gray-500 font-medium">Ingredientes (por toda la receta)</div>
-            <button type="button" onClick={() => setIngs(arr => [...arr, { insumo_id: '', cantidad: '', unidad: '', notas: '' }])}
+            <button type="button" onClick={() => setIngs(arr => [...arr, { componente_id: '', cantidad: '', unidad: '', notas: '' }])}
               className="text-xs text-julia-red hover:underline">+ Agregar</button>
           </div>
           <div className="border border-gray-100 rounded-lg overflow-hidden">
             <table className="w-full text-xs">
               <thead className="bg-gray-50 text-gray-400">
                 <tr>
-                  <th className="px-2 py-1.5 text-left font-normal">Insumo</th>
+                  <th className="px-2 py-1.5 text-left font-normal w-16">Tipo</th>
+                  <th className="px-2 py-1.5 text-left font-normal">Insumo / Sub-receta</th>
                   <th className="px-2 py-1.5 text-right font-normal w-20">Cantidad</th>
                   <th className="px-2 py-1.5 text-left font-normal w-16">Unidad</th>
                   <th className="px-2 py-1.5 text-right font-normal w-24">Costo Q</th>
@@ -374,16 +413,33 @@ function ModalReceta({ recetaId, loyverseItems, insumos, recetasExistentes, onCl
               </thead>
               <tbody>
                 {ings.map((l, i) => {
-                  const ins = insumos.find(x => x.id === l.insumo_id)
-                  const costoUnit = ins?.costo_unitario != null ? Number(ins.costo_unitario) : 0
-                  const sub = (Number(l.cantidad) || 0) * costoUnit
+                  const op = opcionesComponente.find(o => o.value === l.componente_id)
+                  const sub = (Number(l.cantidad) || 0) * (op?.costo || 0)
                   return (
                     <tr key={i} className="border-t border-gray-100">
                       <td className="px-2 py-1">
-                        <select value={l.insumo_id} onChange={e => setLin(i, 'insumo_id', e.target.value)}
+                        {op ? (
+                          <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${
+                            op.tipo === 'receta' ? 'bg-violet-100 text-violet-700' : 'bg-blue-50 text-blue-700'
+                          }`}>{op.tipo === 'receta' ? 'sub-rec' : 'insumo'}</span>
+                        ) : <span className="text-gray-300 text-xs">—</span>}
+                      </td>
+                      <td className="px-2 py-1">
+                        <select value={l.componente_id} onChange={e => setLin(i, 'componente_id', e.target.value)}
                           className="w-full border border-gray-200 rounded px-1 py-1 text-xs">
                           <option value="">— elegir —</option>
-                          {insumos.map(x => <option key={x.id} value={x.id}>{x.nombre}{x.costo_unitario == null ? ' (sin costo)' : ''}</option>)}
+                          <optgroup label="Insumos">
+                            {opcionesComponente.filter(o => o.tipo === 'insumo').map(o =>
+                              <option key={o.value} value={o.value}>
+                                {o.label}{o.sin_costo ? ' (sin costo)' : ''}
+                              </option>)}
+                          </optgroup>
+                          <optgroup label="Sub-recetas">
+                            {opcionesComponente.filter(o => o.tipo === 'receta').map(o =>
+                              <option key={o.value} value={o.value}>
+                                {o.label} · rinde {o.rinde} {o.unidad}
+                              </option>)}
+                          </optgroup>
                         </select>
                       </td>
                       <td className="px-2 py-1">
@@ -392,7 +448,7 @@ function ModalReceta({ recetaId, loyverseItems, insumos, recetasExistentes, onCl
                       </td>
                       <td className="px-2 py-1">
                         <input type="text" value={l.unidad} onChange={e => setLin(i, 'unidad', e.target.value)}
-                          className="w-full border border-gray-200 rounded px-1 py-1 text-xs" placeholder={ins?.unidad || ''} />
+                          className="w-full border border-gray-200 rounded px-1 py-1 text-xs" placeholder={op?.unidad || ''} />
                       </td>
                       <td className="px-2 py-1 text-right tabular-nums text-gray-700">{sub > 0 ? fmt(sub) : ''}</td>
                       <td className="px-2 py-1">
@@ -413,14 +469,14 @@ function ModalReceta({ recetaId, loyverseItems, insumos, recetasExistentes, onCl
 
         {/* Costeo en vivo */}
         <div className="bg-julia-cream/30 border border-julia-cream rounded-lg p-3 grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
-          <Dato label="Costo total receta">{fmtQ(costeoVivo.totalCostoReceta)}</Dato>
+          <Dato label="Costo total receta">{fmtQ(costeoVivo.totalReceta)}</Dato>
           <Dato label="Costo por unidad" bold>{fmtQ(costeoVivo.costoUnidad)}</Dato>
           <Dato label="Precio venta">{costeoVivo.precio != null ? fmtQ(costeoVivo.precio) : '—'}</Dato>
           <Dato label="Margen" bold>{fmtPct(costeoVivo.margen)}</Dato>
         </div>
-        {costeoVivo.ingsConCosto.some(i => i.sin_costo) && (
+        {costeoVivo.detalle.some(i => i.sin_costo) && (
           <div className="bg-amber-50 border border-amber-100 rounded-lg px-3 py-2 text-xs text-amber-800">
-            ⚠ Algunos insumos no tienen costo unitario cargado — el costeo no es exacto. Editalos en /inventario.
+            ⚠ Algunos insumos/sub-recetas no tienen costo cargado — el costeo no es exacto.
           </div>
         )}
 

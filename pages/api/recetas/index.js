@@ -1,8 +1,9 @@
 // GET  /api/recetas
-// POST /api/recetas   (admin) — body { loyverse_item_id?, nombre, rinde_cantidad, rinde_unidad?, merma_pct?, precio_venta?, notas?, ingredientes: [{insumo_id, cantidad, unidad?, notas?}] }
+// POST /api/recetas   (admin)
+//   body { ..., ingredientes: [{ insumo_id?, sub_receta_id?, cantidad, unidad?, notas? }] }
 
 import { requireAuth, requireAdmin } from '../../../lib/auth'
-import { calcularCostoReceta, calcularMargen } from '../../../lib/recetas'
+import { recalcularUnaReceta, validarSinCiclos } from '../../../lib/recetas'
 
 export default async function handler(req, res) {
   if (req.method === 'GET')  return list(req, res)
@@ -33,43 +34,75 @@ async function create(req, res) {
           merma_pct = 0, precio_venta = null, notas, ingredientes = [] } = req.body || {}
   if (!nombre?.trim()) return res.status(400).json({ error: 'nombre requerido' })
 
-  // Cargar costos actuales de los insumos para hacer snapshot
-  const insumoIds = Array.from(new Set((ingredientes || []).map(i => i.insumo_id).filter(Boolean)))
-  let insumosMap = new Map()
-  if (insumoIds.length > 0) {
-    const { data: insumos } = await auth.admin
-      .from('insumos').select('id, nombre, unidad, costo_unitario').in('id', insumoIds)
-    insumosMap = new Map((insumos || []).map(i => [i.id, i]))
+  // Validar cada ingrediente: exactamente UNO de insumo_id o sub_receta_id
+  for (const [i, raw] of (ingredientes || []).entries()) {
+    if ((raw.insumo_id && raw.sub_receta_id) || (!raw.insumo_id && !raw.sub_receta_id)) {
+      return res.status(400).json({ error: `ingrediente ${i+1}: especificar insumo_id O sub_receta_id (no ambos)` })
+    }
+    if (!Number(raw.cantidad) || Number(raw.cantidad) <= 0) {
+      return res.status(400).json({ error: `ingrediente ${i+1}: cantidad debe ser > 0` })
+    }
+  }
+
+  // Cargar costos snapshot (insumos + sub-recetas)
+  const insumoIds = Array.from(new Set(ingredientes.filter(i => i.insumo_id).map(i => i.insumo_id)))
+  const subIds = Array.from(new Set(ingredientes.filter(i => i.sub_receta_id).map(i => i.sub_receta_id)))
+
+  const insumosMap = new Map()
+  if (insumoIds.length) {
+    const { data: ins } = await auth.admin.from('insumos').select('id, unidad, costo_unitario').in('id', insumoIds)
+    for (const x of ins || []) insumosMap.set(x.id, x)
+  }
+  const subsMap = new Map()
+  if (subIds.length) {
+    const { data: subs } = await auth.admin.from('recetas')
+      .select('id, rinde_cantidad, costo_calculado, rinde_unidad').in('id', subIds)
+    for (const x of subs || []) subsMap.set(x.id, x)
   }
 
   const ingNorm = []
-  for (const [i, raw] of (ingredientes || []).entries()) {
-    if (!raw.insumo_id) return res.status(400).json({ error: `ingrediente ${i+1}: insumo_id requerido` })
-    const ins = insumosMap.get(raw.insumo_id)
-    if (!ins) return res.status(400).json({ error: `ingrediente ${i+1}: insumo no encontrado` })
+  let totalCosto = 0
+  for (const [i, raw] of ingredientes.entries()) {
     const cantidad = Number(raw.cantidad)
-    if (!cantidad || cantidad <= 0) return res.status(400).json({ error: `ingrediente ${i+1}: cantidad debe ser > 0` })
-    const costoSnap = ins.costo_unitario != null ? Number(ins.costo_unitario) : 0
+    let snap, unidad, subtotal
+    if (raw.insumo_id) {
+      const ins = insumosMap.get(raw.insumo_id)
+      if (!ins) return res.status(400).json({ error: `ingrediente ${i+1}: insumo no encontrado` })
+      snap = ins.costo_unitario != null ? Number(ins.costo_unitario) : 0
+      unidad = raw.unidad || ins.unidad
+      subtotal = Number((cantidad * snap).toFixed(4))
+    } else {
+      const sub = subsMap.get(raw.sub_receta_id)
+      if (!sub) return res.status(400).json({ error: `ingrediente ${i+1}: sub-receta no encontrada` })
+      const subRinde = Math.max(Number(sub.rinde_cantidad) || 1, 0.0001)
+      const subCosto = Number(sub.costo_calculado) || 0
+      snap = Number((subCosto / subRinde).toFixed(4))
+      unidad = raw.unidad || sub.rinde_unidad
+      subtotal = Number((cantidad * snap).toFixed(4))
+    }
+    totalCosto += subtotal
     ingNorm.push({
-      insumo_id: raw.insumo_id,
-      cantidad,
-      unidad: raw.unidad || ins.unidad,
-      costo_unitario_snapshot: costoSnap,
-      subtotal_costo: Number((cantidad * costoSnap).toFixed(4)),
+      insumo_id: raw.insumo_id || null,
+      sub_receta_id: raw.sub_receta_id || null,
+      cantidad, unidad,
+      costo_unitario_snapshot: snap,
+      subtotal_costo: subtotal,
       notas: raw.notas?.trim() || null,
       orden: i,
     })
   }
 
-  const costoCalc = calcularCostoReceta({
-    ingredientes: ingNorm, rinde_cantidad, merma_pct,
-  })
-  const margenPct = precio_venta != null ? calcularMargen(costoCalc, Number(precio_venta)) : null
+  const rinde = Math.max(Number(rinde_cantidad) || 1, 0.0001)
+  const merma = (Number(merma_pct) || 0) / 100
+  const costoCalc = Number(((totalCosto / rinde) * (1 + merma)).toFixed(4))
+  const margenPct = precio_venta != null && precio_venta !== ''
+    ? Math.round(((Number(precio_venta) - costoCalc) / Number(precio_venta)) * 100 * 100) / 100
+    : null
 
   const { data: receta, error: rErr } = await auth.admin.from('recetas').insert({
     loyverse_item_id: loyverse_item_id || null,
     nombre: nombre.trim(),
-    rinde_cantidad: Number(rinde_cantidad) || 1,
+    rinde_cantidad: rinde,
     rinde_unidad: rinde_unidad?.trim() || 'unidad',
     merma_pct: Number(merma_pct) || 0,
     precio_venta: precio_venta != null && precio_venta !== '' ? Number(precio_venta) : null,
