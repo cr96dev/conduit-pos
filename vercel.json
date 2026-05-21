@@ -1,6 +1,10 @@
 {
   "crons": [
     {
+      "path": "/api/cron/loyverse-sync",
+      "schedule": "*/15 * * * *"
+    },
+    {
       "path": "/api/qbo/sync/daily-prod",
       "schedule": "0 17 * * *"
     },
@@ -22,6 +26,9 @@
     }
   ],
   "functions": {
+    "pages/api/cron/loyverse-sync.js": {
+      "maxDuration": 60
+    },
     "pages/api/qbo/sync/daily.js": {
       "maxDuration": 60
     },
