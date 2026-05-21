@@ -75,7 +75,10 @@ COMMENT ON TABLE bancos_movimientos IS 'Movimientos de extractos bancarios. hash
 CREATE INDEX IF NOT EXISTS bancos_mov_cuenta_idx       ON bancos_movimientos(cuenta_id);
 CREATE INDEX IF NOT EXISTS bancos_mov_fecha_idx        ON bancos_movimientos(fecha DESC);
 CREATE INDEX IF NOT EXISTS bancos_mov_conciliado_idx   ON bancos_movimientos(cuenta_id, asiento_id);
-CREATE UNIQUE INDEX IF NOT EXISTS bancos_mov_hash_unique ON bancos_movimientos(cuenta_id, hash_import) WHERE hash_import IS NOT NULL;
+-- Unique constraint (no parcial) para que upsert con ON CONFLICT funcione.
+-- hash_import siempre se genera desde la API; el constraint cubre todos los rows.
+ALTER TABLE bancos_movimientos
+  ADD CONSTRAINT bancos_mov_hash_unique UNIQUE (cuenta_id, hash_import);
 
 -- =============================================================================
 -- RLS
