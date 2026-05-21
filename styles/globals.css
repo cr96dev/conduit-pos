@@ -10,6 +10,16 @@
 body {
   font-family: 'Cormorant Garamond', 'Georgia', serif;
   font-feature-settings: 'liga', 'kern';
+  /* Lining + tabular figures: que los 0-9 queden a la misma altura y mismo ancho.
+     Cormorant Garamond usa "oldstyle figures" por default que son lindas en texto
+     continuo pero confunden en datos. */
+  font-variant-numeric: lining-nums tabular-nums;
+}
+
+/* Refuerzo en elementos donde los numeros son protagonistas */
+input, table, td, th, .tabular-nums {
+  font-variant-numeric: lining-nums tabular-nums;
+  font-feature-settings: 'lnum', 'tnum';
 }
 
 h1, h2, h3, .font-display {
