@@ -11,13 +11,15 @@ function gtDateString(daysAgo = 0) {
   return new Date(gtMs).toISOString().slice(0, 10) // YYYY-MM-DD
 }
 
-// Rango UTC que cubre un dia en hora Guatemala (00:00 GT -> 23:59:59 GT).
+// Rango UTC que cubre un dia en hora Guatemala (00:00 GT -> proximo dia 00:00 GT).
+// 00:00 GT == 06:00:00 UTC del mismo dia. 24h despues == 06:00:00 UTC del dia siguiente.
 function gtDayRange(daysAgo = 0) {
-  const ymd = gtDateString(daysAgo)
+  const ymd     = gtDateString(daysAgo)
+  const ymdNext = gtDateString(daysAgo - 1) // dia siguiente en GT
   return {
     ymd,
-    fromUtc: `${ymd}T06:00:00+00:00`,            // 00:00 GT
-    toUtc:   `${ymd}T29:59:59.999+00:00`,        // 23:59:59 GT del mismo dia
+    fromUtc: `${ymd}T06:00:00.000+00:00`,
+    toUtc:   `${ymdNext}T06:00:00.000+00:00`, // exclusivo: usar con < no <=
   }
 }
 
@@ -78,7 +80,7 @@ export default function Dashboard({ session }) {
       .select('total_money')
       .eq('receipt_type', 'SALE')
       .gte('receipt_date', hoy.fromUtc)
-      .lte('receipt_date', hoy.toUtc)
+      .lt('receipt_date', hoy.toUtc)
 
     const hoyTotal = (hoyRows || []).reduce((s, r) => s + Number(r.total_money || 0), 0)
 
@@ -88,7 +90,7 @@ export default function Dashboard({ session }) {
       .select('total_money')
       .eq('receipt_type', 'SALE')
       .gte('receipt_date', ayer.fromUtc)
-      .lte('receipt_date', ayer.toUtc)
+      .lt('receipt_date', ayer.toUtc)
 
     const ayerTotal = (ayerRows || []).reduce((s, r) => s + Number(r.total_money || 0), 0)
 
@@ -105,12 +107,12 @@ export default function Dashboard({ session }) {
       .select('receipt_date, total_money')
       .eq('receipt_type', 'SALE')
       .gte('receipt_date', inicio)
-      .lte('receipt_date', fin)
+      .lt('receipt_date', fin)
 
     const labelDia = ['Dom','Lun','Mar','Mie','Jue','Vie','Sab']
     const graficaData = dias.map(d => {
       const total = (semanaRows || [])
-        .filter(r => r.receipt_date >= d.fromUtc && r.receipt_date <= d.toUtc)
+        .filter(r => r.receipt_date >= d.fromUtc && r.receipt_date < d.toUtc)
         .reduce((s, r) => s + Number(r.total_money || 0), 0)
       return {
         ymd: d.ymd,
@@ -126,7 +128,7 @@ export default function Dashboard({ session }) {
       .select('item_name, variant_name, quantity, total_money, receipt_id, loyverse_receipts!inner(receipt_date, receipt_type)')
       .eq('loyverse_receipts.receipt_type', 'SALE')
       .gte('loyverse_receipts.receipt_date', hoy.fromUtc)
-      .lte('loyverse_receipts.receipt_date', hoy.toUtc)
+      .lt('loyverse_receipts.receipt_date', hoy.toUtc)
 
     const acumulado = new Map()
     for (const l of lineas || []) {
