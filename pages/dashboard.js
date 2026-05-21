@@ -42,7 +42,7 @@ function BarChart({ data }) {
             <div className="w-full rounded-t-md transition-all duration-500"
               style={{
                 height: `${Math.max(pct, 4)}%`,
-                background: isToday ? '#B45309' : '#FCD9A8',
+                background: isToday ? '#C62127' : '#EFDEB3',
                 minHeight: '4px'
               }} />
             <span className="text-xs text-gray-400">{d.dia}</span>

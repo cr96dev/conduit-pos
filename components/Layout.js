@@ -71,7 +71,7 @@ function ModalCambioContrasena({ onClose }) {
             </div>
             <div className="text-sm font-medium text-gray-900 mb-1">Contraseña actualizada</div>
             <div className="text-xs text-gray-400 mb-4">Tu contraseña fue cambiada exitosamente.</div>
-            <button onClick={onClose} className="text-sm px-4 py-2 bg-amber-700 text-white rounded-lg hover:bg-amber-800">
+            <button onClick={onClose} className="text-sm px-4 py-2 bg-julia-red text-white rounded-lg hover:bg-red-900">
               Cerrar
             </button>
           </div>
@@ -80,17 +80,17 @@ function ModalCambioContrasena({ onClose }) {
             <div>
               <label className="text-xs text-gray-500 block mb-1">Contraseña actual</label>
               <input type="password" value={actual} onChange={e => setActual(e.target.value)} required
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-amber-500" />
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-julia-red" />
             </div>
             <div>
               <label className="text-xs text-gray-500 block mb-1">Nueva contraseña</label>
               <input type="password" value={nueva} onChange={e => setNueva(e.target.value)} required
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-amber-500" />
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-julia-red" />
             </div>
             <div>
               <label className="text-xs text-gray-500 block mb-1">Confirmar nueva contraseña</label>
               <input type="password" value={confirmar} onChange={e => setConfirmar(e.target.value)} required
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-amber-500" />
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-julia-red" />
             </div>
             {error && (
               <div className="bg-red-50 border border-red-100 rounded-lg px-3 py-2 text-xs text-red-700">{error}</div>
@@ -101,7 +101,7 @@ function ModalCambioContrasena({ onClose }) {
                 Cancelar
               </button>
               <button type="submit" disabled={guardando}
-                className="text-sm px-5 py-2 bg-amber-700 text-white rounded-lg hover:bg-amber-800 disabled:opacity-50 flex items-center gap-2">
+                className="text-sm px-5 py-2 bg-julia-red text-white rounded-lg hover:bg-red-900 disabled:opacity-50 flex items-center gap-2">
                 {guardando && <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>}
                 {guardando ? 'Guardando...' : 'Cambiar contraseña'}
               </button>
@@ -138,7 +138,7 @@ export default function Layout({ children, perfil }) {
     router.push('/')
   }
 
-  const activeColor = 'bg-amber-50 text-amber-800'
+  const activeColor = 'bg-julia-cream/40 text-julia-red'
 
   return (
     <div className="flex min-h-screen bg-gray-50">
@@ -149,7 +149,7 @@ export default function Layout({ children, perfil }) {
       <aside className="hidden md:flex w-56 bg-white border-r border-gray-100 flex-col flex-shrink-0">
         <div className="px-4 py-5 border-b border-gray-100 flex flex-col items-center">
           <button onClick={() => router.push('/dashboard')} className="w-full">
-            <img src="/logo.svg" alt="Julia Bakery" className="w-full object-contain mb-1" style={{ height: '80px' }} />
+            <img src="/logo.png" alt="Julia Bakery" className="w-full object-contain mb-1" style={{ height: '80px' }} />
           </button>
           <div className="text-xs text-gray-400 text-center truncate w-full mt-1">
             Panaderia
@@ -177,14 +177,14 @@ export default function Layout({ children, perfil }) {
           <button onClick={toggleDark}
             className="w-full flex items-center justify-between px-2 py-1.5 rounded-lg hover:bg-gray-50 mb-2 transition-colors">
             <span className="text-xs text-gray-500">{darkMode ? 'Modo dia' : 'Modo noche'}</span>
-            <div className={`w-8 h-4 rounded-full transition-colors relative ${darkMode ? 'bg-amber-700' : 'bg-gray-200'}`}>
+            <div className={`w-8 h-4 rounded-full transition-colors relative ${darkMode ? 'bg-julia-red' : 'bg-gray-200'}`}>
               <div className={`absolute top-0.5 w-3 h-3 bg-white rounded-full transition-transform shadow-sm ${darkMode ? 'translate-x-4' : 'translate-x-0.5'}`}></div>
             </div>
           </button>
           <div className="text-xs text-gray-500 truncate mb-1">{perfil?.nombre_completo || perfil?.email || ''}</div>
           <div className="flex items-center justify-between">
             <button onClick={() => setModalContrasena(true)}
-              className="text-xs text-gray-400 hover:text-amber-700 transition-colors">
+              className="text-xs text-gray-400 hover:text-julia-red transition-colors">
               Cambiar contraseña
             </button>
             <button onClick={logout} className="text-xs text-gray-400 hover:text-red-500 transition-colors">
@@ -200,7 +200,7 @@ export default function Layout({ children, perfil }) {
         {/* Topbar movil */}
         <div className="md:hidden bg-white border-b border-gray-100 px-4 py-3 flex items-center justify-between sticky top-0 z-10">
           <button onClick={() => router.push('/dashboard')}>
-            <img src="/logo.svg" alt="Julia Bakery" style={{ height: '32px' }} />
+            <img src="/logo.png" alt="Julia Bakery" style={{ height: '32px' }} />
           </button>
           <div className="flex items-center gap-2">
             <button onClick={toggleDark} className="p-2 rounded-lg hover:bg-gray-50">
@@ -247,7 +247,7 @@ export default function Layout({ children, perfil }) {
               <div>
                 <div className="text-xs text-gray-400 mb-1">{perfil?.nombre_completo || perfil?.email || ''}</div>
                 <button onClick={() => { setModalContrasena(true); setMenuAbierto(false) }}
-                  className="text-xs text-amber-700 hover:text-amber-800">
+                  className="text-xs text-julia-red hover:text-julia-red">
                   Cambiar contraseña
                 </button>
               </div>
@@ -270,7 +270,7 @@ export default function Layout({ children, perfil }) {
                 <button key={item.href}
                   onClick={() => { router.push(item.href); setMenuAbierto(false) }}
                   className={`flex flex-col items-center py-2 px-0.5 transition-colors ${
-                    active ? 'text-amber-700' : 'text-gray-400'
+                    active ? 'text-julia-red' : 'text-gray-400'
                   }`}>
                   <svg className="w-5 h-5 mb-0.5" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" d={item.icon} />

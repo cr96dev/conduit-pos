@@ -46,7 +46,7 @@ export default function Productos({ session }) {
           placeholder="Buscar producto..."
           value={busqueda}
           onChange={e => setBusqueda(e.target.value)}
-          className="w-full md:w-80 px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-amber-500 mb-4"
+          className="w-full md:w-80 px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-julia-red mb-4"
         />
 
         <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">

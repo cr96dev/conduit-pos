@@ -55,7 +55,7 @@ export default function Empleados({ session }) {
                     <td className="px-4 py-2.5 text-xs text-gray-500">{e.phone_number || '—'}</td>
                     <td className="px-4 py-2.5">
                       {e.is_owner
-                        ? <span className="text-xs bg-amber-50 text-amber-800 px-2 py-0.5 rounded">Propietario</span>
+                        ? <span className="text-xs bg-julia-cream/40 text-julia-red px-2 py-0.5 rounded">Propietario</span>
                         : <span className="text-xs text-gray-500">Empleado</span>}
                     </td>
                   </tr>

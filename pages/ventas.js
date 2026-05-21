@@ -51,7 +51,7 @@ export default function Ventas({ session }) {
           {[['hoy','Hoy'],['semana','7 dias'],['mes','30 dias']].map(([k,l]) => (
             <button key={k} onClick={() => setFiltro(k)}
               className={`text-xs px-3 py-1.5 rounded-lg border transition-colors ${
-                filtro === k ? 'bg-amber-700 text-white border-amber-700' : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
+                filtro === k ? 'bg-julia-red text-white border-julia-red' : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
               }`}>{l}</button>
           ))}
         </div>

@@ -29,7 +29,7 @@ export default function Login({ session }) {
 
         {/* Logo */}
         <div className="flex flex-col items-center mb-8">
-          <img src="/logo.svg" alt="Julia Bakery" className="w-full object-contain mb-3" style={{ height: '140px' }} />
+          <img src="/logo.png" alt="Julia Bakery" className="w-full object-contain mb-3" style={{ height: '140px' }} />
           <div className="flex items-center gap-2 mt-1">
             <div className="h-px w-12 bg-gray-200"></div>
             <p className="text-xs text-gray-400 text-center">Sistema de gestión</p>
