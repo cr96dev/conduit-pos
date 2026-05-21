@@ -31,23 +31,25 @@ function fmtQ(n) {
 function BarChart({ data }) {
   if (!data || data.length === 0) return null
   const max = Math.max(...data.map(d => d.total), 1)
+  // Alto del area de barras (sin contar el label de abajo) = 96px - ~16px del label
+  const BAR_AREA_PX = 80
   return (
-    <div className="flex items-end gap-1.5 h-24 w-full">
+    <div className="flex gap-1.5 w-full h-28 items-stretch">
       {data.map((d, i) => {
-        const pct = (d.total / max) * 100
+        const pct = (d.total / max)
+        const heightPx = Math.max(Math.round(pct * BAR_AREA_PX), 4)
         const isToday = i === data.length - 1
         return (
-          <div key={d.ymd} className="flex-1 flex flex-col items-center gap-1 group relative">
-            <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-gray-900 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-10">
+          <div key={d.ymd} className="flex-1 flex flex-col justify-end items-center gap-1 group relative">
+            <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-gray-900 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-10 pointer-events-none">
               {fmtQ(d.total)}
             </div>
             <div className="w-full rounded-t-md transition-all duration-500"
               style={{
-                height: `${Math.max(pct, 4)}%`,
+                height: `${heightPx}px`,
                 background: isToday ? '#C62127' : '#EFDEB3',
-                minHeight: '4px'
               }} />
-            <span className="text-xs text-gray-400">{d.dia}</span>
+            <span className="text-xs text-gray-400 leading-none">{d.dia}</span>
           </div>
         )
       })}
