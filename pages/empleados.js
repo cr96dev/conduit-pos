@@ -3,6 +3,7 @@ import { useRouter } from 'next/router'
 import { supabase } from '../lib/supabase'
 import Layout from '../components/Layout'
 import { SkeletonRow } from '../components/Skeleton'
+import ImportarCSV from '../components/ImportarCSV'
 
 // ============================================================================
 // Helpers
@@ -118,8 +119,10 @@ function TabPersonal({ esAdmin }) {
         </label>
         <div className="flex-1" />
         {esAdmin && (
-          <button onClick={() => setModal({ tipo: 'nuevo' })}
-            className="btn-primario">+ Nuevo empleado</button>
+          <>
+            <button onClick={() => setModal({ tipo: 'importar' })} className="btn-secundario">Importar CSV</button>
+            <button onClick={() => setModal({ tipo: 'nuevo' })} className="btn-primario">+ Nuevo empleado</button>
+          </>
         )}
       </div>
 
@@ -168,9 +171,37 @@ function TabPersonal({ esAdmin }) {
         </table>
       </div>
 
-      {modal && (
+      {modal?.tipo !== 'importar' && modal && (
         <ModalEmpleado empleado={modal.empleado} onClose={() => setModal(null)}
           onSaved={() => { setModal(null); cargar() }} />
+      )}
+      {modal?.tipo === 'importar' && (
+        <ImportarCSV
+          titulo="Importar empleados desde CSV"
+          schema={{
+            nombre:                        ['nombre', 'name', 'empleado'],
+            dpi:                           ['dpi', 'cui'],
+            nit:                           ['nit'],
+            numero_igss:                   ['numero_igss', 'igss', 'no_igss'],
+            area:                          ['area', 'área', 'departamento'],
+            puesto:                        ['puesto', 'cargo', 'position'],
+            tipo_pago:                     ['tipo_pago', 'forma_pago', 'metodo_pago'],
+            banco:                         ['banco', 'bank'],
+            numero_cuenta:                 ['numero_cuenta', 'cuenta', 'account'],
+            fecha_ingreso:                 ['fecha_ingreso', 'ingreso', 'fecha_inicio'],
+            salario_mensual:               ['salario_mensual', 'salario', 'sueldo'],
+            bonificacion_quincenal:        ['bonificacion_quincenal', 'bono_quincenal'],
+            bonificacion_segunda_quincena: ['bonificacion_segunda_quincena', 'bono_2da_quincena'],
+            notas:                         ['notas', 'observaciones', 'notes'],
+          }}
+          requeridos={['nombre', 'salario_mensual']}
+          endpoint="/api/empleados/bulk"
+          ejemplo={`nombre,dpi,puesto,area,salario_mensual,fecha_ingreso,tipo_pago,bonificacion_quincenal
+Maria Lopez,2345678901101,Panadero,panaderia,4002.28,2024-01-15,efectivo,0
+Juan Perez,1234567890101,Maestro panadero,panaderia,5500,2023-06-01,transferencia,250`}
+          onClose={() => setModal(null)}
+          onImportado={() => { setModal(null); cargar() }}
+        />
       )}
     </div>
   )

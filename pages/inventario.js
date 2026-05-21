@@ -3,6 +3,7 @@ import { useRouter } from 'next/router'
 import { supabase } from '../lib/supabase'
 import Layout from '../components/Layout'
 import { SkeletonRow } from '../components/Skeleton'
+import ImportarCSV from '../components/ImportarCSV'
 
 // ============================================================================
 // Helpers
@@ -269,10 +270,16 @@ function TabInsumos({ esAdmin }) {
           Solo problemas
         </label>
         {esAdmin && (
-          <button onClick={() => setModal({ tipo: 'crear' })}
-            className="px-4 py-2 bg-julia-red text-white text-sm rounded-lg hover:bg-red-900 whitespace-nowrap">
-            + Nuevo insumo
-          </button>
+          <>
+            <button onClick={() => setModal({ tipo: 'importar' })}
+              className="btn-secundario whitespace-nowrap">
+              Importar CSV
+            </button>
+            <button onClick={() => setModal({ tipo: 'crear' })}
+              className="px-4 py-2 bg-julia-red text-white text-sm rounded-lg hover:bg-red-900 whitespace-nowrap">
+              + Nuevo insumo
+            </button>
+          </>
         )}
       </div>
 
@@ -361,6 +368,29 @@ function TabInsumos({ esAdmin }) {
       )}
       {modal?.tipo === 'movimiento' && (
         <ModalMovimiento insumo={modal.insumo} onClose={() => setModal(null)} onSaved={() => { setModal(null); cargar() }} />
+      )}
+      {modal?.tipo === 'importar' && (
+        <ImportarCSV
+          titulo="Importar insumos desde CSV"
+          schema={{
+            nombre:         ['nombre', 'name', 'producto', 'insumo'],
+            categoria:      ['categoria', 'category', 'tipo'],
+            unidad:         ['unidad', 'unit', 'um'],
+            stock_inicial:  ['stock_inicial', 'stock', 'cantidad', 'existencia'],
+            stock_minimo:   ['stock_minimo', 'minimo', 'min'],
+            costo_unitario: ['costo_unitario', 'costo', 'precio', 'cost'],
+            proveedor:      ['proveedor', 'supplier'],
+            notas:          ['notas', 'notes', 'observaciones'],
+          }}
+          requeridos={['nombre']}
+          endpoint="/api/insumos/bulk"
+          ejemplo={`nombre,categoria,unidad,stock_inicial,stock_minimo,costo_unitario,proveedor
+Harina dura,harinas,lb,200,50,4.50,Molino Excelsior
+Levadura seca,levaduras,kg,5,2,180,Distribuidora La Espiga
+Mantequilla,lacteos,lb,15,5,28,Lactosa`}
+          onClose={() => setModal(null)}
+          onImportado={() => { setModal(null); cargar() }}
+        />
       )}
     </div>
   )

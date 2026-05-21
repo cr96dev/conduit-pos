@@ -59,14 +59,16 @@ export default function Bancos({ session }) {
       <div className="px-4 md:px-8 py-6 max-w-7xl mx-auto">
         <h1 className="text-xl font-semibold text-gray-900 mb-4">Bancos / Conciliación</h1>
 
-        <div className="flex gap-1 border-b border-gray-200 mb-5">
+        <div className="flex gap-1 border-b border-gray-200 mb-5 overflow-x-auto">
           <TabBtn active={tab === 'conciliacion'} onClick={() => setTab('conciliacion')}>Conciliación</TabBtn>
           <TabBtn active={tab === 'cuentas'}      onClick={() => setTab('cuentas')}>Cuentas bancarias</TabBtn>
+          <TabBtn active={tab === 'reglas'}       onClick={() => setTab('reglas')}>Reglas de clasificación</TabBtn>
         </div>
 
         {tab === 'cuentas' && (
           <TabCuentas esAdmin={esAdmin} cuentas={cuentas} onChanged={cargarCuentas} />
         )}
+        {tab === 'reglas' && <TabReglas esAdmin={esAdmin} />}
         {tab === 'conciliacion' && (
           cuentas.length === 0 ? (
             <div className="bg-amber-50 border border-amber-100 rounded-lg px-4 py-3 text-sm text-amber-800">
@@ -250,6 +252,194 @@ function ModalCuenta({ cuenta, onClose, onSaved }) {
 }
 
 // ============================================================================
+// Tab Reglas de clasificación
+// ============================================================================
+
+function TabReglas({ esAdmin }) {
+  const [reglas, setReglas] = useState([])
+  const [cuentas, setCuentas] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [modal, setModal] = useState(null)
+
+  useEffect(() => { cargar() }, [])
+
+  async function cargar() {
+    setLoading(true)
+    const [rRes, cRes] = await Promise.all([
+      apiFetch('/api/bancos/reglas'),
+      apiFetch('/api/cuentas'),
+    ])
+    const rJson = await rRes.json()
+    const cJson = await cRes.json()
+    setReglas(rJson.reglas || [])
+    setCuentas((cJson.cuentas || []).filter(c => c.es_movimiento))
+    setLoading(false)
+  }
+
+  async function borrar(id) {
+    if (!confirm('¿Borrar regla?')) return
+    const res = await apiFetch(`/api/bancos/reglas/${id}`, { method: 'DELETE' })
+    if (res.ok) cargar()
+  }
+  async function toggleActiva(r) {
+    const res = await apiFetch(`/api/bancos/reglas/${r.id}`, {
+      method: 'PATCH', body: JSON.stringify({ activa: !r.activa }),
+    })
+    if (res.ok) cargar()
+  }
+
+  return (
+    <div>
+      <div className="bg-gray-50 border border-gray-100 rounded-lg px-3 py-2 text-xs text-gray-600 mb-3">
+        Cuando un movimiento bancario tiene una descripción que matchea con un patrón, se sugiere automáticamente la cuenta contable. Las reglas se evalúan en orden de prioridad (menor primero).
+      </div>
+
+      <div className="flex justify-between items-baseline mb-3">
+        <div className="text-sm text-gray-600">{reglas.length} reglas</div>
+        {esAdmin && (
+          <button onClick={() => setModal({ tipo: 'nueva' })} className="btn-primario">+ Nueva regla</button>
+        )}
+      </div>
+
+      <div className="bg-white border border-gray-100 rounded-xl overflow-hidden">
+        <table className="w-full text-sm">
+          <thead className="bg-gray-50">
+            <tr>
+              <th className="text-left text-xs text-gray-400 font-normal px-3 py-2">Patrón</th>
+              <th className="text-left text-xs text-gray-400 font-normal px-3 py-2">Match</th>
+              <th className="text-left text-xs text-gray-400 font-normal px-3 py-2">Aplica a</th>
+              <th className="text-left text-xs text-gray-400 font-normal px-3 py-2">Cuenta</th>
+              <th className="text-left text-xs text-gray-400 font-normal px-3 py-2">Descripción</th>
+              <th className="text-right text-xs text-gray-400 font-normal px-3 py-2">Prio</th>
+              <th className="text-center text-xs text-gray-400 font-normal px-3 py-2">Activa</th>
+              <th className="px-3 py-2"></th>
+            </tr>
+          </thead>
+          <tbody>
+            {loading ? (
+              <>{[1,2].map(i => <tr key={i}><td colSpan={8}><SkeletonRow /></td></tr>)}</>
+            ) : reglas.length === 0 ? (
+              <tr><td colSpan={8} className="text-center text-xs text-gray-400 py-8">
+                Sin reglas. {esAdmin && <button onClick={() => setModal({tipo:'nueva'})} className="text-julia-red hover:underline">Crear la primera →</button>}
+              </td></tr>
+            ) : reglas.map(r => (
+              <tr key={r.id} className="border-t border-gray-50 hover:bg-gray-50">
+                <td className="px-3 py-1.5 text-gray-800 font-mono text-xs">{r.patron}</td>
+                <td className="px-3 py-1.5 text-xs text-gray-500">{r.tipo_match}</td>
+                <td className="px-3 py-1.5 text-xs text-gray-500">{r.aplica_a}</td>
+                <td className="px-3 py-1.5 text-xs">{r.cuentas_contables?.codigo} <span className="text-gray-600">{r.cuentas_contables?.nombre}</span></td>
+                <td className="px-3 py-1.5 text-xs text-gray-600">{r.descripcion || '—'}</td>
+                <td className="px-3 py-1.5 text-right text-xs text-gray-500 tabular-nums">{r.prioridad}</td>
+                <td className="px-3 py-1.5 text-center">
+                  {esAdmin
+                    ? <input type="checkbox" checked={r.activa} onChange={() => toggleActiva(r)} className="rounded" />
+                    : <span className="text-xs">{r.activa ? '✓' : '×'}</span>}
+                </td>
+                <td className="px-3 py-1.5 text-right whitespace-nowrap">
+                  {esAdmin && (
+                    <div className="flex gap-2 justify-end">
+                      <button onClick={() => setModal({ tipo: 'editar', regla: r })} className="text-xs text-gray-400 hover:text-julia-red">editar</button>
+                      <button onClick={() => borrar(r.id)} className="text-xs text-gray-400 hover:text-red-500">borrar</button>
+                    </div>
+                  )}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {modal && (
+        <ModalRegla regla={modal.regla} cuentas={cuentas}
+          onClose={() => setModal(null)} onSaved={() => { setModal(null); cargar() }} />
+      )}
+    </div>
+  )
+}
+
+function ModalRegla({ regla, cuentas, onClose, onSaved }) {
+  const edicion = !!regla
+  const [f, setF] = useState({
+    patron:      regla?.patron || '',
+    tipo_match:  regla?.tipo_match || 'contains',
+    aplica_a:    regla?.aplica_a || 'ambos',
+    cuenta_id:   regla?.cuenta_id || '',
+    descripcion: regla?.descripcion || '',
+    concepto:    regla?.concepto || '',
+    prioridad:   regla?.prioridad ?? 100,
+    activa:      regla?.activa ?? true,
+  })
+  const [err, setErr] = useState(null)
+  const [guardando, setGuardando] = useState(false)
+
+  async function guardar(e) {
+    e.preventDefault()
+    setErr(null); setGuardando(true)
+    const res = await apiFetch(
+      edicion ? `/api/bancos/reglas/${regla.id}` : '/api/bancos/reglas',
+      { method: edicion ? 'PATCH' : 'POST', body: JSON.stringify(f) }
+    )
+    const json = await res.json()
+    setGuardando(false)
+    if (!res.ok) { setErr(json.error || 'Error'); return }
+    onSaved()
+  }
+
+  return (
+    <ModalShell titulo={edicion ? 'Editar regla' : 'Nueva regla de clasificación'} onClose={onClose}>
+      <form onSubmit={guardar} className="space-y-3">
+        <Campo label="Patrón a buscar en la descripción" required>
+          <input type="text" required value={f.patron} onChange={e => setF({...f, patron: e.target.value})}
+            className="input" placeholder="ej. COMISION, INTERESES, IGSS, FRANCISCO" />
+        </Campo>
+        <div className="grid grid-cols-2 gap-3">
+          <Campo label="Tipo de match">
+            <select value={f.tipo_match} onChange={e => setF({...f, tipo_match: e.target.value})} className="input">
+              <option value="contains">Contiene</option>
+              <option value="starts_with">Empieza con</option>
+              <option value="regex">Regex</option>
+            </select>
+          </Campo>
+          <Campo label="Aplica a">
+            <select value={f.aplica_a} onChange={e => setF({...f, aplica_a: e.target.value})} className="input">
+              <option value="ambos">Ambos (débito y crédito)</option>
+              <option value="debito">Solo débitos (salidas)</option>
+              <option value="credito">Solo créditos (entradas)</option>
+            </select>
+          </Campo>
+        </div>
+        <Campo label="Cuenta contable a asignar" required>
+          <select value={f.cuenta_id} required onChange={e => setF({...f, cuenta_id: e.target.value})} className="input">
+            <option value="">— elegir —</option>
+            {cuentas.map(c => <option key={c.id} value={c.id}>{c.codigo} · {c.nombre}</option>)}
+          </select>
+        </Campo>
+        <Campo label="Descripción (interna, para identificar la regla)">
+          <input type="text" value={f.descripcion} onChange={e => setF({...f, descripcion: e.target.value})} className="input" />
+        </Campo>
+        <Campo label="Concepto para el asiento (opcional, default = descripción del movimiento)">
+          <input type="text" value={f.concepto} onChange={e => setF({...f, concepto: e.target.value})} className="input" />
+        </Campo>
+        <div className="grid grid-cols-2 gap-3 items-end">
+          <Campo label="Prioridad (menor = primero)">
+            <input type="number" value={f.prioridad} onChange={e => setF({...f, prioridad: e.target.value})} className="input" />
+          </Campo>
+          <label className="inline-flex items-center gap-2 text-sm text-gray-700 pb-2">
+            <input type="checkbox" checked={f.activa} onChange={e => setF({...f, activa: e.target.checked})} className="rounded" />
+            Activa
+          </label>
+        </div>
+        {err && <div className="bg-red-50 border border-red-100 rounded-lg px-3 py-2 text-xs text-red-700">{err}</div>}
+        <div className="flex justify-end gap-2 pt-2">
+          <button type="button" onClick={onClose} className="btn-secundario">Cancelar</button>
+          <button type="submit" disabled={guardando} className="btn-primario">{guardando ? 'Guardando…' : 'Guardar'}</button>
+        </div>
+      </form>
+    </ModalShell>
+  )
+}
+
+// ============================================================================
 // Tab Conciliación
 // ============================================================================
 
@@ -258,15 +448,25 @@ function TabConciliacion({ esAdmin, cuentas, cuentaSel, setCuentaSel }) {
   const [saldo, setSaldo] = useState(null)
   const [loading, setLoading] = useState(true)
   const [estado, setEstado] = useState('pendientes')
-  const [modal, setModal] = useState(null) // {tipo: 'importar' | 'conciliar', mov?}
+  const [modal, setModal] = useState(null)
   const [err, setErr] = useState(null)
+  const [seleccionados, setSeleccionados] = useState(new Set())
+  const [cuentasContables, setCuentasContables] = useState([])
+  const [cuentaBulk, setCuentaBulk] = useState('')
+  const [aplicandoBulk, setAplicandoBulk] = useState(false)
 
   useEffect(() => { if (cuentaSel) cargar() }, [cuentaSel, estado])
+  useEffect(() => {
+    apiFetch('/api/cuentas').then(r => r.json())
+      .then(j => setCuentasContables((j.cuentas || []).filter(c => c.es_movimiento)))
+  }, [])
 
   async function cargar() {
     setLoading(true); setErr(null)
+    setSeleccionados(new Set())
+    const sufijo = estado === 'pendientes' ? '&con_sugerencias=1' : ''
     const [mRes, sRes] = await Promise.all([
-      apiFetch(`/api/bancos/movimientos?cuenta_id=${cuentaSel.id}&estado=${estado}&limit=300`),
+      apiFetch(`/api/bancos/movimientos?cuenta_id=${cuentaSel.id}&estado=${estado}&limit=300${sufijo}`),
       apiFetch(`/api/bancos/cuentas/${cuentaSel.id}/saldo`),
     ])
     const mJson = await mRes.json()
@@ -284,6 +484,67 @@ function TabConciliacion({ esAdmin, cuentas, cuentaSel, setCuentaSel }) {
     })
     if (res.ok) cargar()
   }
+
+  function toggleSel(id) {
+    setSeleccionados(s => {
+      const next = new Set(s)
+      if (next.has(id)) next.delete(id); else next.add(id)
+      return next
+    })
+  }
+  function toggleSelAll() {
+    setSeleccionados(s => {
+      const pendientes = movs.filter(m => !m.asiento_id).map(m => m.id)
+      if (s.size >= pendientes.length) return new Set()
+      return new Set(pendientes)
+    })
+  }
+  function aceptarSugerencias() {
+    const conSug = movs.filter(m => !m.asiento_id && m.sugerencia_regla).map(m => m.id)
+    setSeleccionados(new Set(conSug))
+  }
+  function autoFillCuentaBulk() {
+    // Si todos los seleccionados tienen la misma sugerencia, usarla.
+    const sels = movs.filter(m => seleccionados.has(m.id) && m.sugerencia_regla)
+    if (sels.length === 0) return
+    const cuentaId = sels[0].sugerencia_regla.cuenta_id
+    if (sels.every(s => s.sugerencia_regla.cuenta_id === cuentaId)) {
+      setCuentaBulk(cuentaId)
+    }
+  }
+  async function aplicarBulk() {
+    if (!cuentaBulk || seleccionados.size === 0) return
+    setAplicandoBulk(true); setErr(null)
+    const res = await apiFetch('/api/bancos/movimientos/clasificar-bulk', {
+      method: 'POST',
+      body: JSON.stringify({
+        movimiento_ids: Array.from(seleccionados),
+        cuenta_contrapartida_id: cuentaBulk,
+      }),
+    })
+    const json = await res.json()
+    setAplicandoBulk(false)
+    if (!res.ok) { setErr(json.error || 'Error'); return }
+    setCuentaBulk('')
+    cargar()
+  }
+  async function aplicarSugerenciaSola(mov) {
+    if (!mov.sugerencia_regla) return
+    setAplicandoBulk(true); setErr(null)
+    const res = await apiFetch('/api/bancos/movimientos/clasificar-bulk', {
+      method: 'POST',
+      body: JSON.stringify({
+        movimiento_ids: [mov.id],
+        cuenta_contrapartida_id: mov.sugerencia_regla.cuenta_id,
+        concepto: mov.sugerencia_regla.concepto || undefined,
+      }),
+    })
+    setAplicandoBulk(false)
+    if (res.ok) cargar()
+  }
+
+  const pendientesCount = movs.filter(m => !m.asiento_id).length
+  const conSugCount = movs.filter(m => !m.asiento_id && m.sugerencia_regla).length
 
   return (
     <div>
@@ -318,51 +579,108 @@ function TabConciliacion({ esAdmin, cuentas, cuentaSel, setCuentaSel }) {
 
       {err && <div className="bg-red-50 border border-red-100 rounded-lg px-3 py-2 text-xs text-red-700 mb-3">{err}</div>}
 
+      {/* Barra de acciones masivas */}
+      {esAdmin && estado === 'pendientes' && pendientesCount > 0 && (
+        <div className="bg-julia-cream/30 border border-julia-cream rounded-lg px-3 py-2 mb-3 flex flex-wrap items-center gap-2 text-sm">
+          <span className="text-gray-700">
+            <b>{seleccionados.size}</b> seleccionados de {pendientesCount} pendientes
+          </span>
+          {conSugCount > 0 && (
+            <button onClick={aceptarSugerencias}
+              className="text-xs text-julia-red hover:underline">
+              Seleccionar los {conSugCount} con sugerencia
+            </button>
+          )}
+          <div className="flex-1" />
+          {seleccionados.size > 0 && (
+            <>
+              <select value={cuentaBulk} onChange={e => setCuentaBulk(e.target.value)}
+                onFocus={autoFillCuentaBulk} className="input max-w-xs">
+                <option value="">— elegir cuenta contrapartida —</option>
+                {cuentasContables.map(c => <option key={c.id} value={c.id}>{c.codigo} · {c.nombre}</option>)}
+              </select>
+              <button onClick={aplicarBulk} disabled={!cuentaBulk || aplicandoBulk} className="btn-primario">
+                {aplicandoBulk ? '…' : `Clasificar ${seleccionados.size}`}
+              </button>
+            </>
+          )}
+        </div>
+      )}
+
       <div className="bg-white border border-gray-100 rounded-xl overflow-hidden">
         <table className="w-full text-sm">
           <thead className="bg-gray-50">
             <tr>
+              {esAdmin && estado === 'pendientes' && (
+                <th className="px-2 py-2 w-8">
+                  <input type="checkbox"
+                    checked={seleccionados.size > 0 && seleccionados.size === pendientesCount}
+                    onChange={toggleSelAll} className="rounded" />
+                </th>
+              )}
               <th className="text-left text-xs text-gray-400 font-normal px-3 py-2">Fecha</th>
               <th className="text-left text-xs text-gray-400 font-normal px-3 py-2">Descripción</th>
               <th className="text-left text-xs text-gray-400 font-normal px-3 py-2">Ref.</th>
               <th className="text-right text-xs text-gray-400 font-normal px-3 py-2">Débito</th>
               <th className="text-right text-xs text-gray-400 font-normal px-3 py-2">Crédito</th>
-              <th className="text-left text-xs text-gray-400 font-normal px-3 py-2">Asiento</th>
+              <th className="text-left text-xs text-gray-400 font-normal px-3 py-2">Asiento / Sugerencia</th>
               <th className="px-3 py-2"></th>
             </tr>
           </thead>
           <tbody>
             {loading ? (
-              <>{[1,2,3].map(i => <tr key={i}><td colSpan={7}><SkeletonRow /></td></tr>)}</>
+              <>{[1,2,3].map(i => <tr key={i}><td colSpan={esAdmin && estado === 'pendientes' ? 8 : 7}><SkeletonRow /></td></tr>)}</>
             ) : movs.length === 0 ? (
-              <tr><td colSpan={7} className="text-center text-xs text-gray-400 py-8">
+              <tr><td colSpan={esAdmin && estado === 'pendientes' ? 8 : 7} className="text-center text-xs text-gray-400 py-8">
                 {estado === 'pendientes' ? '✓ Sin movimientos pendientes.' : 'Sin movimientos.'}
               </td></tr>
-            ) : movs.map(m => (
-              <tr key={m.id} className="border-t border-gray-50 hover:bg-gray-50">
-                <td className="px-3 py-1.5 text-xs text-gray-600">{formatFecha(m.fecha)}</td>
-                <td className="px-3 py-1.5 text-gray-800">{m.descripcion}</td>
-                <td className="px-3 py-1.5 text-xs text-gray-500 font-mono">{m.referencia || '—'}</td>
-                <td className="px-3 py-1.5 text-right tabular-nums text-red-600">{Number(m.debito) > 0 ? fmt(m.debito) : ''}</td>
-                <td className="px-3 py-1.5 text-right tabular-nums text-green-700">{Number(m.credito) > 0 ? fmt(m.credito) : ''}</td>
-                <td className="px-3 py-1.5">
-                  {m.asientos ? (
-                    <span className="text-xs text-julia-red">
-                      #{m.asientos.numero} · {m.asientos.descripcion?.slice(0, 30)}{m.asientos.descripcion?.length > 30 ? '…' : ''}
-                    </span>
-                  ) : <span className="text-xs text-amber-600">— pendiente —</span>}
-                </td>
-                <td className="px-3 py-1.5 text-right whitespace-nowrap">
-                  {esAdmin && (
-                    m.asientos ? (
-                      <button onClick={() => desconciliar(m)} className="text-xs text-gray-400 hover:text-red-500">desconciliar</button>
-                    ) : (
-                      <button onClick={() => setModal({tipo: 'conciliar', mov: m})} className="text-xs text-julia-red hover:underline">conciliar</button>
-                    )
+            ) : movs.map(m => {
+              const sel = seleccionados.has(m.id)
+              const sug = m.sugerencia_regla
+              return (
+                <tr key={m.id} className={`border-t border-gray-50 hover:bg-gray-50 ${sel ? 'bg-julia-cream/20' : ''}`}>
+                  {esAdmin && estado === 'pendientes' && (
+                    <td className="px-2 py-1.5 text-center">
+                      {!m.asientos && (
+                        <input type="checkbox" checked={sel} onChange={() => toggleSel(m.id)} className="rounded" />
+                      )}
+                    </td>
                   )}
-                </td>
-              </tr>
-            ))}
+                  <td className="px-3 py-1.5 text-xs text-gray-600">{formatFecha(m.fecha)}</td>
+                  <td className="px-3 py-1.5 text-gray-800">{m.descripcion}</td>
+                  <td className="px-3 py-1.5 text-xs text-gray-500 font-mono">{m.referencia || '—'}</td>
+                  <td className="px-3 py-1.5 text-right tabular-nums text-red-600">{Number(m.debito) > 0 ? fmt(m.debito) : ''}</td>
+                  <td className="px-3 py-1.5 text-right tabular-nums text-green-700">{Number(m.credito) > 0 ? fmt(m.credito) : ''}</td>
+                  <td className="px-3 py-1.5">
+                    {m.asientos ? (
+                      <span className="text-xs text-julia-red">
+                        #{m.asientos.numero} · {m.asientos.descripcion?.slice(0, 30)}{m.asientos.descripcion?.length > 30 ? '…' : ''}
+                      </span>
+                    ) : sug ? (
+                      <span className="text-xs text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded">
+                        →  {sug.cuentas_contables?.codigo} {sug.cuentas_contables?.nombre}
+                        <span className="text-emerald-500 ml-1">({sug.descripcion || sug.patron})</span>
+                      </span>
+                    ) : <span className="text-xs text-amber-600">— pendiente —</span>}
+                  </td>
+                  <td className="px-3 py-1.5 text-right whitespace-nowrap">
+                    {esAdmin && (
+                      m.asientos ? (
+                        <button onClick={() => desconciliar(m)} className="text-xs text-gray-400 hover:text-red-500">desconciliar</button>
+                      ) : (
+                        <div className="flex gap-2 justify-end">
+                          {sug && (
+                            <button onClick={() => aplicarSugerenciaSola(m)} disabled={aplicandoBulk}
+                              className="text-xs text-emerald-700 hover:underline">aplicar</button>
+                          )}
+                          <button onClick={() => setModal({tipo: 'conciliar', mov: m})} className="text-xs text-julia-red hover:underline">manual</button>
+                        </div>
+                      )
+                    )}
+                  </td>
+                </tr>
+              )
+            })}
           </tbody>
         </table>
       </div>

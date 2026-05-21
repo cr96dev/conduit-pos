@@ -6,6 +6,7 @@
 
 import { createHash } from 'crypto'
 import { requireAuth, requireAdmin } from '../../../../lib/auth'
+import { aplicarReglas } from '../../../../lib/bancos-reglas'
 
 const round2 = (n) => Math.round((Number(n) + Number.EPSILON) * 100) / 100
 
@@ -19,7 +20,7 @@ async function list(req, res) {
   const auth = await requireAuth(req)
   if (auth.error) return res.status(auth.status).json({ error: auth.error })
 
-  const { cuenta_id, desde, hasta, estado, limit = 200 } = req.query
+  const { cuenta_id, desde, hasta, estado, limit = 200, con_sugerencias } = req.query
   if (!cuenta_id) return res.status(400).json({ error: 'cuenta_id requerido' })
 
   let q = auth.admin
@@ -37,7 +38,22 @@ async function list(req, res) {
 
   const { data, error } = await q
   if (error) return res.status(500).json({ ok: false, error: error.message })
-  return res.status(200).json({ ok: true, movimientos: data })
+
+  let movimientos = data || []
+
+  if (con_sugerencias === '1') {
+    const { data: reglas } = await auth.admin
+      .from('bancos_reglas_clasificacion')
+      .select('id, patron, tipo_match, aplica_a, cuenta_id, descripcion, concepto, prioridad, activa, cuentas_contables(codigo, nombre)')
+      .eq('activa', true).order('prioridad')
+    movimientos = movimientos.map(m => {
+      if (m.asiento_id) return m
+      const match = aplicarReglas(reglas, m)
+      return match ? { ...m, sugerencia_regla: match } : m
+    })
+  }
+
+  return res.status(200).json({ ok: true, movimientos })
 }
 
 async function importar(req, res) {
