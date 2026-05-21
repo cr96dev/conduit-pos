@@ -88,9 +88,8 @@ async function editar(req, res, id) {
       } else {
         const sub = subsMap.get(raw.sub_receta_id)
         if (!sub) return res.status(400).json({ error: `ingrediente ${i+1}: sub-receta no encontrada` })
-        const subRinde = Math.max(Number(sub.rinde_cantidad) || 1, 0.0001)
-        const subCosto = Number(sub.costo_calculado) || 0
-        snap = Number((subCosto / subRinde).toFixed(4))
+        // costo_calculado YA es por unidad del rinde — snapshot directo
+        snap = Number((Number(sub.costo_calculado) || 0).toFixed(4))
         unidad = raw.unidad || sub.rinde_unidad
         subtotal = Number((cantidad * snap).toFixed(4))
       }

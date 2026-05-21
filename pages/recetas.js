@@ -251,11 +251,11 @@ function ModalReceta({ recetaId, loyverseItems, insumos, recetas, onClose, onSav
       .filter(r => r.id !== recetaId && r.activa)
       .map(r => {
         const rinde = Math.max(Number(r.rinde_cantidad) || 1, 0.0001)
-        const costoTotalSub = Number(r.costo_calculado) || 0
         return {
           value: 'r:' + r.id, label: r.nombre,
           tipo: 'receta', unidad: r.rinde_unidad || 'unidad',
-          costo: costoTotalSub / rinde,
+          // costo_calculado YA es por unidad del rinde — usar directo
+          costo: Number(r.costo_calculado) || 0,
           sin_costo: !r.costo_calculado,
           rinde,
         }
