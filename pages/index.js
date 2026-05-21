@@ -29,10 +29,10 @@ export default function Login({ session }) {
 
         {/* Logo */}
         <div className="flex flex-col items-center mb-8">
-          <img src="/logo.svg" alt="GasOps" className="w-full object-contain mb-3" style={{ height: '140px' }} />
+          <img src="/logo.svg" alt="Julia Bakery" className="w-full object-contain mb-3" style={{ height: '140px' }} />
           <div className="flex items-center gap-2 mt-1">
             <div className="h-px w-12 bg-gray-200"></div>
-            <p className="text-xs text-gray-400 text-center">Sistema de gestión de estaciones</p>
+            <p className="text-xs text-gray-400 text-center">Sistema de gestión</p>
             <div className="h-px w-12 bg-gray-200"></div>
           </div>
         </div>
@@ -65,7 +65,7 @@ export default function Login({ session }) {
           </button>
         </form>
 
-        <p className="text-center text-xs text-gray-300 mt-6">GasOps · Hidrocom Guatemala</p>
+        <p className="text-center text-xs text-gray-300 mt-6">Julia Bakery · Guatemala</p>
       </div>
     </div>
   )
