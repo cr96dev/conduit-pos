@@ -83,10 +83,12 @@ export default function Inventario({ session }) {
         <div className="flex gap-1 border-b border-gray-200 mb-6">
           <TabBtn active={tab === 'terminados'} onClick={() => setTab('terminados')}>Productos terminados</TabBtn>
           <TabBtn active={tab === 'insumos'}    onClick={() => setTab('insumos')}>Insumos</TabBtn>
+          <TabBtn active={tab === 'mermas'}     onClick={() => setTab('mermas')}>Histórico de mermas</TabBtn>
         </div>
 
         {tab === 'terminados' && <TabTerminados esAdmin={esAdmin} />}
         {tab === 'insumos'    && <TabInsumos esAdmin={esAdmin} />}
+        {tab === 'mermas'     && <TabHistoricoMermas />}
       </div>
     </Layout>
   )
@@ -137,6 +139,8 @@ function TabTerminados({ esAdmin }) {
   const [filtro, setFiltro] = useState('relevantes') // 'relevantes' | 'todos' | 'con-final' | 'variacion'
   const [savingMap, setSavingMap] = useState({})     // variant_id -> 'saving' | 'ok' | 'error'
   const [err, setErr] = useState(null)
+  const [aviso, setAviso] = useState(null)           // mensaje transitorio (carry-forward, etc.)
+  const [propagando, setPropagando] = useState(false)
 
   useEffect(() => { cargar(fecha) }, [fecha])
 
@@ -222,6 +226,31 @@ function TabTerminados({ esAdmin }) {
     })
   }, [data.filas, busqueda, filtro])
 
+  // Candidatos para carry-forward: filas con inicial vacio Y final de ayer disponible.
+  const candidatosCarryForward = useMemo(() => {
+    return data.filas.filter(f =>
+      f.inventario_inicial == null && f.inicial_sugerido_ayer != null
+    )
+  }, [data.filas])
+
+  async function propagarDesdeAyer() {
+    setPropagando(true); setErr(null); setAviso(null)
+    const res = await apiFetch('/api/inventario/diario/carry-forward', {
+      method: 'POST',
+      body: JSON.stringify({ fecha }),
+    })
+    const json = await res.json().catch(() => ({}))
+    setPropagando(false)
+    if (!res.ok) {
+      setErr(json.error || 'Error al propagar conteos')
+      return
+    }
+    setAviso(`✓ Cargados ${json.propagados} producto(s) desde el conteo del día anterior. Podés editarlos.`)
+    setTimeout(() => setAviso(null), 6000)
+    // Recargar para reflejar los nuevos iniciales y recalcular teoricos/variacion.
+    cargar(fecha)
+  }
+
   const esHoy = fecha === fechaHoyGT()
 
   return (
@@ -299,6 +328,27 @@ function TabTerminados({ esAdmin }) {
           ))}
         </div>
       </div>
+
+      {/* Carry-forward: sugerencia cuando hay finales de ayer disponibles */}
+      {esAdmin && candidatosCarryForward.length > 0 && (
+        <div className="flex items-center justify-between gap-3 bg-amber-50/60 border border-amber-100 rounded-xl px-4 py-3 mb-3">
+          <div className="text-sm text-amber-900 leading-snug">
+            <span className="font-medium">{candidatosCarryForward.length} producto{candidatosCarryForward.length === 1 ? '' : 's'}</span>
+            {' '}sin inicial cargado pero con conteo final del día anterior.
+            <span className="text-amber-700/80"> Podés tomar el final de ayer como inicial de hoy.</span>
+          </div>
+          <button
+            onClick={propagarDesdeAyer}
+            disabled={propagando}
+            className="text-xs font-medium px-3 py-1.5 bg-white border border-amber-300 text-amber-800 rounded-md hover:bg-amber-50 disabled:opacity-50 whitespace-nowrap">
+            {propagando ? 'Cargando…' : 'Usar conteo de ayer'}
+          </button>
+        </div>
+      )}
+
+      {aviso && (
+        <div className="bg-emerald-50 border border-emerald-100 rounded-lg px-3 py-2 text-xs text-emerald-800 mb-3">{aviso}</div>
+      )}
 
       {err && (
         <div className="bg-red-50 border border-red-100 rounded-lg px-3 py-2 text-xs text-red-700 mb-3">{err}</div>
@@ -449,16 +499,31 @@ function FilaProducto({ fila, bordeArriba, esAdmin, estadoSave, onChange }) {
         )}
       </td>
       <td className="px-3 py-3.5 text-right">
-        <input
-          type="number" step="any" inputMode="decimal"
-          value={inicial}
-          disabled={!esAdmin}
-          onChange={e => setInicial(e.target.value)}
-          onBlur={e => commitInicial(e.target.value)}
-          onKeyDown={e => { if (e.key === 'Enter') e.target.blur() }}
-          placeholder="—"
-          className="w-24 text-right tabular-nums px-2 py-1.5 border border-transparent rounded-md hover:border-gray-200 focus:outline-none focus:border-julia-red focus:bg-white text-sm disabled:bg-transparent disabled:cursor-default"
-        />
+        <div className="flex items-center justify-end gap-1.5">
+          {esAdmin && fila.inventario_inicial == null && fila.inicial_sugerido_ayer != null && (
+            <button
+              type="button"
+              onClick={() => {
+                const v = String(fila.inicial_sugerido_ayer)
+                setInicial(v)
+                commitInicial(v)
+              }}
+              title={`Usar ${formatNum(fila.inicial_sugerido_ayer)} (final de ayer)`}
+              className="text-[10px] text-amber-700 hover:text-amber-900 hover:underline tabular-nums whitespace-nowrap">
+              ← {formatNum(fila.inicial_sugerido_ayer)}
+            </button>
+          )}
+          <input
+            type="number" step="any" inputMode="decimal"
+            value={inicial}
+            disabled={!esAdmin}
+            onChange={e => setInicial(e.target.value)}
+            onBlur={e => commitInicial(e.target.value)}
+            onKeyDown={e => { if (e.key === 'Enter') e.target.blur() }}
+            placeholder="—"
+            className="w-24 text-right tabular-nums px-2 py-1.5 border border-transparent rounded-md hover:border-gray-200 focus:outline-none focus:border-julia-red focus:bg-white text-sm disabled:bg-transparent disabled:cursor-default"
+          />
+        </div>
       </td>
       <td className="px-3 py-3.5 text-right tabular-nums"
           title={teorico != null ? 'Final teórico = inicial − ventas del día' : 'Cargá el inventario inicial para calcular el final teórico'}>
@@ -1067,4 +1132,255 @@ function Campo({ label, required, children }) {
       {children}
     </div>
   )
+}
+
+// ============================================================================
+// Tab 3: Historico de mermas
+// Cruza conteos_diarios_producto en un rango para mostrar el top de productos
+// con mas merma acumulada (variacion negativa). Calcula monto estimado usando
+// el precio promedio del periodo y arma un sparkline por producto.
+// ============================================================================
+
+const PRESETS = [
+  { v: '7',   l: '7 días'  },
+  { v: '30',  l: '30 días' },
+  { v: 'mes', l: 'Mes actual' },
+  { v: 'custom', l: 'Personalizado' },
+]
+
+function rangoDePreset(preset) {
+  const hoy = fechaHoyGT()
+  if (preset === '7' || preset === '30') {
+    const n = parseInt(preset, 10)
+    const [y, m, d] = hoy.split('-').map(Number)
+    const desde = new Date(Date.UTC(y, m - 1, d) - (n - 1) * 86_400_000).toISOString().slice(0, 10)
+    return { desde, hasta: hoy }
+  }
+  if (preset === 'mes') {
+    const [y, m] = hoy.split('-').map(Number)
+    const desde = `${String(y).padStart(4, '0')}-${String(m).padStart(2, '0')}-01`
+    return { desde, hasta: hoy }
+  }
+  return null
+}
+
+function TabHistoricoMermas() {
+  const [preset, setPreset] = useState('7')
+  const [rango, setRango] = useState(() => rangoDePreset('7'))
+  const [loading, setLoading] = useState(true)
+  const [data, setData] = useState({ resumen: null, ranking: [], fechas: [] })
+  const [err, setErr] = useState(null)
+
+  useEffect(() => {
+    if (preset !== 'custom') {
+      const r = rangoDePreset(preset)
+      if (r) setRango(r)
+    }
+  }, [preset])
+
+  useEffect(() => {
+    if (!rango?.desde || !rango?.hasta) return
+    cargar(rango.desde, rango.hasta)
+  }, [rango?.desde, rango?.hasta])
+
+  async function cargar(desde, hasta) {
+    setLoading(true); setErr(null)
+    const res = await apiFetch(`/api/inventario/historico-mermas?desde=${desde}&hasta=${hasta}`)
+    const json = await res.json()
+    if (!res.ok) {
+      setErr(json.error || 'Error cargando histórico de mermas')
+      setData({ resumen: null, ranking: [], fechas: [] })
+    } else {
+      setData({ resumen: json.resumen, ranking: json.ranking || [], fechas: json.fechas || [] })
+    }
+    setLoading(false)
+  }
+
+  const resumen = data.resumen
+
+  return (
+    <div>
+      {/* Header + period selector */}
+      <div className="bg-white border border-gray-100 rounded-2xl p-5 mb-6 shadow-sm">
+        <div className="flex flex-wrap items-center justify-between gap-4 mb-5">
+          <div>
+            <div className="text-xs uppercase tracking-wider text-gray-400 font-medium">Histórico de mermas</div>
+            <div className="text-lg text-gray-900 font-medium mt-0.5">
+              {rango?.desde && rango?.hasta && (
+                <>Del {formatFechaCorta(rango.desde)} al {formatFechaCorta(rango.hasta)}</>
+              )}
+            </div>
+          </div>
+
+          <div className="flex gap-1 bg-gray-50 border border-gray-200 rounded-lg p-1 text-xs">
+            {PRESETS.map(p => (
+              <button key={p.v} onClick={() => setPreset(p.v)}
+                className={`px-3 py-1.5 rounded-md transition ${preset === p.v
+                  ? 'bg-white text-julia-red shadow-sm font-medium'
+                  : 'text-gray-500 hover:text-gray-800'}`}>
+                {p.l}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {preset === 'custom' && (
+          <div className="flex flex-wrap items-center gap-3 mb-5 pb-5 border-b border-gray-100">
+            <div className="flex items-center gap-2">
+              <label className="text-xs text-gray-500">Desde</label>
+              <input type="date" value={rango?.desde || ''} max={rango?.hasta}
+                onChange={e => setRango(r => ({ ...r, desde: e.target.value }))}
+                className="px-2.5 py-1.5 border border-gray-200 rounded-md text-sm focus:outline-none focus:border-julia-red" />
+            </div>
+            <div className="flex items-center gap-2">
+              <label className="text-xs text-gray-500">Hasta</label>
+              <input type="date" value={rango?.hasta || ''} min={rango?.desde} max={fechaHoyGT()}
+                onChange={e => setRango(r => ({ ...r, hasta: e.target.value }))}
+                className="px-2.5 py-1.5 border border-gray-200 rounded-md text-sm focus:outline-none focus:border-julia-red" />
+            </div>
+          </div>
+        )}
+
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <ResumenCard
+            label="Productos afectados"
+            value={resumen?.productos_afectados ?? '—'}
+            hint="con merma en el período" />
+          <ResumenCard
+            label="Merma en unidades"
+            value={resumen ? formatNum(Math.abs(resumen.merma_unidades_total || 0)) : '—'}
+            hint="suma de variaciones negativas"
+            tone={resumen && (resumen.merma_unidades_total || 0) < 0 ? 'red' : 'neutral'} />
+          <ResumenCard
+            label="Valor estimado"
+            value={resumen ? `Q ${formatNum(resumen.merma_monto_estimado || 0)}` : '—'}
+            hint="a precio promedio del período"
+            tone={resumen && (resumen.merma_monto_estimado || 0) > 0 ? 'red' : 'neutral'} />
+          <ResumenCard
+            label="Días con conteo"
+            value={resumen?.dias_con_conteo ?? '—'}
+            hint="en el rango seleccionado" />
+        </div>
+      </div>
+
+      {err && (
+        <div className="bg-red-50 border border-red-100 rounded-lg px-3 py-2 text-xs text-red-700 mb-3">{err}</div>
+      )}
+
+      {/* Tabla ranking */}
+      <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm">
+        <div className="px-5 py-3 border-b border-gray-100 flex items-baseline justify-between">
+          <h2 className="text-sm font-medium text-gray-900">Top productos con más merma</h2>
+          <span className="text-xs text-gray-400">{data.ranking.length} producto{data.ranking.length === 1 ? '' : 's'}</span>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead className="bg-gray-50/80 border-b border-gray-100">
+              <tr>
+                <th className="text-left  text-xs text-gray-500 font-medium px-5 py-3">#</th>
+                <th className="text-left  text-xs text-gray-500 font-medium px-3 py-3">Producto</th>
+                <th className="text-right text-xs text-gray-500 font-medium px-3 py-3 w-28">Merma <span className="text-gray-400 font-normal">(unid.)</span></th>
+                <th className="text-right text-xs text-gray-500 font-medium px-3 py-3 w-28">Valor estim.</th>
+                <th className="text-right text-xs text-gray-500 font-medium px-3 py-3 w-24">Días</th>
+                <th className="text-left  text-xs text-gray-500 font-medium px-5 py-3 w-32">Tendencia</th>
+              </tr>
+            </thead>
+            <tbody>
+              {loading ? (
+                <>{[1, 2, 3, 4, 5].map(i => <tr key={i}><td colSpan={6}><SkeletonRow /></td></tr>)}</>
+              ) : data.ranking.length === 0 ? (
+                <tr><td colSpan={6} className="text-center text-xs text-gray-400 py-12">
+                  Sin merma registrada en este período. Cargá inicial y final en la pestaña de productos para que aparezcan acá.
+                </td></tr>
+              ) : (
+                data.ranking.map((r, i) => (
+                  <FilaMerma key={r.variant_id} pos={i + 1} fila={r} fechas={data.fechas} />
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+        {!loading && data.ranking.length > 0 && (
+          <div className="px-5 py-3 border-t border-gray-100 bg-gray-50/40 text-xs text-gray-500">
+            Valor estimado calculado con el precio promedio de venta del período. Los productos sin ventas en el rango aparecen sin valor.
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+function FilaMerma({ pos, fila, fechas }) {
+  return (
+    <tr className={`${pos > 1 ? 'border-t border-gray-50' : ''} hover:bg-gray-50/40`}>
+      <td className="px-5 py-3.5 text-xs text-gray-400 tabular-nums">{pos}</td>
+      <td className="px-3 py-3.5">
+        <div className="text-gray-900 leading-tight">{fila.item_name}</div>
+        <div className="text-xs text-gray-400 mt-0.5 flex items-center gap-2">
+          {fila.variant_name && <span>{fila.variant_name}</span>}
+          {fila.variant_name && fila.sku && <span>·</span>}
+          {fila.sku && <span className="font-mono">{fila.sku}</span>}
+        </div>
+      </td>
+      <td className="px-3 py-3.5 text-right">
+        <div className="text-red-700 font-medium tabular-nums">{formatNum(fila.merma_unidades)}</div>
+        {fila.dias_con_merma > 0 && (
+          <div className="text-[11px] text-gray-400 tabular-nums">{fila.dias_con_merma} día{fila.dias_con_merma === 1 ? '' : 's'} c/merma</div>
+        )}
+      </td>
+      <td className="px-3 py-3.5 text-right">
+        {fila.monto_merma_estimado != null ? (
+          <div>
+            <div className="text-gray-800 font-medium tabular-nums">Q {formatNum(fila.monto_merma_estimado)}</div>
+            <div className="text-[11px] text-gray-400 tabular-nums">@ Q {formatNum(fila.precio_promedio || 0)}</div>
+          </div>
+        ) : (
+          <span className="text-gray-300 text-xs italic">sin ventas</span>
+        )}
+      </td>
+      <td className="px-3 py-3.5 text-right text-gray-600 tabular-nums">
+        {fila.dias_con_conteo}<span className="text-gray-400"> / {fechas.length}</span>
+      </td>
+      <td className="px-5 py-3.5">
+        <Sparkline serie={fila.serie} />
+      </td>
+    </tr>
+  )
+}
+
+// Sparkline SVG: barras hacia abajo en proporcion a la merma de cada dia.
+function Sparkline({ serie }) {
+  const W = 96, H = 24, GAP = 1
+  const n = (serie || []).length
+  if (!n) return null
+  const max = Math.max(1, ...serie.map(p => Math.abs(p.merma || 0)))
+  const bw = (W - GAP * (n - 1)) / n
+  return (
+    <svg width={W} height={H} viewBox={`0 0 ${W} ${H}`} className="overflow-visible">
+      <line x1="0" y1="0" x2={W} y2="0" stroke="#e5e7eb" strokeWidth="1" />
+      {serie.map((p, i) => {
+        const m = Math.abs(p.merma || 0)
+        if (m === 0) return null
+        const h = (m / max) * (H - 2)
+        const x = i * (bw + GAP)
+        return (
+          <rect
+            key={p.fecha}
+            x={x} y={0} width={bw} height={h}
+            fill="#dc2626" opacity={0.85}
+            rx={0.5}
+          >
+            <title>{p.fecha}: {formatNum(-m)}</title>
+          </rect>
+        )
+      })}
+    </svg>
+  )
+}
+
+function formatFechaCorta(fecha) {
+  if (!fecha) return ''
+  const [y, m, d] = fecha.split('-').map(Number)
+  const dt = new Date(Date.UTC(y, m - 1, d, 12, 0, 0))
+  return dt.toLocaleDateString('es-GT', { day: 'numeric', month: 'short' })
 }

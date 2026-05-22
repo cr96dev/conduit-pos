@@ -129,6 +129,27 @@ async function list(req, res) {
       conteoPorVariant[c.variant_id] = c
     }
 
+    // 4b) Final del dia anterior por variante — para sugerir como inicial de hoy.
+    const fechaAyer = (() => {
+      const [y, m, d] = fecha.split('-').map(Number)
+      const ms = Date.UTC(y, m - 1, d) - 86_400_000
+      return new Date(ms).toISOString().slice(0, 10)
+    })()
+
+    let ayerQuery = auth.admin
+      .from('conteos_diarios_producto')
+      .select('variant_id, store_id, inventario_final')
+      .eq('fecha', fechaAyer)
+      .not('inventario_final', 'is', null)
+    if (store_id) ayerQuery = ayerQuery.eq('store_id', store_id)
+    const { data: ayerData, error: ayerErr } = await ayerQuery
+    if (ayerErr) throw new Error('conteos ayer: ' + ayerErr.message)
+
+    const finalAyerPorVariant = {}
+    for (const r of ayerData || []) {
+      finalAyerPorVariant[r.variant_id] = Number(r.inventario_final)
+    }
+
     // 5) Armar filas finales.
     let totalVentasMonto = 0
     let totalVentasCantidad = 0
@@ -156,6 +177,7 @@ async function list(req, res) {
         if (variacion < 0) mermaTotal += variacion
       }
 
+      const sugeridoAyer = finalAyerPorVariant[v.variant_id]
       return {
         variant_id:        v.variant_id,
         item_id:           v.item_id,
@@ -170,6 +192,7 @@ async function list(req, res) {
         inventario_final:   final,
         inventario_teorico: teorico,
         variacion,
+        inicial_sugerido_ayer: sugeridoAyer != null ? round3(sugeridoAyer) : null,
         conteo_id:         conteo?.id || null,
         notas:             conteo?.notas || null,
         updated_at:        conteo?.updated_at || null,
