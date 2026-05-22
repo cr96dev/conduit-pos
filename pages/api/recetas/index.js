@@ -3,7 +3,7 @@
 //   body { ..., ingredientes: [{ insumo_id?, sub_receta_id?, cantidad, unidad?, notas? }] }
 
 import { requireAuth, requireAdmin } from '../../../lib/auth'
-import { recalcularUnaReceta, validarSinCiclos } from '../../../lib/recetas'
+import { recalcularUnaReceta, validarSinCiclos, calcularMargen } from '../../../lib/recetas'
 
 export default async function handler(req, res) {
   if (req.method === 'GET')  return list(req, res)
@@ -96,10 +96,11 @@ async function create(req, res) {
   const merma = (Number(merma_pct) || 0) / 100
   const costoCalc = Number(((totalCosto / rinde) * (1 + merma)).toFixed(4))
   const costoPers = costo_personalizado != null && costo_personalizado !== '' ? Number(costo_personalizado) : null
-  // margen se calcula sobre el costo efectivo (personalizado si existe, sino calculado)
+  // margen se calcula sobre el costo efectivo (personalizado si existe, sino calculado).
+  // calcularMargen descuenta IVA internamente — recibe el precio TAL COMO SE VENDE.
   const costoEfec = costoPers != null ? costoPers : costoCalc
-  const margenPct = precio_venta != null && precio_venta !== ''
-    ? Math.round(((Number(precio_venta) - costoEfec) / Number(precio_venta)) * 100 * 100) / 100
+  const margenPct = (precio_venta != null && precio_venta !== '')
+    ? calcularMargen(costoEfec, Number(precio_venta))
     : null
 
   const { data: receta, error: rErr } = await auth.admin.from('recetas').insert({
