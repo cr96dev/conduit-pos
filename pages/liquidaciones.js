@@ -255,18 +255,41 @@ function ModalCalcular({ empleado, onClose, onSaved }) {
           </div>
         )}
 
-        <div className="grid grid-cols-2 gap-3">
-          <Campo label="Tipo de baja" required>
-            <select value={tipoBaja} onChange={e => setTipoBaja(e.target.value)} className="input">
-              {Object.entries(TIPO_BAJA).map(([k, v]) => (
-                <option key={k} value={k}>{v.label} ({v.art})</option>
-              ))}
-            </select>
-          </Campo>
-          <Campo label="Fecha de baja" required>
-            <input type="date" required value={fechaBaja} onChange={e => setFechaBaja(e.target.value)} className="input" />
-          </Campo>
-        </div>
+        <Campo label="Tipo de baja" required>
+          <div className="grid grid-cols-3 gap-2">
+            {Object.entries(TIPO_BAJA).map(([k, v]) => {
+              const activo = tipoBaja === k
+              return (
+                <button
+                  key={k}
+                  type="button"
+                  onClick={() => setTipoBaja(k)}
+                  className={`text-left px-3 py-2.5 rounded-lg border transition ${
+                    activo
+                      ? 'border-julia-red bg-julia-cream/40 ring-1 ring-julia-red/30'
+                      : 'border-gray-200 hover:border-gray-300 bg-white'
+                  }`}
+                >
+                  <div className={`text-sm font-medium ${activo ? 'text-julia-red' : 'text-gray-700'}`}>
+                    {v.label}
+                  </div>
+                  <div className="text-[10px] uppercase tracking-wide text-gray-400 mt-0.5">{v.art}</div>
+                </button>
+              )
+            })}
+          </div>
+        </Campo>
+
+        {tipoBaja !== 'despido_injustificado' && (
+          <div className="bg-amber-50/60 border border-amber-100 rounded-lg px-3 py-2 text-xs text-amber-800">
+            <strong>{TIPO_BAJA[tipoBaja].label}</strong>: la liquidación <em>no incluye</em> indemnización
+            (Art. 82) ni preaviso (Art. 78). Sí se pagan aguinaldo, bono 14 y vacaciones proporcionales.
+          </div>
+        )}
+
+        <Campo label="Fecha de baja" required>
+          <input type="date" required value={fechaBaja} onChange={e => setFechaBaja(e.target.value)} className="input" />
+        </Campo>
 
         <Campo label="Motivo">
           <input type="text" value={motivo} onChange={e => setMotivo(e.target.value)} className="input"
