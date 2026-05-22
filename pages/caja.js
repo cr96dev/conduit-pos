@@ -253,12 +253,9 @@ function ModalNuevoCierre({ onClose, onSaved }) {
             <div className="text-xs text-gray-400">{cargandoPreview ? 'Calculando…' : (preview ? `${preview.cantidad_recibos} recibos` : '')}</div>
           </div>
           {preview ? (
-            <div className="grid grid-cols-4 gap-2 text-sm">
-              <Dato label="Efectivo">{formatMoney(preview.ventas_efectivo)}</Dato>
-              <Dato label="Tarjeta">{formatMoney(preview.ventas_tarjeta)}</Dato>
-              <Dato label="Otros">{formatMoney(preview.ventas_otros)}</Dato>
-              <Dato label="Total" bold>{formatMoney(preview.ventas_total)}</Dato>
-            </div>
+            <>
+              <DesglosePagos desglose={preview.desglose_pagos} total={preview.ventas_total} />
+            </>
           ) : (
             <div className="text-xs text-gray-400">Sin datos para esa fecha</div>
           )}
@@ -411,12 +408,7 @@ function ModalDetalleCierre({ cierreId, esAdmin, onClose, onChanged }) {
         {/* Ventas */}
         <div className="bg-gray-50 border border-gray-100 rounded-lg p-3">
           <div className="text-xs uppercase tracking-wide text-gray-500 mb-2">Ventas Loyverse</div>
-          <div className="grid grid-cols-4 gap-2 text-sm">
-            <Dato label="Efectivo">{formatMoney(cierre.ventas_efectivo)}</Dato>
-            <Dato label="Tarjeta">{formatMoney(cierre.ventas_tarjeta)}</Dato>
-            <Dato label="Otros">{formatMoney(cierre.ventas_otros)}</Dato>
-            <Dato label="Total" bold>{formatMoney(cierre.ventas_total)}</Dato>
-          </div>
+          <DesglosePagos desglose={cierre.desglose_pagos} total={cierre.ventas_total} fallback={{ efectivo: cierre.ventas_efectivo, tarjeta: cierre.ventas_tarjeta, otros: cierre.ventas_otros }} />
         </div>
 
         {/* Egresos */}
@@ -537,6 +529,32 @@ function Dato({ label, children, bold }) {
     <div>
       <div className="text-xs text-gray-400">{label}</div>
       <div className={`tabular-nums ${bold ? 'text-gray-900 font-semibold' : 'text-gray-700'}`}>{children}</div>
+    </div>
+  )
+}
+
+// Muestra TODOS los métodos de pago del desglose. Si el desglose esta vacio
+// (cierres antiguos), cae al modelo viejo de 3 buckets.
+function DesglosePagos({ desglose, total, fallback }) {
+  let entries = []
+  if (desglose && typeof desglose === 'object' && Object.keys(desglose).length > 0) {
+    entries = Object.entries(desglose)
+      .filter(([_, v]) => Number(v) !== 0)
+      .sort((a, b) => Math.abs(Number(b[1])) - Math.abs(Number(a[1])))
+  } else if (fallback) {
+    if (Number(fallback.efectivo)) entries.push(['EFECTIVO', fallback.efectivo])
+    if (Number(fallback.tarjeta))  entries.push(['TARJETA',  fallback.tarjeta])
+    if (Number(fallback.otros))    entries.push(['OTROS',    fallback.otros])
+  }
+  if (entries.length === 0) {
+    return <div className="text-xs text-gray-400">Sin ventas</div>
+  }
+  return (
+    <div className="grid grid-cols-2 md:grid-cols-3 gap-2 text-sm">
+      {entries.map(([nombre, monto]) => (
+        <Dato key={nombre} label={nombre}>{formatMoney(monto)}</Dato>
+      ))}
+      <Dato label="Total" bold>{formatMoney(total)}</Dato>
     </div>
   )
 }

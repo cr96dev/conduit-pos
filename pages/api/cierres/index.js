@@ -79,6 +79,7 @@ async function create(req, res) {
       ventas_otros: ventas.ventas_otros,
       ventas_total: ventas.ventas_total,
       cantidad_recibos: ventas.cantidad_recibos,
+      desglose_pagos: ventas.desglose_pagos || {},
       egresos_total,
       saldo_esperado,
       diferencia,
