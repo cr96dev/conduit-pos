@@ -1,0 +1,677 @@
+import { useEffect, useMemo, useState } from 'react'
+import { useRouter } from 'next/router'
+import { supabase } from '../lib/supabase'
+import Layout from '../components/Layout'
+import { SkeletonRow } from '../components/Skeleton'
+
+// ============================================================================
+// Helpers
+// ============================================================================
+
+async function apiFetch(path, opts = {}) {
+  const { data: { session } } = await supabase.auth.getSession()
+  const headers = { 'Content-Type': 'application/json', ...(opts.headers || {}) }
+  if (session?.access_token) headers.Authorization = `Bearer ${session.access_token}`
+  return fetch(path, { ...opts, headers })
+}
+
+const fmtNum = (n, d = 0) => Number(n || 0).toLocaleString('es-GT', { minimumFractionDigits: d, maximumFractionDigits: d })
+const fmtQ   = (n) => 'Q ' + fmtNum(n, 2)
+const fmtPct = (n) => n == null ? '—' : fmtNum(n, 2) + '%'
+const hoyGT  = () => new Date(Date.now() - 6*3600_000).toISOString().slice(0, 10)
+
+function inicioMes()    { const h = hoyGT().split('-'); return `${h[0]}-${h[1]}-01` }
+function inicioMesPrev(){ const [y, m] = hoyGT().split('-').map(Number); const d = new Date(Date.UTC(y, m - 2, 1)); return d.toISOString().slice(0, 10) }
+function finMesPrev()   { const [y, m] = hoyGT().split('-').map(Number); const d = new Date(Date.UTC(y, m - 1, 0)); return d.toISOString().slice(0, 10) }
+function inicioAnio()   { return hoyGT().slice(0, 4) + '-01-01' }
+function hace30dias()   { return new Date(Date.now() - 30*86_400_000 - 6*3600_000).toISOString().slice(0, 10) }
+
+function formatFecha(s) {
+  if (!s) return ''
+  const [y, m, d] = s.split('-').map(Number)
+  return new Date(Date.UTC(y, m - 1, d, 12)).toLocaleDateString('es-GT', { day: 'numeric', month: 'short', year: 'numeric' })
+}
+
+async function descargarExcel(filename, sheets) {
+  const XLSX = await import('xlsx')   // lazy: solo cuando se clickea Export
+  const wb = XLSX.utils.book_new()
+  for (const { name, data } of sheets) {
+    if (!data || data.length === 0) continue
+    const ws = XLSX.utils.json_to_sheet(data)
+    XLSX.utils.book_append_sheet(wb, ws, name.slice(0, 31))
+  }
+  XLSX.writeFile(wb, filename)
+}
+
+// ============================================================================
+// Pagina
+// ============================================================================
+
+export default function Reportes({ session }) {
+  const router = useRouter()
+  const [perfil, setPerfil] = useState(null)
+  const [tab, setTab] = useState('dashboard')
+
+  // Rango con default = mes actual
+  const [desde, setDesde] = useState(inicioMes())
+  const [hasta, setHasta] = useState(hoyGT())
+
+  useEffect(() => {
+    if (!session) { router.push('/'); return }
+    supabase.from('perfiles').select('id, email, nombre_completo, rol, activo').eq('id', session.user.id).single()
+      .then(({ data }) => setPerfil(data || { id: session.user.id, email: session.user.email, rol: 'empleado' }))
+  }, [session])
+
+  function setPreset(p) {
+    if (p === 'mes')     { setDesde(inicioMes());      setHasta(hoyGT()) }
+    if (p === 'prev')    { setDesde(inicioMesPrev());  setHasta(finMesPrev()) }
+    if (p === '30d')     { setDesde(hace30dias());     setHasta(hoyGT()) }
+    if (p === 'anio')    { setDesde(inicioAnio());     setHasta(hoyGT()) }
+  }
+
+  return (
+    <Layout perfil={perfil}>
+      <div className="px-4 md:px-10 py-7 max-w-7xl mx-auto">
+        <div className="flex items-baseline justify-between mb-5 no-print">
+          <h1 className="text-2xl font-semibold text-gray-900 tracking-tight">Reportes</h1>
+        </div>
+
+        {/* Header: rango + presets */}
+        <div className="bg-white border border-gray-100 rounded-2xl p-5 mb-5 shadow-sm no-print">
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div className="flex items-center gap-3 flex-wrap">
+              <div className="flex items-center gap-2">
+                <label className="text-xs uppercase tracking-wider text-gray-400 font-medium">Desde</label>
+                <input type="date" value={desde} onChange={e => setDesde(e.target.value)} max={hasta}
+                  className="px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-julia-red" />
+              </div>
+              <div className="flex items-center gap-2">
+                <label className="text-xs uppercase tracking-wider text-gray-400 font-medium">Hasta</label>
+                <input type="date" value={hasta} onChange={e => setHasta(e.target.value)} min={desde} max={hoyGT()}
+                  className="px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-julia-red" />
+              </div>
+            </div>
+            <div className="flex gap-1 bg-gray-50 border border-gray-200 rounded-lg p-1 text-xs">
+              <button onClick={() => setPreset('mes')}  className="px-3 py-1.5 rounded-md text-gray-600 hover:text-julia-red">Este mes</button>
+              <button onClick={() => setPreset('prev')} className="px-3 py-1.5 rounded-md text-gray-600 hover:text-julia-red">Mes pasado</button>
+              <button onClick={() => setPreset('30d')}  className="px-3 py-1.5 rounded-md text-gray-600 hover:text-julia-red">30 días</button>
+              <button onClick={() => setPreset('anio')} className="px-3 py-1.5 rounded-md text-gray-600 hover:text-julia-red">Año actual</button>
+            </div>
+          </div>
+        </div>
+
+        {/* Tabs */}
+        <div className="flex gap-1 border-b border-gray-200 mb-6 no-print overflow-x-auto">
+          <TabBtn active={tab === 'dashboard'}    onClick={() => setTab('dashboard')}>Dashboard</TabBtn>
+          <TabBtn active={tab === 'pnl'}          onClick={() => setTab('pnl')}>Estado de Resultados</TabBtn>
+          <TabBtn active={tab === 'ventas'}       onClick={() => setTab('ventas')}>Ventas</TabBtn>
+          <TabBtn active={tab === 'rentabilidad'} onClick={() => setTab('rentabilidad')}>Rentabilidad</TabBtn>
+        </div>
+
+        {tab === 'dashboard'    && <TabDashboard    desde={desde} hasta={hasta} />}
+        {tab === 'pnl'          && <TabPnL          desde={desde} hasta={hasta} />}
+        {tab === 'ventas'       && <TabVentas       desde={desde} hasta={hasta} />}
+        {tab === 'rentabilidad' && <TabRentabilidad desde={desde} hasta={hasta} />}
+      </div>
+
+      {/* Print stylesheet — para "Save as PDF" del navegador */}
+      <style jsx global>{`
+        @media print {
+          @page { size: A4; margin: 1.2cm; }
+          body { background: white !important; }
+          .no-print { display: none !important; }
+          .print-shadow { box-shadow: none !important; }
+          aside, nav, header { display: none !important; }
+          main { padding: 0 !important; }
+          table { page-break-inside: auto; }
+          tr { page-break-inside: avoid; }
+        }
+      `}</style>
+    </Layout>
+  )
+}
+
+function TabBtn({ active, onClick, children }) {
+  return (
+    <button onClick={onClick}
+      className={`px-4 py-2 text-sm font-medium transition-colors whitespace-nowrap ${
+        active ? 'border-b-2 border-julia-red text-julia-red' : 'text-gray-500 hover:text-gray-800'
+      }`}>
+      {children}
+    </button>
+  )
+}
+
+// ============================================================================
+// Dashboard
+// ============================================================================
+
+function TabDashboard({ desde, hasta }) {
+  const [loading, setLoading] = useState(true)
+  const [data, setData] = useState(null)
+  const [err, setErr] = useState(null)
+
+  useEffect(() => { cargar() }, [desde, hasta])
+  async function cargar() {
+    setLoading(true); setErr(null)
+    const res = await apiFetch(`/api/reportes/dashboard?desde=${desde}&hasta=${hasta}`)
+    const json = await res.json()
+    setLoading(false)
+    if (!res.ok) { setErr(json.error); return }
+    setData(json)
+  }
+
+  if (loading) return <Loading />
+  if (err) return <Error msg={err} />
+  if (!data) return null
+
+  const k = data.kpis
+
+  function exportarExcel() {
+    descargarExcel(`dashboard_${desde}_${hasta}.xlsx`, [
+      { name: 'KPIs', data: [{ ...k, desde, hasta }] },
+      { name: 'Ventas por día', data: data.serie_dias },
+      { name: 'Top productos', data: data.top5_productos },
+      { name: 'Top categorías', data: data.top5_categorias },
+      { name: 'Métodos de pago', data: data.metodos_pago },
+    ])
+  }
+
+  return (
+    <div>
+      <ExportBar onExcel={exportarExcel} />
+
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">
+        <Kpi label="Ingresos (c/IVA)"        value={fmtQ(k.ingresos_total)}        hint={`${fmtNum(k.recibos)} recibos`} />
+        <Kpi label="Ingresos sin IVA"        value={fmtQ(k.ingresos_sin_iva)}      hint="base de negocio" />
+        <Kpi label="COGS teórico"            value={fmtQ(k.cogs_teorico)}          hint="costo de receta × vendidos" tone="amber" />
+        <Kpi label="Utilidad bruta teórica"  value={fmtQ(k.utilidad_bruta)}        hint={k.margen_promedio_pct != null ? `margen prom. ${fmtPct(k.margen_promedio_pct)}` : ''} tone="green" />
+
+        <Kpi label="Food cost"               value={fmtPct(k.food_cost_pct)}       hint="costo / ingresos sin IVA" />
+        <Kpi label="Cobertura recetas"       value={fmtPct(k.cobertura_recetas_pct)} hint="% ingresos con receta" />
+        <Kpi label="Ticket promedio"         value={fmtQ(k.ticket_promedio)}       hint={`${fmtNum(k.productos_unicos)} productos únicos`} />
+        <Kpi label="Productos únicos"        value={fmtNum(k.productos_unicos)}    hint="vendidos en el rango" />
+      </div>
+
+      {/* Serie diaria */}
+      <Section title="Ventas por día">
+        <SimpleBars data={data.serie_dias.map(d => ({ label: d.fecha.slice(5), value: d.monto }))} />
+        <div className="text-xs text-gray-400 mt-2">{data.serie_dias.length} días en el rango</div>
+      </Section>
+
+      {/* Top productos */}
+      <Section title="Top 5 productos del período">
+        <SimpleTable
+          columns={[
+            { k: 'item_name',  l: 'Producto' },
+            { k: 'unidades',   l: 'Unid.',     align: 'right', fmt: v => fmtNum(v) },
+            { k: 'ingresos',   l: 'Ingresos',  align: 'right', fmt: fmtQ },
+            { k: 'costo_total', l: 'Costo',     align: 'right', fmt: v => v != null ? fmtQ(v) : '—' },
+            { k: 'margen_pct', l: 'Margen',    align: 'right', fmt: v => v != null ? fmtPct(v) : '—' },
+          ]}
+          rows={data.top5_productos}
+        />
+      </Section>
+
+      {/* Top categorías */}
+      <Section title="Top 5 categorías del período">
+        <SimpleTable
+          columns={[
+            { k: 'nombre',     l: 'Categoría' },
+            { k: 'productos',  l: 'Productos', align: 'right', fmt: fmtNum },
+            { k: 'unidades',   l: 'Unidades',  align: 'right', fmt: v => fmtNum(v, 0) },
+            { k: 'monto',      l: 'Ingresos',  align: 'right', fmt: fmtQ },
+          ]}
+          rows={data.top5_categorias}
+        />
+      </Section>
+
+      <Section title="Métodos de pago">
+        <SimpleTable
+          columns={[
+            { k: 'nombre', l: 'Método' },
+            { k: 'monto',  l: 'Monto',    align: 'right', fmt: fmtQ },
+          ]}
+          rows={data.metodos_pago}
+        />
+      </Section>
+    </div>
+  )
+}
+
+// ============================================================================
+// P&L
+// ============================================================================
+
+function TabPnL({ desde, hasta }) {
+  const [loading, setLoading] = useState(true)
+  const [data, setData] = useState(null)
+  const [err, setErr] = useState(null)
+
+  useEffect(() => { cargar() }, [desde, hasta])
+  async function cargar() {
+    setLoading(true); setErr(null)
+    const res = await apiFetch(`/api/reportes/pnl?desde=${desde}&hasta=${hasta}`)
+    const json = await res.json()
+    setLoading(false)
+    if (!res.ok) { setErr(json.error); return }
+    setData(json)
+  }
+
+  if (loading) return <Loading />
+  if (err) return <Error msg={err} />
+  if (!data) return null
+
+  function exportarExcel() {
+    descargarExcel(`pnl_${desde}_${hasta}.xlsx`, [
+      { name: 'Resumen', data: [{
+        desde, hasta,
+        ingresos_brutos_con_iva: data.ingresos.brutos_con_iva,
+        ingresos_netos_sin_iva: data.ingresos.netos_sin_iva,
+        iva_repercutido: data.ingresos.iva_repercutido,
+        cogs_teorico: data.cogs.teorico,
+        cobertura_pct: data.cogs.cobertura_pct,
+        utilidad_bruta: data.utilidad_bruta.monto,
+        margen_bruto_pct: data.utilidad_bruta.margen_pct,
+        gastos_egresos_caja: data.gastos.egresos_caja,
+        gastos_contables: data.gastos.contables,
+        gastos_total: data.gastos.total,
+        utilidad_operativa: data.utilidad_operativa.monto,
+        margen_operativo_pct: data.utilidad_operativa.margen_pct,
+      }] },
+      { name: 'Gastos por cuenta', data: data.gastos.detalle_por_cuenta },
+    ])
+  }
+
+  return (
+    <div>
+      <ExportBar onExcel={exportarExcel} />
+
+      {/* Aviso COGS teorico */}
+      <div className="bg-amber-50/60 border border-amber-100 rounded-xl px-4 py-3 mb-5 text-sm text-amber-900 no-print">
+        <strong>COGS teórico</strong> — calculado como <em>costo de receta × unidades vendidas</em>.
+        Cobertura actual: <strong>{fmtPct(data.cogs.cobertura_pct)}</strong> del ingreso. La carga masiva
+        de insumos reales habilitará COGS real desde el inventario.
+      </div>
+
+      <PrintHeader titulo="Estado de Resultados" desde={desde} hasta={hasta} />
+
+      <div className="bg-white border border-gray-100 rounded-2xl shadow-sm overflow-hidden print-shadow">
+        <table className="w-full text-sm">
+          <tbody>
+            <PnLSeccion titulo="INGRESOS" />
+            <PnLFila label="Ventas brutas (incluye IVA)" valor={data.ingresos.brutos_con_iva} />
+            <PnLFila label="( − ) IVA repercutido"        valor={-data.ingresos.iva_repercutido} muted />
+            <PnLFila label="Ventas netas (base)"          valor={data.ingresos.netos_sin_iva} bold />
+
+            <PnLSeccion titulo="COSTO DE VENTAS" />
+            <PnLFila label={`COGS teórico (cobertura ${fmtPct(data.cogs.cobertura_pct)})`} valor={-data.cogs.teorico} />
+
+            <PnLFila label="UTILIDAD BRUTA" valor={data.utilidad_bruta.monto} bold highlight
+                     subtexto={data.utilidad_bruta.margen_pct != null ? `Margen bruto ${fmtPct(data.utilidad_bruta.margen_pct)}` : null} />
+
+            <PnLSeccion titulo="GASTOS OPERATIVOS" />
+            <PnLFila label="Egresos de caja (cierres)"     valor={-data.gastos.egresos_caja} muted />
+            <PnLFila label="Gastos contables (asientos)"   valor={-data.gastos.contables} muted />
+            <PnLFila label="Total gastos operativos"       valor={-data.gastos.total} bold />
+
+            <PnLFila label="UTILIDAD OPERATIVA" valor={data.utilidad_operativa.monto} bold highlight
+                     subtexto={data.utilidad_operativa.margen_pct != null ? `Margen operativo ${fmtPct(data.utilidad_operativa.margen_pct)}` : null} />
+          </tbody>
+        </table>
+      </div>
+
+      {/* Detalle de gastos por cuenta */}
+      {data.gastos.detalle_por_cuenta.length > 0 && (
+        <Section title="Detalle de gastos por cuenta">
+          <SimpleTable
+            columns={[
+              { k: 'codigo', l: 'Código' },
+              { k: 'nombre', l: 'Cuenta' },
+              { k: 'monto',  l: 'Monto', align: 'right', fmt: fmtQ },
+            ]}
+            rows={data.gastos.detalle_por_cuenta}
+          />
+        </Section>
+      )}
+    </div>
+  )
+}
+
+function PnLSeccion({ titulo }) {
+  return (
+    <tr className="border-t border-gray-200 bg-gray-50">
+      <td colSpan="2" className="px-5 py-2.5 text-[11px] uppercase tracking-wider font-semibold text-gray-500">{titulo}</td>
+    </tr>
+  )
+}
+
+function PnLFila({ label, valor, bold, highlight, muted, subtexto }) {
+  return (
+    <tr className={`border-t border-gray-50 ${highlight ? 'bg-julia-cream/30' : ''}`}>
+      <td className={`px-5 py-2.5 ${bold ? 'font-semibold text-gray-900' : muted ? 'text-gray-500 pl-9' : 'text-gray-700 pl-9'}`}>
+        {label}
+        {subtexto && <span className="ml-2 text-xs text-gray-500 font-normal">· {subtexto}</span>}
+      </td>
+      <td className={`px-5 py-2.5 text-right tabular-nums ${bold ? 'font-semibold text-gray-900' : muted ? 'text-gray-500' : 'text-gray-700'} ${valor < 0 ? '' : ''}`}>
+        {fmtQ(valor)}
+      </td>
+    </tr>
+  )
+}
+
+// ============================================================================
+// Ventas
+// ============================================================================
+
+function TabVentas({ desde, hasta }) {
+  const [loading, setLoading] = useState(true)
+  const [data, setData] = useState(null)
+  const [err, setErr] = useState(null)
+
+  useEffect(() => { cargar() }, [desde, hasta])
+  async function cargar() {
+    setLoading(true); setErr(null)
+    const res = await apiFetch(`/api/reportes/ventas?desde=${desde}&hasta=${hasta}`)
+    const json = await res.json()
+    setLoading(false)
+    if (!res.ok) { setErr(json.error); return }
+    setData(json)
+  }
+
+  if (loading) return <Loading />
+  if (err) return <Error msg={err} />
+  if (!data) return null
+
+  const r = data.resumen
+
+  function exportarExcel() {
+    descargarExcel(`ventas_${desde}_${hasta}.xlsx`, [
+      { name: 'Resumen', data: [{ desde, hasta, ...r }] },
+      { name: 'Por día', data: data.dias },
+      { name: 'Por categoría', data: data.categorias },
+      { name: 'Por producto', data: data.productos },
+      { name: 'Métodos de pago', data: data.metodos_pago },
+    ])
+  }
+
+  return (
+    <div>
+      <ExportBar onExcel={exportarExcel} />
+
+      <PrintHeader titulo="Reporte de Ventas" desde={desde} hasta={hasta} />
+
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">
+        <Kpi label="Ingresos (c/IVA)"   value={fmtQ(r.total)}           hint={`${fmtNum(r.recibos)} recibos`} />
+        <Kpi label="Sin IVA"            value={fmtQ(r.total_sin_iva)}   hint={`IVA Q ${fmtNum(r.iva, 2)}`} />
+        <Kpi label="Ticket promedio"    value={fmtQ(r.ticket_promedio)} />
+        <Kpi label="Unidades vendidas"  value={fmtNum(r.unidades_totales)} hint={`${fmtNum(r.productos_unicos)} productos únicos`} />
+      </div>
+
+      <Section title="Por día">
+        <SimpleBars data={data.dias.map(d => ({ label: d.fecha.slice(5), value: d.monto }))} />
+      </Section>
+
+      <Section title="Por categoría">
+        <SimpleTable
+          columns={[
+            { k: 'nombre',    l: 'Categoría' },
+            { k: 'productos', l: 'Productos', align: 'right', fmt: fmtNum },
+            { k: 'unidades',  l: 'Unidades',  align: 'right', fmt: v => fmtNum(v, 0) },
+            { k: 'monto',     l: 'Ingresos',  align: 'right', fmt: fmtQ },
+          ]}
+          rows={data.categorias}
+        />
+      </Section>
+
+      <Section title="Métodos de pago">
+        <SimpleTable
+          columns={[
+            { k: 'nombre', l: 'Método' },
+            { k: 'monto',  l: 'Monto',    align: 'right', fmt: fmtQ },
+          ]}
+          rows={data.metodos_pago}
+        />
+      </Section>
+
+      <Section title={`Productos (${data.productos.length})`}>
+        <SimpleTable
+          maxRows={50}
+          columns={[
+            { k: 'item_name',  l: 'Producto' },
+            { k: 'cantidad',   l: 'Unidades', align: 'right', fmt: v => fmtNum(v, 0) },
+            { k: 'lineas',     l: 'Líneas',   align: 'right', fmt: fmtNum },
+            { k: 'monto',      l: 'Monto',    align: 'right', fmt: fmtQ },
+          ]}
+          rows={data.productos}
+        />
+      </Section>
+    </div>
+  )
+}
+
+// ============================================================================
+// Rentabilidad
+// ============================================================================
+
+function TabRentabilidad({ desde, hasta }) {
+  const [loading, setLoading] = useState(true)
+  const [data, setData] = useState(null)
+  const [err, setErr] = useState(null)
+  const [filtro, setFiltro] = useState('con-receta')
+
+  useEffect(() => { cargar() }, [desde, hasta])
+  async function cargar() {
+    setLoading(true); setErr(null)
+    const res = await apiFetch(`/api/reportes/rentabilidad?desde=${desde}&hasta=${hasta}`)
+    const json = await res.json()
+    setLoading(false)
+    if (!res.ok) { setErr(json.error); return }
+    setData(json)
+  }
+
+  const filtrados = useMemo(() => {
+    if (!data) return []
+    if (filtro === 'con-receta') return data.productos.filter(p => p.con_receta)
+    if (filtro === 'sin-receta') return data.productos.filter(p => !p.con_receta)
+    return data.productos
+  }, [data, filtro])
+
+  if (loading) return <Loading />
+  if (err) return <Error msg={err} />
+  if (!data) return null
+
+  const r = data.resumen
+
+  function exportarExcel() {
+    descargarExcel(`rentabilidad_${desde}_${hasta}.xlsx`, [
+      { name: 'Resumen', data: [{ desde, hasta, ...r }] },
+      { name: 'Productos', data: data.productos },
+    ])
+  }
+
+  return (
+    <div>
+      <ExportBar onExcel={exportarExcel} />
+
+      <PrintHeader titulo="Rentabilidad por Producto" desde={desde} hasta={hasta} />
+
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">
+        <Kpi label="Ventas (c/IVA)"           value={fmtQ(r.ventas_total)} />
+        <Kpi label="Costo teórico"            value={fmtQ(r.costo_teorico_total)} tone="amber" />
+        <Kpi label="Utilidad bruta teórica"   value={fmtQ(r.utilidad_bruta_teorica)} tone="green"
+             hint={r.margen_promedio_pct != null ? `margen prom. ${fmtPct(r.margen_promedio_pct)}` : ''} />
+        <Kpi label="Food cost"                value={fmtPct(r.food_cost_pct)} />
+        <Kpi label="Cobertura recetas"        value={fmtPct(r.cobertura_pct)} hint="% ingresos con receta" />
+        <Kpi label="Ingresos con receta"      value={fmtQ(r.ingresos_con_receta)} />
+        <Kpi label="Ingresos sin receta"      value={fmtQ(r.ingresos_sin_receta)} tone={r.ingresos_sin_receta > 0 ? 'amber' : 'neutral'}
+             hint={r.ingresos_sin_receta > 0 ? 'sin BOM definido' : ''} />
+        <Kpi label="Productos con receta"     value={fmtNum(data.productos.filter(p => p.con_receta).length)} />
+      </div>
+
+      <div className="flex gap-1 bg-gray-50 border border-gray-200 rounded-lg p-1 text-xs mb-3 inline-flex no-print">
+        {[
+          { v: 'con-receta', l: 'Con receta' },
+          { v: 'sin-receta', l: 'Sin receta' },
+          { v: 'todos',      l: 'Todos' },
+        ].map(o => (
+          <button key={o.v} onClick={() => setFiltro(o.v)}
+            className={`px-3 py-1.5 rounded-md transition ${filtro === o.v
+              ? 'bg-white text-julia-red shadow-sm font-medium'
+              : 'text-gray-500 hover:text-gray-800'}`}>{o.l}</button>
+        ))}
+      </div>
+
+      <SimpleTable
+        maxRows={100}
+        columns={[
+          { k: 'item_name',       l: 'Producto' },
+          { k: 'unidades',        l: 'Unid.',         align: 'right', fmt: v => fmtNum(v, 0) },
+          { k: 'ingresos',        l: 'Ingresos',      align: 'right', fmt: fmtQ },
+          { k: 'ingresos_sin_iva', l: 'Sin IVA',      align: 'right', fmt: fmtQ },
+          { k: 'costo_unitario',  l: 'Costo unit.',   align: 'right', fmt: v => v != null ? fmtQ(v) : '—' },
+          { k: 'costo_total',     l: 'Costo total',   align: 'right', fmt: v => v != null ? fmtQ(v) : '—' },
+          { k: 'margen_q',        l: 'Margen Q',      align: 'right', fmt: v => v != null ? fmtQ(v) : '—' },
+          { k: 'margen_pct',      l: 'Margen %',      align: 'right', fmt: v => v != null ? fmtPct(v) : '—' },
+        ]}
+        rows={filtrados}
+      />
+    </div>
+  )
+}
+
+// ============================================================================
+// Componentes reusables
+// ============================================================================
+
+function ExportBar({ onExcel }) {
+  return (
+    <div className="flex justify-end gap-2 mb-3 no-print">
+      <button onClick={onExcel}
+        className="text-xs px-3 py-1.5 border border-gray-200 text-gray-700 rounded-md hover:border-julia-red hover:text-julia-red bg-white">
+        ↓ Excel
+      </button>
+      <button onClick={() => window.print()}
+        className="text-xs px-3 py-1.5 border border-gray-200 text-gray-700 rounded-md hover:border-julia-red hover:text-julia-red bg-white">
+        ↓ PDF (imprimir)
+      </button>
+    </div>
+  )
+}
+
+function PrintHeader({ titulo, desde, hasta }) {
+  return (
+    <div className="hidden print:block mb-4">
+      <h1 className="text-2xl font-semibold">Julia Bakery — {titulo}</h1>
+      <p className="text-sm text-gray-600">Período: {formatFecha(desde)} a {formatFecha(hasta)}</p>
+      <hr className="mt-2 border-gray-300" />
+    </div>
+  )
+}
+
+function Kpi({ label, value, hint, tone = 'neutral' }) {
+  const tones = {
+    neutral: 'border-gray-100',
+    amber:   'border-amber-200 bg-amber-50/40',
+    green:   'border-emerald-200 bg-emerald-50/40',
+    red:     'border-red-200 bg-red-50/40',
+  }
+  const valueTones = {
+    neutral: 'text-gray-900',
+    amber:   'text-amber-800',
+    green:   'text-emerald-700',
+    red:     'text-red-700',
+  }
+  return (
+    <div className={`border rounded-xl px-4 py-3 ${tones[tone]}`}>
+      <div className="text-[11px] uppercase tracking-wider text-gray-400 font-medium">{label}</div>
+      <div className={`text-xl font-semibold mt-1 tabular-nums ${valueTones[tone]}`}>{value}</div>
+      {hint && <div className="text-xs text-gray-500 mt-1">{hint}</div>}
+    </div>
+  )
+}
+
+function Section({ title, children }) {
+  return (
+    <div className="mb-5">
+      <h3 className="text-sm font-medium text-gray-900 mb-2">{title}</h3>
+      {children}
+    </div>
+  )
+}
+
+function SimpleTable({ columns, rows, maxRows }) {
+  const trim = maxRows && rows.length > maxRows
+  const visibles = trim ? rows.slice(0, maxRows) : rows
+  return (
+    <div className="bg-white border border-gray-100 rounded-xl shadow-sm overflow-hidden print-shadow">
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead className="bg-gray-50/80 border-b border-gray-100">
+            <tr>
+              {columns.map(c => (
+                <th key={c.k} className={`text-${c.align || 'left'} text-xs text-gray-500 font-medium px-4 py-2.5`}>{c.l}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {visibles.length === 0 ? (
+              <tr><td colSpan={columns.length} className="text-center text-xs text-gray-400 py-8">Sin datos en el rango.</td></tr>
+            ) : visibles.map((r, i) => (
+              <tr key={i} className={i > 0 ? 'border-t border-gray-50' : ''}>
+                {columns.map(c => (
+                  <td key={c.k} className={`px-4 py-2 text-${c.align || 'left'} ${c.align === 'right' ? 'tabular-nums' : ''} text-gray-700`}>
+                    {c.fmt ? c.fmt(r[c.k]) : (r[c.k] ?? '—')}
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      {trim && (
+        <div className="px-4 py-2 border-t border-gray-100 bg-gray-50/40 text-xs text-gray-500 no-print">
+          Mostrando primeros {maxRows} de {rows.length}. Descargá Excel para ver todo.
+        </div>
+      )}
+    </div>
+  )
+}
+
+function SimpleBars({ data }) {
+  if (!data || data.length === 0) return <div className="text-xs text-gray-400 py-4">Sin datos</div>
+  const max = Math.max(...data.map(d => Math.abs(d.value || 0)))
+  return (
+    <div className="bg-white border border-gray-100 rounded-xl p-4 print-shadow shadow-sm">
+      <div className="flex items-end gap-1 h-32 overflow-x-auto">
+        {data.map((d, i) => {
+          const h = max > 0 ? (Math.abs(d.value) / max) * 100 : 0
+          return (
+            <div key={i} className="flex flex-col items-center flex-shrink-0" style={{ minWidth: '24px' }} title={`${d.label}: Q ${fmtNum(d.value, 2)}`}>
+              <div className="flex-1 flex items-end w-full">
+                <div className="bg-julia-red rounded-t w-full opacity-80" style={{ height: `${h}%`, minHeight: h > 0 ? '2px' : '0' }} />
+              </div>
+              <div className="text-[9px] text-gray-400 mt-1 transform -rotate-45 origin-top-left whitespace-nowrap">
+                {d.label}
+              </div>
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
+function Loading() {
+  return (
+    <div className="bg-white border border-gray-100 rounded-2xl p-5 shadow-sm">
+      <SkeletonRow /><SkeletonRow /><SkeletonRow /><SkeletonRow />
+    </div>
+  )
+}
+
+function Error({ msg }) {
+  return (
+    <div className="bg-red-50 border border-red-100 rounded-lg px-3 py-2 text-sm text-red-700">{msg}</div>
+  )
+}
