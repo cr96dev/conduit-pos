@@ -104,14 +104,22 @@ export default function Reportes({ session }) {
         <div className="flex gap-1 border-b border-gray-200 mb-6 no-print overflow-x-auto">
           <TabBtn active={tab === 'dashboard'}    onClick={() => setTab('dashboard')}>Dashboard</TabBtn>
           <TabBtn active={tab === 'pnl'}          onClick={() => setTab('pnl')}>Estado de Resultados</TabBtn>
+          <TabBtn active={tab === 'balance'}      onClick={() => setTab('balance')}>Balance General</TabBtn>
+          <TabBtn active={tab === 'flujo'}        onClick={() => setTab('flujo')}>Flujo de Caja</TabBtn>
           <TabBtn active={tab === 'ventas'}       onClick={() => setTab('ventas')}>Ventas</TabBtn>
           <TabBtn active={tab === 'rentabilidad'} onClick={() => setTab('rentabilidad')}>Rentabilidad</TabBtn>
+          <TabBtn active={tab === 'libro-mayor'}  onClick={() => setTab('libro-mayor')}>Libro Mayor</TabBtn>
+          <TabBtn active={tab === 'balance-comp'} onClick={() => setTab('balance-comp')}>Balance Comprobación</TabBtn>
         </div>
 
         {tab === 'dashboard'    && <TabDashboard    desde={desde} hasta={hasta} />}
         {tab === 'pnl'          && <TabPnL          desde={desde} hasta={hasta} />}
+        {tab === 'balance'      && <TabBalanceGeneral hasta={hasta} />}
+        {tab === 'flujo'        && <TabFlujoCaja    desde={desde} hasta={hasta} />}
         {tab === 'ventas'       && <TabVentas       desde={desde} hasta={hasta} />}
         {tab === 'rentabilidad' && <TabRentabilidad desde={desde} hasta={hasta} />}
+        {tab === 'libro-mayor'  && <TabLibroMayor   desde={desde} hasta={hasta} />}
+        {tab === 'balance-comp' && <TabBalanceComprobacion desde={desde} hasta={hasta} />}
       </div>
 
       {/* Print stylesheet — para "Save as PDF" del navegador */}
@@ -673,5 +681,409 @@ function Loading() {
 function Error({ msg }) {
   return (
     <div className="bg-red-50 border border-red-100 rounded-lg px-3 py-2 text-sm text-red-700">{msg}</div>
+  )
+}
+
+// ============================================================================
+// Balance General
+// ============================================================================
+
+function TabBalanceGeneral({ hasta }) {
+  const [loading, setLoading] = useState(true)
+  const [data, setData] = useState(null)
+  const [err, setErr] = useState(null)
+
+  useEffect(() => { cargar() }, [hasta])
+  async function cargar() {
+    setLoading(true); setErr(null)
+    const res = await apiFetch(`/api/reportes/balance-general?hasta=${hasta}`)
+    const json = await res.json()
+    setLoading(false)
+    if (!res.ok) { setErr(json.error); return }
+    setData(json)
+  }
+
+  if (loading) return <Loading />
+  if (err) return <Error msg={err} />
+  if (!data) return null
+
+  const g = data.grupos
+  const t = data.totales
+
+  function exportarExcel() {
+    descargarExcel(`balance-general_al_${hasta}.xlsx`, [
+      { name: 'Resumen', data: [{
+        hasta,
+        total_activo: t.activo,
+        total_pasivo: g.pasivo.total,
+        total_patrimonio_cuentas: g.patrimonio.total_cuentas,
+        utilidad_ejercicio: g.patrimonio.utilidad_ejercicio,
+        total_patrimonio: g.patrimonio.total,
+        total_pasivo_y_patrimonio: t.pasivo_y_patrimonio,
+        diferencia: t.diferencia,
+        cuadra: t.cuadra,
+      }] },
+      { name: 'Activo',     data: g.activo.cuentas },
+      { name: 'Pasivo',     data: g.pasivo.cuentas },
+      { name: 'Patrimonio', data: g.patrimonio.cuentas },
+    ])
+  }
+
+  return (
+    <div>
+      <ExportBar onExcel={exportarExcel} />
+
+      <div className="text-xs text-gray-500 mb-3 no-print">
+        Al cierre del <strong>{formatFecha(hasta)}</strong>. Las cuentas de resultado del año en curso
+        ({formatFecha(g.patrimonio.inicio_ejercicio)} en adelante) se suman como <em>Utilidad del Ejercicio</em>.
+      </div>
+
+      <PrintHeader titulo="Balance General" desde={null} hasta={hasta} />
+
+      {!t.cuadra && (
+        <div className="bg-red-50 border border-red-100 rounded-lg px-4 py-3 mb-4 text-sm text-red-800">
+          ⚠ <strong>Balance no cuadra:</strong> diferencia de {fmtQ(t.diferencia)}.
+          Activo {fmtQ(t.activo)} ≠ Pasivo+Patrimonio {fmtQ(t.pasivo_y_patrimonio)}.
+          Revisar asientos posteados sin contra-partida o desbalanceados.
+        </div>
+      )}
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+        {/* Columna izquierda: ACTIVO */}
+        <BGGrupo titulo="ACTIVO" cuentas={g.activo.cuentas} total={g.activo.total} colorTotal={C_TONE_ACTIVO} />
+
+        {/* Columna derecha: PASIVO + PATRIMONIO */}
+        <div className="space-y-5">
+          <BGGrupo titulo="PASIVO" cuentas={g.pasivo.cuentas} total={g.pasivo.total} colorTotal={C_TONE_PASIVO} />
+          <BGGrupo
+            titulo="PATRIMONIO"
+            cuentas={[
+              ...g.patrimonio.cuentas,
+              {
+                codigo: '',
+                nombre: 'Utilidad del ejercicio en curso',
+                saldo: g.patrimonio.utilidad_ejercicio,
+                esEjercicio: true,
+              },
+            ]}
+            total={g.patrimonio.total}
+            colorTotal={C_TONE_PATRIMONIO}
+            subtotalLabel="Subtotal cuentas"
+            subtotal={g.patrimonio.total_cuentas}
+          />
+        </div>
+      </div>
+
+      {/* Totales finales */}
+      <div className="mt-5 bg-white border-2 border-julia-red/20 rounded-2xl shadow-sm overflow-hidden print-shadow">
+        <table className="w-full text-sm">
+          <tbody>
+            <tr>
+              <td className="px-5 py-3 font-semibold text-gray-900">TOTAL ACTIVO</td>
+              <td className="px-5 py-3 text-right tabular-nums font-semibold text-gray-900">{fmtQ(t.activo)}</td>
+            </tr>
+            <tr className="border-t border-gray-100">
+              <td className="px-5 py-3 font-semibold text-gray-900">TOTAL PASIVO + PATRIMONIO</td>
+              <td className="px-5 py-3 text-right tabular-nums font-semibold text-gray-900">{fmtQ(t.pasivo_y_patrimonio)}</td>
+            </tr>
+            <tr className={`border-t border-gray-100 ${t.cuadra ? 'bg-emerald-50/40' : 'bg-red-50/40'}`}>
+              <td className="px-5 py-3 text-xs text-gray-600">Diferencia (debe ser 0)</td>
+              <td className={`px-5 py-3 text-right tabular-nums font-semibold ${t.cuadra ? 'text-emerald-700' : 'text-red-700'}`}>
+                {fmtQ(t.diferencia)}  {t.cuadra ? '✓' : '⚠'}
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  )
+}
+
+const C_TONE_ACTIVO     = 'border-blue-200 bg-blue-50/40 text-blue-900'
+const C_TONE_PASIVO     = 'border-amber-200 bg-amber-50/40 text-amber-900'
+const C_TONE_PATRIMONIO = 'border-emerald-200 bg-emerald-50/40 text-emerald-900'
+
+function BGGrupo({ titulo, cuentas, total, colorTotal, subtotalLabel, subtotal }) {
+  return (
+    <div className="bg-white border border-gray-100 rounded-2xl shadow-sm overflow-hidden print-shadow">
+      <div className="px-5 py-3 border-b border-gray-100 bg-gray-50/80">
+        <h3 className="text-xs uppercase tracking-wider text-gray-600 font-semibold">{titulo}</h3>
+      </div>
+      <table className="w-full text-sm">
+        <tbody>
+          {cuentas.length === 0 ? (
+            <tr><td colSpan="2" className="px-5 py-6 text-center text-xs text-gray-400">Sin cuentas con saldo</td></tr>
+          ) : cuentas.map((c, i) => (
+            <tr key={c.id || c.nombre} className={i > 0 ? 'border-t border-gray-50' : ''}>
+              <td className="px-5 py-2 text-gray-700">
+                {c.codigo && <span className="text-xs text-gray-400 mr-2 font-mono">{c.codigo}</span>}
+                <span className={c.esEjercicio ? 'italic' : ''}>{c.nombre}</span>
+              </td>
+              <td className="px-5 py-2 text-right tabular-nums text-gray-800">{fmtQ(c.saldo)}</td>
+            </tr>
+          ))}
+          {subtotal != null && (
+            <tr className="border-t border-gray-100 bg-gray-50/40">
+              <td className="px-5 py-2 text-xs text-gray-500">{subtotalLabel}</td>
+              <td className="px-5 py-2 text-right tabular-nums text-gray-700">{fmtQ(subtotal)}</td>
+            </tr>
+          )}
+          <tr className={`border-t border-gray-100 ${colorTotal.split(' ').filter(c => c.includes('bg')).join(' ')}`}>
+            <td className={`px-5 py-2.5 font-semibold ${colorTotal.split(' ').filter(c => c.includes('text')).join(' ')}`}>Total {titulo.toLowerCase()}</td>
+            <td className={`px-5 py-2.5 text-right tabular-nums font-semibold ${colorTotal.split(' ').filter(c => c.includes('text')).join(' ')}`}>{fmtQ(total)}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  )
+}
+
+// ============================================================================
+// Flujo de Caja
+// ============================================================================
+
+function TabFlujoCaja({ desde, hasta }) {
+  const [loading, setLoading] = useState(true)
+  const [data, setData] = useState(null)
+  const [err, setErr] = useState(null)
+
+  useEffect(() => { cargar() }, [desde, hasta])
+  async function cargar() {
+    setLoading(true); setErr(null)
+    const res = await apiFetch(`/api/reportes/flujo-caja?desde=${desde}&hasta=${hasta}`)
+    const json = await res.json()
+    setLoading(false)
+    if (!res.ok) { setErr(json.error); return }
+    setData(json)
+  }
+
+  if (loading) return <Loading />
+  if (err) return <Error msg={err} />
+  if (!data) return null
+
+  const r = data.resumen
+
+  function exportarExcel() {
+    descargarExcel(`flujo-caja_${desde}_${hasta}.xlsx`, [
+      { name: 'Resumen', data: [{ desde, hasta, ...r }] },
+      { name: 'Día por día', data: data.dias },
+    ])
+  }
+
+  return (
+    <div>
+      <ExportBar onExcel={exportarExcel} />
+
+      <PrintHeader titulo="Flujo de Caja" desde={desde} hasta={hasta} />
+
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">
+        <Kpi label="Entradas efectivo"   value={fmtQ(r.total_entradas)}   tone="green" hint="ventas efectivo del rango" />
+        <Kpi label="Salidas (egresos)"   value={fmtQ(r.total_salidas)}    tone="amber" hint="pagos chicos de caja" />
+        <Kpi label="Flujo neto"          value={fmtQ(r.flujo_neto)}       tone={r.flujo_neto >= 0 ? 'green' : 'red'} />
+        <Kpi label="Ventas totales"      value={fmtQ(r.ventas_total_periodo)} hint="incluye tarjeta/otros" />
+        <Kpi label="Días con cierre"     value={fmtNum(r.dias_cerrados)}  hint={`${r.dias_total} días con registro`} />
+        <Kpi label="Días abiertos"       value={fmtNum(r.dias_abiertos)}  tone={r.dias_abiertos > 0 ? 'amber' : 'neutral'} hint="sin marcar cerrado" />
+        <Kpi label="Días con diferencia" value={fmtNum(r.dias_con_diferencia)} tone={r.dias_con_diferencia > 0 ? 'amber' : 'neutral'} />
+        <Kpi label="Suma diferencias"    value={fmtQ(r.suma_diferencias)} hint="conteo − esperado" />
+      </div>
+
+      {data.dias.length === 0 ? (
+        <div className="bg-white border border-gray-100 rounded-xl p-8 text-center text-sm text-gray-400">
+          Sin cierres de caja registrados en el rango.
+        </div>
+      ) : (
+        <SimpleTable
+          columns={[
+            { k: 'fecha',           l: 'Fecha',           fmt: formatFecha },
+            { k: 'estado',          l: 'Estado',         fmt: v => (
+              <span className={`text-[10px] uppercase tracking-wide px-2 py-0.5 rounded-md font-medium ${v === 'cerrado' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>{v}</span>
+            ) },
+            { k: 'saldo_inicial',   l: 'Inicial',        align: 'right', fmt: fmtQ },
+            { k: 'ventas_efectivo', l: 'Ventas efect.',  align: 'right', fmt: fmtQ },
+            { k: 'egresos',         l: 'Egresos',        align: 'right', fmt: fmtQ },
+            { k: 'saldo_esperado',  l: 'Esperado',       align: 'right', fmt: fmtQ },
+            { k: 'conteo',          l: 'Conteo',         align: 'right', fmt: v => v != null ? fmtQ(v) : '—' },
+            { k: 'diferencia',      l: 'Dif.',           align: 'right', fmt: v => {
+              if (v == null) return '—'
+              const cls = v > 0 ? 'text-emerald-700' : v < 0 ? 'text-red-700' : ''
+              return <span className={cls}>{fmtQ(v)}</span>
+            } },
+            { k: 'recibos',         l: 'Recibos',        align: 'right', fmt: fmtNum },
+          ]}
+          rows={data.dias}
+        />
+      )}
+    </div>
+  )
+}
+
+// ============================================================================
+// Libro Mayor
+// ============================================================================
+
+function TabLibroMayor({ desde, hasta }) {
+  const [cuentas, setCuentas] = useState([])
+  const [cuentaId, setCuentaId] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [data, setData] = useState(null)
+  const [err, setErr] = useState(null)
+
+  useEffect(() => { cargarCuentas() }, [])
+  useEffect(() => { if (cuentaId) cargar() }, [cuentaId, desde, hasta])
+
+  async function cargarCuentas() {
+    const res = await apiFetch('/api/cuentas')
+    const json = await res.json()
+    if (res.ok) {
+      const lista = (json.cuentas || []).filter(c => c.es_movimiento && c.activo)
+      setCuentas(lista)
+      if (lista.length > 0 && !cuentaId) setCuentaId(lista[0].id)
+    }
+  }
+
+  async function cargar() {
+    setLoading(true); setErr(null)
+    const res = await apiFetch(`/api/contabilidad/libro-mayor?cuenta_id=${cuentaId}&desde=${desde}&hasta=${hasta}`)
+    const json = await res.json()
+    setLoading(false)
+    if (!res.ok) { setErr(json.error); return }
+    setData(json)
+  }
+
+  function exportarExcel() {
+    if (!data) return
+    descargarExcel(`libro-mayor_${data.cuenta.codigo}_${desde}_${hasta}.xlsx`, [
+      { name: 'Resumen', data: [{
+        cuenta_codigo: data.cuenta.codigo,
+        cuenta_nombre: data.cuenta.nombre,
+        desde, hasta,
+        saldo_inicial: data.saldo_inicial,
+        saldo_final: data.saldo_final,
+        movimientos: data.movimientos.length,
+      }] },
+      { name: 'Movimientos', data: data.movimientos },
+    ])
+  }
+
+  return (
+    <div>
+      <div className="flex items-center gap-3 mb-3 no-print">
+        <label className="text-xs uppercase tracking-wider text-gray-400 font-medium">Cuenta</label>
+        <select value={cuentaId} onChange={e => setCuentaId(e.target.value)}
+          className="px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-julia-red flex-1 max-w-md">
+          {cuentas.map(c => (
+            <option key={c.id} value={c.id}>
+              {c.codigo} — {c.nombre} ({c.tipo})
+            </option>
+          ))}
+        </select>
+        <button onClick={exportarExcel} disabled={!data}
+          className="text-xs px-3 py-1.5 border border-gray-200 text-gray-700 rounded-md hover:border-julia-red hover:text-julia-red bg-white disabled:opacity-50">
+          ↓ Excel
+        </button>
+        <button onClick={() => window.print()}
+          className="text-xs px-3 py-1.5 border border-gray-200 text-gray-700 rounded-md hover:border-julia-red hover:text-julia-red bg-white">
+          ↓ PDF
+        </button>
+      </div>
+
+      {!cuentaId && <div className="text-sm text-gray-500">Cargando cuentas…</div>}
+      {loading && <Loading />}
+      {err && <Error msg={err} />}
+
+      {data && !loading && (
+        <>
+          <PrintHeader titulo={`Libro Mayor — ${data.cuenta.codigo} ${data.cuenta.nombre}`} desde={desde} hasta={hasta} />
+
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">
+            <Kpi label="Saldo inicial"    value={fmtQ(data.saldo_inicial)} hint={`al ${formatFecha(desde)}`} />
+            <Kpi label="Movimientos"      value={fmtNum(data.movimientos.length)} />
+            <Kpi label="Saldo final"      value={fmtQ(data.saldo_final)}   tone="green" hint={`al ${formatFecha(hasta)}`} />
+            <Kpi label="Variación"        value={fmtQ(data.saldo_final - data.saldo_inicial)}
+                 tone={data.saldo_final >= data.saldo_inicial ? 'green' : 'red'} />
+          </div>
+
+          <SimpleTable
+            maxRows={200}
+            columns={[
+              { k: 'fecha',          l: 'Fecha',     fmt: formatFecha },
+              { k: 'asiento_numero', l: 'Asiento',   align: 'right' },
+              { k: 'descripcion',    l: 'Descripción' },
+              { k: 'concepto',       l: 'Concepto',  fmt: v => v || '—' },
+              { k: 'debe',           l: 'Debe',      align: 'right', fmt: v => v > 0 ? fmtQ(v) : '' },
+              { k: 'haber',          l: 'Haber',     align: 'right', fmt: v => v > 0 ? fmtQ(v) : '' },
+              { k: 'saldo',          l: 'Saldo',     align: 'right', fmt: fmtQ },
+            ]}
+            rows={data.movimientos}
+          />
+        </>
+      )}
+    </div>
+  )
+}
+
+// ============================================================================
+// Balance de Comprobación
+// ============================================================================
+
+function TabBalanceComprobacion({ desde, hasta }) {
+  const [loading, setLoading] = useState(true)
+  const [data, setData] = useState(null)
+  const [err, setErr] = useState(null)
+
+  useEffect(() => { cargar() }, [desde, hasta])
+  async function cargar() {
+    setLoading(true); setErr(null)
+    const res = await apiFetch(`/api/contabilidad/balance?desde=${desde}&hasta=${hasta}`)
+    const json = await res.json()
+    setLoading(false)
+    if (!res.ok) { setErr(json.error); return }
+    setData(json)
+  }
+
+  if (loading) return <Loading />
+  if (err) return <Error msg={err} />
+  if (!data) return null
+
+  const t = data.totales
+  const debeCuadra  = Math.abs(t.debe - t.haber) < 0.01
+  const saldosCuadra = Math.abs(t.saldo_deudor - t.saldo_acreedor) < 0.01
+
+  function exportarExcel() {
+    descargarExcel(`balance-comprobacion_${desde}_${hasta}.xlsx`, [
+      { name: 'Resumen', data: [{ desde, hasta, ...t }] },
+      { name: 'Por cuenta', data: data.filas },
+    ])
+  }
+
+  return (
+    <div>
+      <ExportBar onExcel={exportarExcel} />
+
+      <PrintHeader titulo="Balance de Comprobación" desde={desde} hasta={hasta} />
+
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">
+        <Kpi label="Total Debe"          value={fmtQ(t.debe)}            tone={debeCuadra ? 'green' : 'red'} />
+        <Kpi label="Total Haber"         value={fmtQ(t.haber)}           tone={debeCuadra ? 'green' : 'red'}
+             hint={debeCuadra ? 'cuadra ✓' : `dif ${fmtQ(t.debe - t.haber)} ⚠`} />
+        <Kpi label="Saldo deudor"        value={fmtQ(t.saldo_deudor)}    tone={saldosCuadra ? 'green' : 'neutral'} />
+        <Kpi label="Saldo acreedor"      value={fmtQ(t.saldo_acreedor)}  tone={saldosCuadra ? 'green' : 'neutral'}
+             hint={saldosCuadra ? 'cuadra ✓' : `dif ${fmtQ(t.saldo_deudor - t.saldo_acreedor)} ⚠`} />
+      </div>
+
+      <SimpleTable
+        maxRows={300}
+        columns={[
+          { k: 'codigo',          l: 'Código' },
+          { k: 'nombre',          l: 'Cuenta' },
+          { k: 'tipo',            l: 'Tipo' },
+          { k: 'debe',            l: 'Debe',           align: 'right', fmt: fmtQ },
+          { k: 'haber',           l: 'Haber',          align: 'right', fmt: fmtQ },
+          { k: 'saldo_deudor',    l: 'Saldo deudor',   align: 'right', fmt: v => v > 0 ? fmtQ(v) : '' },
+          { k: 'saldo_acreedor',  l: 'Saldo acreedor', align: 'right', fmt: v => v > 0 ? fmtQ(v) : '' },
+        ]}
+        rows={data.filas}
+      />
+    </div>
   )
 }
