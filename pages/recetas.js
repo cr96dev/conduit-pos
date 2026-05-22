@@ -3,7 +3,7 @@ import { useRouter } from 'next/router'
 import { supabase } from '../lib/supabase'
 import Layout from '../components/Layout'
 import { SkeletonRow } from '../components/Skeleton'
-import { calcularMargen } from '../lib/recetas'
+import { calcularMargen, costoEfectivo } from '../lib/recetas'
 
 async function apiFetch(path, opts = {}) {
   const { data: { session } } = await supabase.auth.getSession()
@@ -136,6 +136,8 @@ export default function Recetas({ session }) {
                 const margenCls = r.margen_pct == null ? 'text-gray-400'
                                 : Number(r.margen_pct) < 30 ? 'text-amber-600'
                                 : 'text-green-700'
+                const efectivo = costoEfectivo(r)
+                const esPersonalizado = r.costo_personalizado != null
                 return (
                   <tr key={r.id} className="border-t border-gray-50 hover:bg-gray-50">
                     <td className="px-3 py-2 text-gray-800">{r.nombre}</td>
@@ -143,7 +145,10 @@ export default function Recetas({ session }) {
                       {r.loyverse_items?.item_name || <span className="text-amber-500">— sin enlace —</span>}
                     </td>
                     <td className="px-3 py-2 text-right text-gray-600 tabular-nums">{fmt(r.rinde_cantidad)} <span className="text-xs text-gray-400">{r.rinde_unidad}</span></td>
-                    <td className="px-3 py-2 text-right text-gray-700 tabular-nums">{r.costo_calculado != null ? fmtQ(r.costo_calculado) : '—'}</td>
+                    <td className="px-3 py-2 text-right text-gray-700 tabular-nums">
+                      {efectivo > 0 ? fmtQ(efectivo) : '—'}
+                      {esPersonalizado && <span className="ml-1 text-[10px] bg-violet-100 text-violet-700 px-1 rounded">manual</span>}
+                    </td>
                     <td className="px-3 py-2 text-right text-gray-700 tabular-nums">{r.precio_venta != null ? fmtQ(r.precio_venta) : '—'}</td>
                     <td className={`px-3 py-2 text-right font-medium tabular-nums ${margenCls}`}>{fmtPct(r.margen_pct)}</td>
                     <td className="px-3 py-2 text-right">
@@ -196,6 +201,7 @@ function ModalReceta({ recetaId, loyverseItems, insumos, recetas, onClose, onSav
     rinde_unidad: 'unidad',
     merma_pct: 0,
     precio_venta: '',
+    costo_personalizado: '',
     notas: '',
     activa: true,
   })
@@ -218,6 +224,7 @@ function ModalReceta({ recetaId, loyverseItems, insumos, recetas, onClose, onSav
         rinde_unidad: json.receta.rinde_unidad || 'unidad',
         merma_pct: json.receta.merma_pct || 0,
         precio_venta: json.receta.precio_venta ?? '',
+        costo_personalizado: json.receta.costo_personalizado ?? '',
         notas: json.receta.notas || '',
         activa: json.receta.activa,
       })
@@ -304,10 +311,13 @@ function ModalReceta({ recetaId, loyverseItems, insumos, recetas, onClose, onSav
     const rinde = Math.max(Number(cab.rinde_cantidad) || 1, 0.0001)
     const merma = (Number(cab.merma_pct) || 0) / 100
     const costoUnidad = (totalReceta / rinde) * (1 + merma)
+    // Si hay costo personalizado, ese es el "efectivo" para margen y para uso como sub-receta
+    const cp = cab.costo_personalizado !== '' && cab.costo_personalizado != null ? Number(cab.costo_personalizado) : null
+    const costoEfec = cp != null ? cp : costoUnidad
     const precio = cab.precio_venta !== '' ? Number(cab.precio_venta) : null
-    const margen = precio ? calcularMargen(costoUnidad, precio) : null
-    return { detalle, totalReceta, costoUnidad, precio, margen }
-  }, [ings, cab.rinde_cantidad, cab.merma_pct, cab.precio_venta, opcionesComponente])
+    const margen = precio ? calcularMargen(costoEfec, precio) : null
+    return { detalle, totalReceta, costoUnidad, costoEfec, costoPers: cp, precio, margen }
+  }, [ings, cab.rinde_cantidad, cab.merma_pct, cab.precio_venta, cab.costo_personalizado, opcionesComponente])
 
   async function guardar(e) {
     e.preventDefault()
@@ -328,6 +338,7 @@ function ModalReceta({ recetaId, loyverseItems, insumos, recetas, onClose, onSav
     const payload = {
       ...cab,
       precio_venta: cab.precio_venta === '' ? null : Number(cab.precio_venta),
+      costo_personalizado: cab.costo_personalizado === '' ? null : Number(cab.costo_personalizado),
       loyverse_item_id: cab.loyverse_item_id || null,
       ingredientes: ingredientesPayload,
     }
@@ -387,9 +398,26 @@ function ModalReceta({ recetaId, loyverseItems, insumos, recetas, onClose, onSav
           </Campo>
         </div>
 
-        <Campo label="Precio de venta (Q por unidad)">
-          <input type="number" step="any" value={cab.precio_venta} onChange={e => setCab({...cab, precio_venta: e.target.value})} className="input" placeholder="opcional (intermedios no llevan precio)" />
-        </Campo>
+        <div className="grid grid-cols-2 gap-3">
+          <Campo label="Precio de venta (Q por unidad)">
+            <input type="number" step="any" value={cab.precio_venta} onChange={e => setCab({...cab, precio_venta: e.target.value})} className="input" placeholder="opcional" />
+          </Campo>
+          <Campo label="Costo personalizado (Q por unidad)">
+            <div className="flex gap-1">
+              <input type="number" step="any" value={cab.costo_personalizado} onChange={e => setCab({...cab, costo_personalizado: e.target.value})} className="input"
+                placeholder={`auto: ${fmtQ(costeoVivo.costoUnidad)}`} />
+              {cab.costo_personalizado !== '' && (
+                <button type="button" onClick={() => setCab({...cab, costo_personalizado: ''})}
+                  className="text-xs text-gray-400 hover:text-red-500 px-2">↻</button>
+              )}
+            </div>
+          </Campo>
+        </div>
+        <p className="text-xs text-gray-500 -mt-2">
+          El costo personalizado sobrescribe el calculado automático.
+          Útil para sumar mano de obra, energía, o cuando algún insumo no está cargado.
+          Dejá vacío para usar el calculado.
+        </p>
 
         {/* Ingredientes */}
         <div>
@@ -468,9 +496,13 @@ function ModalReceta({ recetaId, loyverseItems, insumos, recetas, onClose, onSav
         </div>
 
         {/* Costeo en vivo */}
-        <div className="bg-julia-cream/30 border border-julia-cream rounded-lg p-3 grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+        <div className="bg-julia-cream/30 border border-julia-cream rounded-lg p-3 grid grid-cols-2 md:grid-cols-5 gap-3 text-sm">
           <Dato label="Costo total receta">{fmtQ(costeoVivo.totalReceta)}</Dato>
-          <Dato label="Costo por unidad" bold>{fmtQ(costeoVivo.costoUnidad)}</Dato>
+          <Dato label="Costo calculado">{fmtQ(costeoVivo.costoUnidad)}</Dato>
+          <Dato label="Costo efectivo" bold>
+            {fmtQ(costeoVivo.costoEfec)}
+            {costeoVivo.costoPers != null && <span className="ml-1 text-[10px] bg-violet-100 text-violet-700 px-1 rounded">manual</span>}
+          </Dato>
           <Dato label="Precio venta">{costeoVivo.precio != null ? fmtQ(costeoVivo.precio) : '—'}</Dato>
           <Dato label="Margen" bold>{fmtPct(costeoVivo.margen)}</Dato>
         </div>

@@ -31,7 +31,8 @@ async function create(req, res) {
   if (auth.error) return res.status(auth.status).json({ error: auth.error })
 
   const { loyverse_item_id, nombre, rinde_cantidad = 1, rinde_unidad = 'unidad',
-          merma_pct = 0, precio_venta = null, notas, ingredientes = [] } = req.body || {}
+          merma_pct = 0, precio_venta = null, costo_personalizado = null,
+          notas, ingredientes = [] } = req.body || {}
   if (!nombre?.trim()) return res.status(400).json({ error: 'nombre requerido' })
 
   // Validar cada ingrediente: exactamente UNO de insumo_id o sub_receta_id
@@ -94,8 +95,11 @@ async function create(req, res) {
   const rinde = Math.max(Number(rinde_cantidad) || 1, 0.0001)
   const merma = (Number(merma_pct) || 0) / 100
   const costoCalc = Number(((totalCosto / rinde) * (1 + merma)).toFixed(4))
+  const costoPers = costo_personalizado != null && costo_personalizado !== '' ? Number(costo_personalizado) : null
+  // margen se calcula sobre el costo efectivo (personalizado si existe, sino calculado)
+  const costoEfec = costoPers != null ? costoPers : costoCalc
   const margenPct = precio_venta != null && precio_venta !== ''
-    ? Math.round(((Number(precio_venta) - costoCalc) / Number(precio_venta)) * 100 * 100) / 100
+    ? Math.round(((Number(precio_venta) - costoEfec) / Number(precio_venta)) * 100 * 100) / 100
     : null
 
   const { data: receta, error: rErr } = await auth.admin.from('recetas').insert({
@@ -106,6 +110,7 @@ async function create(req, res) {
     merma_pct: Number(merma_pct) || 0,
     precio_venta: precio_venta != null && precio_venta !== '' ? Number(precio_venta) : null,
     costo_calculado: costoCalc,
+    costo_personalizado: costoPers,
     margen_pct: margenPct,
     notas: notas?.trim() || null,
     created_by: auth.user.id,

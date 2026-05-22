@@ -35,9 +35,13 @@ async function editar(req, res, id) {
   const auth = await requireAdmin(req)
   if (auth.error) return res.status(auth.status).json({ error: auth.error })
 
-  const editables = ['loyverse_item_id', 'nombre', 'rinde_cantidad', 'rinde_unidad', 'merma_pct', 'precio_venta', 'notas', 'activa']
+  const editables = ['loyverse_item_id', 'nombre', 'rinde_cantidad', 'rinde_unidad', 'merma_pct', 'precio_venta', 'costo_personalizado', 'notas', 'activa']
   const patch = {}
   for (const k of editables) if (req.body && k in req.body) patch[k] = req.body[k]
+  if ('costo_personalizado' in patch) {
+    patch.costo_personalizado = patch.costo_personalizado === '' || patch.costo_personalizado == null
+      ? null : Number(patch.costo_personalizado)
+  }
 
   if (Array.isArray(req.body?.ingredientes)) {
     const ings = req.body.ingredientes
