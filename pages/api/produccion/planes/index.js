@@ -15,7 +15,7 @@ async function list(req, res) {
   const auth = await requireAuth(req)
   if (auth.error) return res.status(auth.status).json({ error: auth.error })
 
-  const { fecha, desde, hasta, estado, limit = '50' } = req.query
+  const { fecha, desde, hasta, estado, incluir_cancelados, limit = '50' } = req.query
   let q = auth.admin
     .from('planes_produccion')
     .select('id, fecha_produccion, estado, notas, ejecutado_at, created_at, updated_at')
@@ -27,6 +27,10 @@ async function list(req, res) {
   if (desde)  q = q.gte('fecha_produccion', desde)
   if (hasta)  q = q.lte('fecha_produccion', hasta)
   if (estado) q = q.eq('estado', estado)
+  // Cancelados son terminales: no aparecen al elegir "el plan del dia" salvo
+  // que el caller lo pida explicito (historial admin). Filtra solo cuando no
+  // se solicito un estado concreto.
+  else if (incluir_cancelados !== '1') q = q.neq('estado', 'cancelado')
 
   const { data, error } = await q
   if (error) return res.status(500).json({ ok: false, error: error.message })

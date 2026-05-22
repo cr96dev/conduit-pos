@@ -165,19 +165,6 @@ export default function Produccion({ session }) {
     return { ok: false, ...json, status: res.status }
   }
 
-  async function cancelarPlan() {
-    if (!planActivo) return
-    const res = await apiFetch(`/api/produccion/planes/${planActivo.plan.id}`, {
-      method: 'PATCH',
-      body: JSON.stringify({ estado: 'cancelado' }),
-    })
-    const json = await res.json()
-    if (!res.ok) { setErr(json.error || 'Error cancelando'); return }
-    setAviso('Plan cancelado.')
-    setTimeout(() => setAviso(null), 4000)
-    await cargarPlan(planActivo.plan.id)
-  }
-
   async function eliminarPlan() {
     if (!planActivo) return
     if (!confirm('Borrar este plan? (solo borradores).')) return
@@ -243,22 +230,22 @@ export default function Produccion({ session }) {
               )
             )}
             {planActivo && estado === 'borrador' && esAdmin && (
-              <>
-                <button onClick={cancelarPlan}
-                  className="text-xs px-3 py-1.5 border border-gray-200 text-gray-600 rounded-md hover:border-gray-300">
-                  Cancelar plan
-                </button>
-                <button onClick={eliminarPlan}
-                  className="text-xs px-3 py-1.5 text-gray-400 hover:text-red-600">
-                  Borrar
-                </button>
-              </>
+              <button onClick={eliminarPlan}
+                className="text-xs px-3 py-1.5 text-gray-400 hover:text-red-600">
+                Borrar plan
+              </button>
             )}
             {planActivo && estado === 'ejecutado' && (
               <div className="text-xs text-gray-500">
                 Ejecutado {planActivo.plan.ejecutado_at && new Date(planActivo.plan.ejecutado_at).toLocaleString('es-GT')} ·
                 ya descontó insumos del stock.
               </div>
+            )}
+            {planActivo && estado === 'cancelado' && esAdmin && (
+              <button onClick={crearPlan} disabled={creando}
+                className="px-4 py-2 bg-julia-red text-white text-sm rounded-lg hover:bg-red-900 disabled:opacity-50">
+                {creando ? 'Creando…' : '+ Crear nuevo plan para esta fecha'}
+              </button>
             )}
           </div>
         </div>
