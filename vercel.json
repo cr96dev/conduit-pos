@@ -7,6 +7,14 @@
     {
       "path": "/api/contabilidad/cron-asientos-diarios",
       "schedule": "0 9 * * *"
+    },
+    {
+      "path": "/api/cron/resumen-ventas-diario",
+      "schedule": "0 3 * * *"
+    },
+    {
+      "path": "/api/cron/alerta-cierre-faltante",
+      "schedule": "0 15 * * *"
     }
   ],
   "functions": {
@@ -17,6 +25,12 @@
       "maxDuration": 60
     },
     "pages/api/contabilidad/cron-asientos-diarios.js": {
+      "maxDuration": 60
+    },
+    "pages/api/cron/resumen-ventas-diario.js": {
+      "maxDuration": 60
+    },
+    "pages/api/cron/alerta-cierre-faltante.js": {
       "maxDuration": 60
     }
   }
