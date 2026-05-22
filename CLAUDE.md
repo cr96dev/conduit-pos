@@ -127,7 +127,6 @@ Mantener este checklist actualizado conforme se cierren fases.
 **Auth de crons / endpoints internos:**
 - `CRON_SECRET` — para autenticar llamadas de Vercel Cron (header `Authorization: Bearer ...`)
 - `INTERNAL_API_SECRET` — alternativa para llamadas manuales/server-to-server
-- `BRIDGE_SECRET` — usado por `/api/ventas/sync` (header `x-bridge-secret`)
 
 **QBO (heredado, dual sandbox/producción):**
 - `QBO_CLIENT_ID` / `QBO_CLIENT_SECRET` / `QBO_REDIRECT_URI` (sandbox)
@@ -145,7 +144,7 @@ Mantener este checklist actualizado conforme se cierren fases.
 
 ### Reglas
 1. **Nunca** referenciar `SUPABASE_SERVICE_ROLE_KEY` o cualquier secret sin `NEXT_PUBLIC_` desde código que pueda terminar en el bundle (componentes, hooks, `lib/supabase.js`).
-2. **Nunca** hardcodear secrets como fallback. `pages/api/ventas/sync.js` lo hace (`process.env.X || "valor_real"`) — **eso es bug heredado, no patrón a copiar**. Si falta una var, fallar explícitamente con `res.status(500).json({ error: 'X no configurada' })`.
+2. **Nunca** hardcodear secrets como fallback (`process.env.X || "valor_real"`). Si falta una var, fallar explícitamente con `res.status(500).json({ error: 'X no configurada' })`.
 3. Usar `vercel env pull .env.local` para sincronizar localmente (los archivos `.env*` están en `.gitignore`).
 4. Si añadís una variable nueva, documentala aquí.
 
@@ -203,7 +202,6 @@ Hay tres mecanismos conviviendo. Al añadir uno nuevo, elegí el que más se par
 | ------------------------------------- | ----------------------------------------------- |
 | Cron de Vercel                        | `Authorization: Bearer ${CRON_SECRET}`          |
 | Llamada server-to-server (admin tool) | `Authorization: Bearer ${INTERNAL_API_SECRET}`  |
-| Bridge externo (script de campo)      | `x-bridge-secret: ${BRIDGE_SECRET}`             |
 
 Pattern recomendado para crons que también permiten invocación manual:
 ```js

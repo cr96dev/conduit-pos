@@ -5,24 +5,8 @@
       "schedule": "*/15 * * * *"
     },
     {
-      "path": "/api/qbo/sync/daily-prod",
-      "schedule": "0 17 * * *"
-    },
-    {
-      "path": "/api/qbo/sync/retry-failed",
-      "schedule": "30 17 * * *"
-    },
-    {
-      "path": "/api/qbo/conciliar/mensual",
-      "schedule": "0 18 1 * *"
-    },
-    {
       "path": "/api/contabilidad/cron-asientos-diarios",
       "schedule": "0 9 * * *"
-    },
-    {
-      "path": "/api/cron/myposoft-sync",
-      "schedule": "0 10 * * *"
     }
   ],
   "functions": {
@@ -32,19 +16,7 @@
     "pages/api/qbo/sync/daily.js": {
       "maxDuration": 60
     },
-    "pages/api/qbo/sync/daily-prod.js": {
-      "maxDuration": 60
-    },
-    "pages/api/qbo/sync/retry-failed.js": {
-      "maxDuration": 60
-    },
-    "pages/api/qbo/conciliar/mensual.js": {
-      "maxDuration": 60
-    },
     "pages/api/contabilidad/cron-asientos-diarios.js": {
-      "maxDuration": 60
-    },
-    "pages/api/cron/myposoft-sync.js": {
       "maxDuration": 60
     }
   }
