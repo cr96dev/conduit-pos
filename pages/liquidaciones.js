@@ -211,15 +211,23 @@ function ModalCalcular({ empleado, onClose, onSaved }) {
   const [guardando, setGuardando] = useState(false)
   const [err, setErr] = useState(null)
 
-  const calc = useMemo(() => {
-    try {
-      return calcularLiquidacion({
-        empleado, fechaBaja, tipoBaja,
-        diasSalarioPendiente: Number(diasPend) || 0,
-        deducciones: Number(deducciones) || 0,
-      })
-    } catch (e) { return null }
-  }, [empleado, fechaBaja, tipoBaja, diasPend, deducciones])
+  // Compute inline en cada render — el calc es cheap y elimina cualquier
+  // duda de useMemo + deps. Cambiar tipoBaja garantiza recompute.
+  let calc = null
+  try {
+    calc = calcularLiquidacion({
+      empleado, fechaBaja, tipoBaja,
+      diasSalarioPendiente: Number(diasPend) || 0,
+      deducciones: Number(deducciones) || 0,
+    })
+  } catch (e) {
+    calc = null
+  }
+
+  // Aplicabilidad legal por antigüedad (Codigo de Trabajo GT)
+  const antiguedadInsuficiente = calc && calc.aniosTrabajados < 0.5 && calc.mesesTrabajados < 6
+  const indemAplicaPorTipo = tipoBaja === 'despido_injustificado'
+  const preavisoAplicaPorTipo = tipoBaja === 'despido_injustificado'
 
   async function guardar(e) {
     e.preventDefault()
@@ -287,6 +295,16 @@ function ModalCalcular({ empleado, onClose, onSaved }) {
           </div>
         )}
 
+        {antiguedadInsuficiente && (
+          <div className="bg-blue-50 border border-blue-100 rounded-lg px-3 py-2 text-xs text-blue-800">
+            <strong>Antigüedad menor a 6 meses</strong> ({calc.mesesTrabajados} mes{calc.mesesTrabajados === 1 ? '' : 'es'} ·
+            {' '}{calc.diasTrabajados} días). Por Código de Trabajo GT, indemnización (Art. 82) y preaviso (Art. 78)
+            <strong> requieren al menos 6 meses</strong> de relación laboral aunque el despido sea injustificado.
+            Cambiar el tipo de baja <strong>no modificará el total</strong> en este caso — solo cambia cuando
+            la antigüedad alcanza el umbral legal.
+          </div>
+        )}
+
         <Campo label="Fecha de baja" required>
           <input type="date" required value={fechaBaja} onChange={e => setFechaBaja(e.target.value)} className="input" />
         </Campo>
@@ -309,16 +327,31 @@ function ModalCalcular({ empleado, onClose, onSaved }) {
           <div className="border border-gray-200 rounded-xl overflow-hidden">
             <div className="bg-gray-50 px-4 py-2 border-b border-gray-200 flex justify-between items-baseline">
               <span className="text-sm font-medium text-gray-700">Cálculo de prestaciones</span>
-              <span className="text-xs text-gray-400">
-                {calc.aniosTrabajados.toFixed(2)} años · {calc.mesesTrabajados} meses
+              <span className="text-xs text-gray-500">
+                Antigüedad: <strong className="text-gray-700">{calc.aniosTrabajados.toFixed(2)} años · {calc.mesesTrabajados} meses · {calc.diasTrabajados} días</strong>
               </span>
             </div>
             <div className="divide-y divide-gray-50">
-              <Fila label={`Indemnización ${tipoBaja !== 'despido_injustificado' ? '— no aplica' : ''}`}
-                nota={tipoBaja === 'despido_injustificado' ? `Prom. 6m: ${fmt(calc.salProm6m)} × ${calc.aniosTrabajados.toFixed(2)} años` : null}
-                val={calc.indemnizacion} aplica={tipoBaja === 'despido_injustificado'} />
-              <Fila label={`Preaviso ${tipoBaja !== 'despido_injustificado' ? '— no aplica' : ''}`} val={calc.preaviso}
-                aplica={tipoBaja === 'despido_injustificado'} />
+              <Fila
+                label={
+                  !indemAplicaPorTipo ? 'Indemnización — no aplica (tipo de baja)'
+                  : antiguedadInsuficiente ? 'Indemnización — no aplica (antigüedad < 6 meses)'
+                  : 'Indemnización'
+                }
+                nota={indemAplicaPorTipo && !antiguedadInsuficiente
+                  ? `Prom. 6m: ${fmt(calc.salProm6m)} × ${calc.aniosTrabajados.toFixed(2)} años` : null}
+                val={calc.indemnizacion}
+                aplica={indemAplicaPorTipo && !antiguedadInsuficiente}
+              />
+              <Fila
+                label={
+                  !preavisoAplicaPorTipo ? 'Preaviso — no aplica (tipo de baja)'
+                  : antiguedadInsuficiente ? 'Preaviso — no aplica (antigüedad < 6 meses)'
+                  : 'Preaviso'
+                }
+                val={calc.preaviso}
+                aplica={preavisoAplicaPorTipo && !antiguedadInsuficiente}
+              />
               <Fila label="Vacaciones proporcionales" val={calc.vacaciones}
                 nota={`${calc.diasVacProporcionales} días × ${fmt(empleado.salario_mensual/30)}/día`} />
               <Fila label="Aguinaldo proporcional" val={calc.aguinaldo} nota={`${calc.diasAguinaldo} días del período`} />
