@@ -24,6 +24,11 @@ CREATE POLICY liquidaciones_select      ON liquidaciones      FOR SELECT TO auth
 DROP POLICY IF EXISTS asientos_select           ON asientos;
 CREATE POLICY asientos_select           ON asientos           FOR SELECT TO authenticated USING (es_admin(auth.uid()));
 
+-- En asientos_partidas la policy original (2026_05_21_contabilidad.sql:119)
+-- se llama `partidas_select`, no `<tabla>_select`. Si no la dropeamos,
+-- queda activa en paralelo con USING (true) y RLS hace OR → la
+-- restriccion es_admin se anula.
+DROP POLICY IF EXISTS partidas_select           ON asientos_partidas;
 DROP POLICY IF EXISTS asientos_partidas_select  ON asientos_partidas;
 CREATE POLICY asientos_partidas_select  ON asientos_partidas  FOR SELECT TO authenticated USING (es_admin(auth.uid()));
 
