@@ -96,7 +96,7 @@ async function notificarAfiliadoDesconocido({ noAfiliado, liquidacionNo, fechaRe
       },
       body: JSON.stringify({
         sender: { name: 'GasOps BAC', email: 'noreply@hidrocom.net' },
-        to: [{ email: 'adoffice569@gmail.com', name: 'Charles' }],
+        to: [{ email: process.env.NOTIFY_EMAIL || 'adoffice569@gmail.com', name: 'Charles' }],
         subject: `Afiliado BAC desconocido: ${noAfiliado}`,
         htmlContent: `
           <p>BAC envió un PDF con un número de afiliado que no está mapeado:</p>

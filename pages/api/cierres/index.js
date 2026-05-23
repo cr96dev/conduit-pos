@@ -94,7 +94,9 @@ async function create(req, res) {
     return res.status(500).json({ ok: false, error: cErr.message })
   }
 
-  // Insertar egresos
+  // Insertar egresos (idempotente: si el cierre se reintenta, el constraint
+  // UNIQUE (cierre_id, concepto, monto) evita duplicados; ignoreDuplicates
+  // hace que el INSERT se comporte como ON CONFLICT DO NOTHING).
   if (egresos.length > 0) {
     const rows = egresos.map(e => ({
       cierre_id: cierre.id,
@@ -102,7 +104,9 @@ async function create(req, res) {
       monto: Number(e.monto),
       created_by: auth.user.id,
     }))
-    const { error: eErr } = await auth.admin.from('cierres_egresos').insert(rows)
+    const { error: eErr } = await auth.admin
+      .from('cierres_egresos')
+      .upsert(rows, { onConflict: 'cierre_id,concepto,monto', ignoreDuplicates: true })
     if (eErr) console.error('[cierres.create] egresos ERROR:', eErr.message)
   }
 

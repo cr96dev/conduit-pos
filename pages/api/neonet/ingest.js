@@ -25,7 +25,7 @@ export const config = {
   }
 }
 
-const NOTIFY_EMAIL = 'adoffice569@gmail.com'
+const NOTIFY_EMAIL = process.env.NOTIFY_EMAIL || 'adoffice569@gmail.com'
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
