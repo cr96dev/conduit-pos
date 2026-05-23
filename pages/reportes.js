@@ -56,6 +56,11 @@ export default function Reportes({ session }) {
   const [desde, setDesde] = useState(inicioMes())
   const [hasta, setHasta] = useState(hoyGT())
 
+  // Drill-down: cuenta seleccionada para abrir movimientos en un modal.
+  // null = cerrado. Objeto = { id, codigo, nombre }.
+  const [drillCuenta, setDrillCuenta] = useState(null)
+  const onDrillCuenta = (c) => setDrillCuenta(c)
+
   useEffect(() => {
     if (!session) { router.push('/'); return }
     supabase.from('perfiles').select('id, email, nombre_completo, rol, activo').eq('id', session.user.id).single()
@@ -113,14 +118,23 @@ export default function Reportes({ session }) {
         </div>
 
         {tab === 'dashboard'    && <TabDashboard    desde={desde} hasta={hasta} />}
-        {tab === 'pnl'          && <TabPnL          desde={desde} hasta={hasta} />}
-        {tab === 'balance'      && <TabBalanceGeneral hasta={hasta} />}
+        {tab === 'pnl'          && <TabPnL          desde={desde} hasta={hasta} onDrillCuenta={onDrillCuenta} setTab={setTab} />}
+        {tab === 'balance'      && <TabBalanceGeneral hasta={hasta} onDrillCuenta={onDrillCuenta} />}
         {tab === 'flujo'        && <TabFlujoCaja    desde={desde} hasta={hasta} />}
         {tab === 'ventas'       && <TabVentas       desde={desde} hasta={hasta} />}
         {tab === 'rentabilidad' && <TabRentabilidad desde={desde} hasta={hasta} />}
         {tab === 'libro-mayor'  && <TabLibroMayor   desde={desde} hasta={hasta} />}
-        {tab === 'balance-comp' && <TabBalanceComprobacion desde={desde} hasta={hasta} />}
+        {tab === 'balance-comp' && <TabBalanceComprobacion desde={desde} hasta={hasta} onDrillCuenta={onDrillCuenta} />}
       </div>
+
+      {drillCuenta && (
+        <DrillDownCuentaModal
+          cuenta={drillCuenta}
+          desde={desde}
+          hasta={hasta}
+          onClose={() => setDrillCuenta(null)}
+        />
+      )}
 
       {/* Print stylesheet — para "Save as PDF" del navegador */}
       <style jsx global>{`
@@ -251,7 +265,7 @@ function TabDashboard({ desde, hasta }) {
 // P&L
 // ============================================================================
 
-function TabPnL({ desde, hasta }) {
+function TabPnL({ desde, hasta, onDrillCuenta, setTab }) {
   const [loading, setLoading] = useState(true)
   const [data, setData] = useState(null)
   const [err, setErr] = useState(null)
@@ -313,7 +327,10 @@ function TabPnL({ desde, hasta }) {
             <PnLFila label="Ventas netas (base)"          valor={data.ingresos.netos_sin_iva} bold />
 
             <PnLSeccion titulo="COSTO DE VENTAS" />
-            <PnLFila label={`COGS teórico (cobertura ${fmtPct(data.cogs.cobertura_pct)})`} valor={-data.cogs.teorico} />
+            <PnLFila label={`COGS teórico (cobertura ${fmtPct(data.cogs.cobertura_pct)})`}
+                     valor={-data.cogs.teorico}
+                     onClick={() => setTab && setTab('rentabilidad')}
+                     hintClick="ver desglose por producto" />
 
             <PnLFila label="UTILIDAD BRUTA" valor={data.utilidad_bruta.monto} bold highlight
                      subtexto={data.utilidad_bruta.margen_pct != null ? `Margen bruto ${fmtPct(data.utilidad_bruta.margen_pct)}` : null} />
@@ -329,19 +346,68 @@ function TabPnL({ desde, hasta }) {
         </table>
       </div>
 
+      {/* Desglose contable de ingresos por cuenta */}
+      {data.ingresos.detalle_por_cuenta && data.ingresos.detalle_por_cuenta.length > 0 && (
+        <Section title="Desglose contable de ingresos por cuenta">
+          <DrillCuentasTable
+            rows={data.ingresos.detalle_por_cuenta}
+            onClick={onDrillCuenta}
+          />
+          <div className="text-xs text-gray-400 mt-2 no-print">
+            Click en una fila para ver los movimientos del rango. Total contable: {fmtQ(data.ingresos.total_contable)}.
+          </div>
+        </Section>
+      )}
+
       {/* Detalle de gastos por cuenta */}
       {data.gastos.detalle_por_cuenta.length > 0 && (
         <Section title="Detalle de gastos por cuenta">
-          <SimpleTable
-            columns={[
-              { k: 'codigo', l: 'Código' },
-              { k: 'nombre', l: 'Cuenta' },
-              { k: 'monto',  l: 'Monto', align: 'right', fmt: fmtQ },
-            ]}
+          <DrillCuentasTable
             rows={data.gastos.detalle_por_cuenta}
+            onClick={onDrillCuenta}
           />
+          <div className="text-xs text-gray-400 mt-2 no-print">
+            Click en una fila para ver las partidas que la componen.
+          </div>
         </Section>
       )}
+    </div>
+  )
+}
+
+// Tabla reusable para gastos/ingresos por cuenta con drill-down al click.
+function DrillCuentasTable({ rows, onClick }) {
+  if (!rows || rows.length === 0) return <div className="text-xs text-gray-400 py-4">Sin datos</div>
+  return (
+    <div className="bg-white border border-gray-100 rounded-xl shadow-sm overflow-hidden print-shadow">
+      <table className="w-full text-sm">
+        <thead className="bg-gray-50/80 border-b border-gray-100">
+          <tr>
+            <th className="text-left text-xs text-gray-500 font-medium px-4 py-2.5">Código</th>
+            <th className="text-left text-xs text-gray-500 font-medium px-4 py-2.5">Cuenta</th>
+            <th className="text-right text-xs text-gray-500 font-medium px-4 py-2.5">Monto</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((r, i) => {
+            const clickeable = onClick && r.id
+            return (
+              <tr
+                key={r.id || i}
+                className={`${i > 0 ? 'border-t border-gray-50' : ''} ${clickeable ? 'cursor-pointer hover:bg-julia-cream/30 transition-colors group' : ''}`}
+                onClick={clickeable ? () => onClick({ id: r.id, codigo: r.codigo, nombre: r.nombre }) : undefined}
+              >
+                <td className="px-4 py-2 text-gray-500 font-mono text-xs">{r.codigo}</td>
+                <td className="px-4 py-2 text-gray-700">
+                  {r.nombre}
+                  {clickeable && <span className="ml-2 text-[10px] text-gray-300 group-hover:text-julia-red no-print">→ ver detalle</span>}
+                </td>
+                <td className="px-4 py-2 text-right tabular-nums text-gray-700">{fmtQ(r.monto)}</td>
+              </tr>
+            )
+          })}
+        </tbody>
+      </table>
     </div>
   )
 }
@@ -354,12 +420,19 @@ function PnLSeccion({ titulo }) {
   )
 }
 
-function PnLFila({ label, valor, bold, highlight, muted, subtexto }) {
+function PnLFila({ label, valor, bold, highlight, muted, subtexto, onClick, hintClick }) {
+  const clickeable = !!onClick
   return (
-    <tr className={`border-t border-gray-50 ${highlight ? 'bg-julia-cream/30' : ''}`}>
+    <tr
+      className={`border-t border-gray-50 ${highlight ? 'bg-julia-cream/30' : ''} ${clickeable ? 'cursor-pointer hover:bg-julia-cream/40 transition-colors group' : ''}`}
+      onClick={clickeable ? onClick : undefined}
+    >
       <td className={`px-5 py-2.5 ${bold ? 'font-semibold text-gray-900' : muted ? 'text-gray-500 pl-9' : 'text-gray-700 pl-9'}`}>
         {label}
         {subtexto && <span className="ml-2 text-xs text-gray-500 font-normal">· {subtexto}</span>}
+        {clickeable && hintClick && (
+          <span className="ml-2 text-[10px] text-gray-300 group-hover:text-julia-red no-print">→ {hintClick}</span>
+        )}
       </td>
       <td className={`px-5 py-2.5 text-right tabular-nums ${bold ? 'font-semibold text-gray-900' : muted ? 'text-gray-500' : 'text-gray-700'} ${valor < 0 ? '' : ''}`}>
         {fmtQ(valor)}
@@ -608,7 +681,7 @@ function Section({ title, children }) {
   )
 }
 
-function SimpleTable({ columns, rows, maxRows }) {
+function SimpleTable({ columns, rows, maxRows, onRowClick }) {
   const trim = maxRows && rows.length > maxRows
   const visibles = trim ? rows.slice(0, maxRows) : rows
   return (
@@ -626,7 +699,11 @@ function SimpleTable({ columns, rows, maxRows }) {
             {visibles.length === 0 ? (
               <tr><td colSpan={columns.length} className="text-center text-xs text-gray-400 py-8">Sin datos en el rango.</td></tr>
             ) : visibles.map((r, i) => (
-              <tr key={i} className={i > 0 ? 'border-t border-gray-50' : ''}>
+              <tr
+                key={i}
+                className={`${i > 0 ? 'border-t border-gray-50' : ''} ${onRowClick ? 'cursor-pointer hover:bg-julia-cream/30 transition-colors' : ''}`}
+                onClick={onRowClick ? () => onRowClick(r) : undefined}
+              >
                 {columns.map(c => (
                   <td key={c.k} className={`px-4 py-2 text-${c.align || 'left'} ${c.align === 'right' ? 'tabular-nums' : ''} text-gray-700`}>
                     {c.fmt ? c.fmt(r[c.k]) : (r[c.k] ?? '—')}
@@ -688,7 +765,7 @@ function Error({ msg }) {
 // Balance General
 // ============================================================================
 
-function TabBalanceGeneral({ hasta }) {
+function TabBalanceGeneral({ hasta, onDrillCuenta }) {
   const [loading, setLoading] = useState(true)
   const [data, setData] = useState(null)
   const [err, setErr] = useState(null)
@@ -750,11 +827,11 @@ function TabBalanceGeneral({ hasta }) {
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
         {/* Columna izquierda: ACTIVO */}
-        <BGGrupo titulo="ACTIVO" cuentas={g.activo.cuentas} total={g.activo.total} colorTotal={C_TONE_ACTIVO} />
+        <BGGrupo titulo="ACTIVO" cuentas={g.activo.cuentas} total={g.activo.total} colorTotal={C_TONE_ACTIVO} onDrillCuenta={onDrillCuenta} />
 
         {/* Columna derecha: PASIVO + PATRIMONIO */}
         <div className="space-y-5">
-          <BGGrupo titulo="PASIVO" cuentas={g.pasivo.cuentas} total={g.pasivo.total} colorTotal={C_TONE_PASIVO} />
+          <BGGrupo titulo="PASIVO" cuentas={g.pasivo.cuentas} total={g.pasivo.total} colorTotal={C_TONE_PASIVO} onDrillCuenta={onDrillCuenta} />
           <BGGrupo
             titulo="PATRIMONIO"
             cuentas={[
@@ -770,6 +847,7 @@ function TabBalanceGeneral({ hasta }) {
             colorTotal={C_TONE_PATRIMONIO}
             subtotalLabel="Subtotal cuentas"
             subtotal={g.patrimonio.total_cuentas}
+            onDrillCuenta={onDrillCuenta}
           />
         </div>
       </div>
@@ -803,7 +881,7 @@ const C_TONE_ACTIVO     = 'border-blue-200 bg-blue-50/40 text-blue-900'
 const C_TONE_PASIVO     = 'border-amber-200 bg-amber-50/40 text-amber-900'
 const C_TONE_PATRIMONIO = 'border-emerald-200 bg-emerald-50/40 text-emerald-900'
 
-function BGGrupo({ titulo, cuentas, total, colorTotal, subtotalLabel, subtotal }) {
+function BGGrupo({ titulo, cuentas, total, colorTotal, subtotalLabel, subtotal, onDrillCuenta }) {
   return (
     <div className="bg-white border border-gray-100 rounded-2xl shadow-sm overflow-hidden print-shadow">
       <div className="px-5 py-3 border-b border-gray-100 bg-gray-50/80">
@@ -813,15 +891,22 @@ function BGGrupo({ titulo, cuentas, total, colorTotal, subtotalLabel, subtotal }
         <tbody>
           {cuentas.length === 0 ? (
             <tr><td colSpan="2" className="px-5 py-6 text-center text-xs text-gray-400">Sin cuentas con saldo</td></tr>
-          ) : cuentas.map((c, i) => (
-            <tr key={c.id || c.nombre} className={i > 0 ? 'border-t border-gray-50' : ''}>
+          ) : cuentas.map((c, i) => {
+            const clickeable = onDrillCuenta && c.id && !c.esEjercicio
+            return (
+            <tr
+              key={c.id || c.nombre}
+              className={`${i > 0 ? 'border-t border-gray-50' : ''} ${clickeable ? 'cursor-pointer hover:bg-julia-cream/30 transition-colors group' : ''}`}
+              onClick={clickeable ? () => onDrillCuenta({ id: c.id, codigo: c.codigo, nombre: c.nombre }) : undefined}
+            >
               <td className="px-5 py-2 text-gray-700">
                 {c.codigo && <span className="text-xs text-gray-400 mr-2 font-mono">{c.codigo}</span>}
                 <span className={c.esEjercicio ? 'italic' : ''}>{c.nombre}</span>
+                {clickeable && <span className="ml-2 text-[10px] text-gray-300 group-hover:text-julia-red no-print">→</span>}
               </td>
               <td className="px-5 py-2 text-right tabular-nums text-gray-800">{fmtQ(c.saldo)}</td>
             </tr>
-          ))}
+          )})}
           {subtotal != null && (
             <tr className="border-t border-gray-100 bg-gray-50/40">
               <td className="px-5 py-2 text-xs text-gray-500">{subtotalLabel}</td>
@@ -1026,7 +1111,7 @@ function TabLibroMayor({ desde, hasta }) {
 // Balance de Comprobación
 // ============================================================================
 
-function TabBalanceComprobacion({ desde, hasta }) {
+function TabBalanceComprobacion({ desde, hasta, onDrillCuenta }) {
   const [loading, setLoading] = useState(true)
   const [data, setData] = useState(null)
   const [err, setErr] = useState(null)
@@ -1073,6 +1158,7 @@ function TabBalanceComprobacion({ desde, hasta }) {
 
       <SimpleTable
         maxRows={300}
+        onRowClick={onDrillCuenta ? (r) => onDrillCuenta({ id: r.id, codigo: r.codigo, nombre: r.nombre }) : null}
         columns={[
           { k: 'codigo',          l: 'Código' },
           { k: 'nombre',          l: 'Cuenta' },
@@ -1084,6 +1170,137 @@ function TabBalanceComprobacion({ desde, hasta }) {
         ]}
         rows={data.filas}
       />
+      {onDrillCuenta && (
+        <div className="text-xs text-gray-400 mt-2 no-print">
+          Click en una fila para ver los movimientos de la cuenta en el rango.
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ============================================================================
+// Drill-down de cuenta: modal que reusa /api/contabilidad/libro-mayor
+// ============================================================================
+
+function DrillDownCuentaModal({ cuenta, desde, hasta, onClose }) {
+  const [loading, setLoading] = useState(true)
+  const [data, setData] = useState(null)
+  const [err, setErr] = useState(null)
+
+  useEffect(() => {
+    let cancel = false
+    setLoading(true); setErr(null); setData(null)
+    apiFetch(`/api/contabilidad/libro-mayor?cuenta_id=${cuenta.id}&desde=${desde}&hasta=${hasta}`)
+      .then(r => r.json().then(j => ({ ok: r.ok, j })))
+      .then(({ ok, j }) => {
+        if (cancel) return
+        setLoading(false)
+        if (!ok) setErr(j.error || 'Error cargando movimientos')
+        else setData(j)
+      })
+    return () => { cancel = true }
+  }, [cuenta.id, desde, hasta])
+
+  // Cerrar con ESC.
+  useEffect(() => {
+    const onKey = (e) => { if (e.key === 'Escape') onClose() }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [onClose])
+
+  const movimientos = data?.movimientos || []
+  const totDebe  = movimientos.reduce((s, m) => s + (Number(m.debe)  || 0), 0)
+  const totHaber = movimientos.reduce((s, m) => s + (Number(m.haber) || 0), 0)
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-start md:items-center justify-center bg-black/40 px-2 py-4 md:p-6 no-print" onClick={onClose}>
+      <div
+        className="bg-white rounded-2xl shadow-xl w-full max-w-5xl max-h-[95vh] flex flex-col overflow-hidden"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div className="px-5 py-4 border-b border-gray-100 flex items-start justify-between gap-4">
+          <div>
+            <div className="text-[11px] uppercase tracking-wider text-gray-400 font-medium">Movimientos de cuenta</div>
+            <h2 className="text-lg font-semibold text-gray-900 mt-0.5">
+              {cuenta.codigo && <span className="text-gray-400 font-mono text-sm mr-2">{cuenta.codigo}</span>}
+              {cuenta.nombre}
+            </h2>
+            <div className="text-xs text-gray-500 mt-0.5">
+              Del {formatFecha(desde)} al {formatFecha(hasta)}
+            </div>
+          </div>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-700 text-2xl leading-none p-1 -mt-1" aria-label="Cerrar">×</button>
+        </div>
+
+        {/* Body */}
+        <div className="flex-1 overflow-auto">
+          {loading && <div className="p-6"><SkeletonRow /><SkeletonRow /><SkeletonRow /></div>}
+          {err && <div className="m-4"><Error msg={err} /></div>}
+          {data && !loading && !err && (
+            <>
+              {/* KPIs */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 p-5 bg-gray-50/40 border-b border-gray-100">
+                <Kpi label="Saldo inicial" value={fmtQ(data.saldo_inicial)} hint={`al ${formatFecha(desde)}`} />
+                <Kpi label="Movimientos"   value={fmtNum(movimientos.length)} />
+                <Kpi label="Saldo final"   value={fmtQ(data.saldo_final)} tone="green" hint={`al ${formatFecha(hasta)}`} />
+                <Kpi label="Variación"     value={fmtQ(data.saldo_final - data.saldo_inicial)}
+                     tone={data.saldo_final >= data.saldo_inicial ? 'green' : 'red'} />
+              </div>
+
+              {/* Tabla */}
+              {movimientos.length === 0 ? (
+                <div className="p-10 text-center text-sm text-gray-400">Sin movimientos en el rango.</div>
+              ) : (
+                <table className="w-full text-sm">
+                  <thead className="bg-gray-50/80 border-b border-gray-100 sticky top-0">
+                    <tr>
+                      <th className="text-left text-xs text-gray-500 font-medium px-4 py-2.5">Fecha</th>
+                      <th className="text-right text-xs text-gray-500 font-medium px-4 py-2.5">Asiento</th>
+                      <th className="text-left text-xs text-gray-500 font-medium px-4 py-2.5">Descripción</th>
+                      <th className="text-left text-xs text-gray-500 font-medium px-4 py-2.5">Concepto</th>
+                      <th className="text-right text-xs text-gray-500 font-medium px-4 py-2.5">Debe</th>
+                      <th className="text-right text-xs text-gray-500 font-medium px-4 py-2.5">Haber</th>
+                      <th className="text-right text-xs text-gray-500 font-medium px-4 py-2.5">Saldo</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {movimientos.map((m, i) => (
+                      <tr key={m.id || i} className={i > 0 ? 'border-t border-gray-50' : ''}>
+                        <td className="px-4 py-2 text-gray-700 whitespace-nowrap">{formatFecha(m.fecha)}</td>
+                        <td className="px-4 py-2 text-right tabular-nums text-gray-500 font-mono text-xs">{m.asiento_numero ?? '—'}</td>
+                        <td className="px-4 py-2 text-gray-700">{m.descripcion || '—'}</td>
+                        <td className="px-4 py-2 text-gray-600 text-xs">{m.concepto || '—'}</td>
+                        <td className="px-4 py-2 text-right tabular-nums text-gray-700">{m.debe > 0  ? fmtQ(m.debe)  : ''}</td>
+                        <td className="px-4 py-2 text-right tabular-nums text-gray-700">{m.haber > 0 ? fmtQ(m.haber) : ''}</td>
+                        <td className="px-4 py-2 text-right tabular-nums text-gray-800 font-medium">{fmtQ(m.saldo)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                  <tfoot>
+                    <tr className="border-t-2 border-gray-200 bg-gray-50/60">
+                      <td colSpan="4" className="px-4 py-2.5 text-xs uppercase tracking-wider text-gray-500 font-medium">Totales del rango</td>
+                      <td className="px-4 py-2.5 text-right tabular-nums font-semibold text-gray-800">{fmtQ(totDebe)}</td>
+                      <td className="px-4 py-2.5 text-right tabular-nums font-semibold text-gray-800">{fmtQ(totHaber)}</td>
+                      <td></td>
+                    </tr>
+                  </tfoot>
+                </table>
+              )}
+            </>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="px-5 py-3 border-t border-gray-100 flex justify-between items-center bg-gray-50/40">
+          <span className="text-xs text-gray-400">ESC o click fuera para cerrar</span>
+          <button onClick={onClose}
+            className="text-xs px-3 py-1.5 bg-white border border-gray-200 text-gray-700 rounded-md hover:border-julia-red hover:text-julia-red">
+            Cerrar
+          </button>
+        </div>
+      </div>
     </div>
   )
 }
