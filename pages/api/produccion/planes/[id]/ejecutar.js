@@ -22,6 +22,7 @@
 
 import { requireAdmin } from '../../../../../lib/auth'
 import { explotarPlan } from '../../../../../lib/produccion'
+import { poblarInventarioInicialDesdeProduccion } from '../../../../../lib/produccion-inventario'
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' })
@@ -148,13 +149,29 @@ export default async function handler(req, res) {
       .single()
     if (upErr) throw new Error('update plan: ' + upErr.message)
 
+    // 6) Poblar inventario_inicial de producto terminado del dia. Best-effort:
+    //    si falla, registramos en la respuesta pero no abortamos (los
+    //    movimientos de insumos ya quedaron registrados y el plan ejecutado).
+    let inventarioPoblado = null
+    let inventarioError = null
+    try {
+      inventarioPoblado = await poblarInventarioInicialDesdeProduccion(auth.admin, plan.id, auth.user.id)
+    } catch (e) {
+      console.error('[produccion.ejecutar] poblar inventario inicial:', e.message)
+      inventarioError = e.message
+    }
+
     const respuesta = {
       ok: errores.length === 0,
       plan: planActualizado,
       movimientos_creados: movimientos.length,
       total_insumos: explosion.requerimientos.length,
+      inventario_inicial: inventarioPoblado
+        ? { actualizadas: inventarioPoblado.actualizadas.length, saltadas: inventarioPoblado.saltadas.length, detalle: inventarioPoblado.actualizadas }
+        : null,
     }
     if (errores.length > 0) respuesta.errores_parciales = errores
+    if (inventarioError) respuesta.inventario_error = inventarioError
 
     return res.status(errores.length === 0 ? 200 : 207).json(respuesta)
   } catch (e) {
