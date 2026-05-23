@@ -1,5 +1,10 @@
+import { requireAuth } from '../../../lib/auth'
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).end()
+
+  const auth = await requireAuth(req)
+  if (auth.error) return res.status(auth.status).json({ error: auth.error })
 
   try {
     const resp = await fetch('https://signer-emisores.feel.com.gt/sign_solicitud_firmas/firma_xml', {

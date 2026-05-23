@@ -3,6 +3,7 @@ import { useRouter } from 'next/router'
 import { supabase } from '../lib/supabase'
 import Layout from '../components/Layout'
 import { SkeletonRow } from '../components/Skeleton'
+import { rangoUTCDeDiaGT, fechaGT } from '../lib/fecha-gt'
 
 function fmtQ(n) {
   if (n == null) return 'Q 0.00'
@@ -22,16 +23,17 @@ export default function Ventas({ session }) {
 
   async function cargar() {
     setLoading(true)
-    const desde = new Date()
-    if (filtro === 'hoy')    desde.setHours(0,0,0,0)
-    if (filtro === 'semana') desde.setDate(desde.getDate() - 7)
-    if (filtro === 'mes')    desde.setDate(desde.getDate() - 30)
-    const desdeIso = new Date(desde.getTime() - 6 * 60 * 60 * 1000).toISOString()
+    // Calcular el inicio del rango en GT (UTC-6) independientemente de la
+    // zona horaria del navegador: 'hoy' = 00:00 GT del dia actual GT;
+    // semana/mes = 7 o 30 dias atras desde hoy GT.
+    const diasAtras = filtro === 'hoy' ? 0 : filtro === 'semana' ? 7 : 30
+    const fechaInicioGT = fechaGT(diasAtras)
+    const { desdeUTC } = rangoUTCDeDiaGT(fechaInicioGT)
 
     const { data } = await supabase
       .from('loyverse_receipts')
       .select('loyverse_id, receipt_number, receipt_type, total_money, total_tax, receipt_date, employee_id, customer_id')
-      .gte('receipt_date', desdeIso)
+      .gte('receipt_date', desdeUTC)
       .order('receipt_date', { ascending: false })
       .limit(500)
 
