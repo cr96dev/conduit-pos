@@ -4,7 +4,7 @@
 //                                                  Body: { regenerar?: true }  // borra y recrea
 
 import { requireAuth, requireAdmin } from '../../../../../lib/auth'
-import { calcularIgssLinea, calcularTotalesPlanilla, round2 } from '../../../../../lib/planillas'
+import { calcularIgssLinea, calcularTotalesPlanilla, cargasPatronalesQuincenales, round2 } from '../../../../../lib/planillas'
 
 export default async function handler(req, res) {
   const { id } = req.query
@@ -58,6 +58,10 @@ async function generar(req, res, id) {
     const bonifQ   = Number(e.bonificacion_quincenal) || 0
     const bonif2da = planilla.quincena === 2 ? (Number(e.bonificacion_segunda_quincena) || 0) : 0
     const otros_ingresos = round2(bonifQ + bonif2da)
+    // Cargas patronales = monto mensual / 2 por quincena (al sumar Q1+Q2 del
+    // mes = monto mensual exacto, sin duplicar). `costo_patronal_quincenal`
+    // ya viene prorrateado desde calcularProvisiones.
+    const cargasQ = cargasPatronalesQuincenales(e)
     const baseLinea = {
       planilla_id: id,
       empleado_id: e.id,
@@ -71,10 +75,10 @@ async function generar(req, res, id) {
       bonificacion_incentivo: 0,
       faltante_inventario: 0, faltante_efectivo: 0,
       prestamo_anticipo: 0, embargo_deuda: 0, otros_descuentos: 0, descuentos_varios: 0,
-      igss_patronal: e.igss_patronal_mensual,
-      irtra: e.irtra_mensual,
-      intecap: e.intecap_mensual,
-      indemnizacion: e.indemnizacion_mensual,
+      igss_patronal: cargasQ.igss_patronal,
+      irtra:         cargasQ.irtra,
+      intecap:       cargasQ.intecap,
+      indemnizacion: cargasQ.indemnizacion,
       costo_patronal_total: e.costo_patronal_quincenal,
       concepto: planilla.periodo,
     }
