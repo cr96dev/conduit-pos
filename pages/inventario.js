@@ -208,6 +208,23 @@ function TabTerminados({ esAdmin }) {
     }, 600)
   }, [fecha])
 
+  // Funciones de filtro reutilizables (también se usan para los contadores).
+  const esRelevante = (f) =>
+    (Number(f.ventas_cantidad) || 0) !== 0
+    || (f.inventario_inicial != null)
+    || (f.inventario_final != null)
+    || (f.inicial_sugerido_ayer != null)
+  const tieneFinal     = (f) => f.inventario_final != null
+  const tieneVariacion = (f) => f.variacion != null && f.variacion !== 0
+
+  // Contadores por filtro (sobre todo data, sin búsqueda).
+  const contadores = useMemo(() => ({
+    relevantes: data.filas.filter(esRelevante).length,
+    'con-final':  data.filas.filter(tieneFinal).length,
+    variacion:    data.filas.filter(tieneVariacion).length,
+    todos:        data.filas.length,
+  }), [data.filas])
+
   const filtradas = useMemo(() => {
     const q = busqueda.trim().toLowerCase()
     return data.filas.filter(f => {
@@ -215,13 +232,9 @@ function TabTerminados({ esAdmin }) {
         const txt = `${f.item_name || ''} ${f.variant_name || ''} ${f.sku || ''}`.toLowerCase()
         if (!txt.includes(q)) return false
       }
-      if (filtro === 'relevantes') {
-        return f.ventas_cantidad !== 0
-            || f.inventario_inicial != null
-            || f.inventario_final != null
-      }
-      if (filtro === 'con-final')  return f.inventario_final != null
-      if (filtro === 'variacion')  return f.variacion != null && f.variacion !== 0
+      if (filtro === 'relevantes') return esRelevante(f)
+      if (filtro === 'con-final')  return tieneFinal(f)
+      if (filtro === 'variacion')  return tieneVariacion(f)
       return true
     })
   }, [data.filas, busqueda, filtro])
@@ -323,7 +336,7 @@ function TabTerminados({ esAdmin }) {
               className={`px-3 py-1.5 rounded-md transition ${filtro === o.v
                 ? 'bg-white text-julia-red shadow-sm font-medium'
                 : 'text-gray-500 hover:text-gray-800'}`}>
-              {o.l}
+              {o.l} <span className="ml-1 text-gray-400">({contadores[o.v] ?? 0})</span>
             </button>
           ))}
         </div>
@@ -379,7 +392,20 @@ function TabTerminados({ esAdmin }) {
                 <>{[1, 2, 3, 4, 5].map(i => <tr key={i}><td colSpan={6}><SkeletonRow /></td></tr>)}</>
               ) : filtradas.length === 0 ? (
                 <tr><td colSpan={6} className="text-center text-xs text-gray-400 py-12">
-                  {data.filas.length === 0 ? 'No hay productos sincronizados desde Loyverse.' : 'Sin resultados con esos filtros.'}
+                  {data.filas.length === 0 ? (
+                    'No hay productos sincronizados desde Loyverse.'
+                  ) : (
+                    <>
+                      Sin resultados con esos filtros.
+                      {(busqueda || filtro !== 'todos') && (
+                        <>
+                          {' '}
+                          <button onClick={() => { setBusqueda(''); setFiltro('todos') }}
+                            className="text-julia-red hover:underline">Ver todos ({data.filas.length})</button>
+                        </>
+                      )}
+                    </>
+                  )}
                 </td></tr>
               ) : (
                 filtradas.map((f, idx) => (
