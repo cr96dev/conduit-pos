@@ -367,8 +367,54 @@ function TabTerminados({ esAdmin }) {
         <div className="bg-red-50 border border-red-100 rounded-lg px-3 py-2 text-xs text-red-700 mb-3">{err}</div>
       )}
 
-      {/* Tabla */}
-      <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm">
+      {/* Vista MOBILE: cards apiladas (≤ md). En móvil la tabla quedaba con
+          scroll horizontal y la columna Inicial se ocultaba a la derecha. */}
+      <div className="md:hidden space-y-2 mb-3">
+        {loading ? (
+          <>{[1, 2, 3].map(i => <div key={i} className="bg-white rounded-xl border border-gray-100 p-4"><SkeletonRow /></div>)}</>
+        ) : filtradas.length === 0 ? (
+          <div className="bg-white rounded-xl border border-gray-100 p-6 text-center text-xs text-gray-400">
+            {data.filas.length === 0 ? (
+              'No hay productos sincronizados desde Loyverse.'
+            ) : (
+              <>
+                Sin resultados con esos filtros.
+                {(busqueda || filtro !== 'todos') && (
+                  <>
+                    {' '}
+                    <button onClick={() => { setBusqueda(''); setFiltro('todos') }}
+                      className="text-julia-red hover:underline">Ver todos ({data.filas.length})</button>
+                  </>
+                )}
+              </>
+            )}
+          </div>
+        ) : (
+          filtradas.map(f => (
+            <CardProductoMobile
+              key={f.variant_id}
+              fila={f}
+              esAdmin={esAdmin}
+              estadoSave={savingMap[f.variant_id]}
+              onChange={(patch) => {
+                upsertLocal(f.variant_id, patch)
+                guardarFila(f.variant_id, {
+                  inventario_inicial: patch.inventario_inicial !== undefined ? patch.inventario_inicial : f.inventario_inicial,
+                  inventario_final:   patch.inventario_final   !== undefined ? patch.inventario_final   : f.inventario_final,
+                })
+              }}
+            />
+          ))
+        )}
+        {!loading && filtradas.length > 0 && (
+          <div className="text-[11px] text-gray-400 text-center pt-1">
+            {filtradas.length} producto{filtradas.length === 1 ? '' : 's'} · auto-guarda al editar
+          </div>
+        )}
+      </div>
+
+      {/* Vista DESKTOP: tabla (≥ md) */}
+      <div className="hidden md:block bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="bg-gray-50/80 border-b border-gray-100">
@@ -580,6 +626,129 @@ function FilaProducto({ fila, bordeArriba, esAdmin, estadoSave, onChange }) {
         {varBadge || <span className="text-gray-300 text-xs">—</span>}
       </td>
     </tr>
+  )
+}
+
+// Vista mobile: card apilada con grid 2-col para los datos numericos.
+// Misma logica de inputs y commits que FilaProducto.
+function CardProductoMobile({ fila, esAdmin, estadoSave, onChange }) {
+  const [inicial, setInicial] = useState(fila.inventario_inicial != null ? String(fila.inventario_inicial) : '')
+  const [final, setFinal] = useState(fila.inventario_final != null ? String(fila.inventario_final) : '')
+
+  useEffect(() => {
+    setInicial(fila.inventario_inicial != null ? String(fila.inventario_inicial) : '')
+    setFinal(fila.inventario_final != null ? String(fila.inventario_final) : '')
+  }, [fila.variant_id, fila.inventario_inicial, fila.inventario_final])
+
+  function commitInicial(v) {
+    const parsed = v === '' ? null : Number(v)
+    if (v !== '' && !Number.isFinite(parsed)) return
+    onChange({ inventario_inicial: parsed })
+  }
+  function commitFinal(v) {
+    const parsed = v === '' ? null : Number(v)
+    if (v !== '' && !Number.isFinite(parsed)) return
+    onChange({ inventario_final: parsed })
+  }
+
+  const teorico = fila.inventario_teorico
+  const variacion = fila.variacion
+  const varTone = variacion == null ? null
+    : variacion > 0 ? 'bg-emerald-50 text-emerald-700'
+    : variacion < 0 ? 'bg-red-50 text-red-700'
+    : 'bg-gray-100 text-gray-600'
+
+  return (
+    <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-3">
+      {/* Header: nombre + meta */}
+      <div className="flex items-start justify-between gap-2 mb-2">
+        <div className="min-w-0 flex-1">
+          <div className="text-sm font-medium text-gray-900 leading-tight truncate">{fila.item_name}</div>
+          {(fila.variant_name || fila.sku) && (
+            <div className="text-[11px] text-gray-400 mt-0.5 flex items-center gap-1.5 flex-wrap">
+              {fila.variant_name && <span>{fila.variant_name}</span>}
+              {fila.variant_name && fila.sku && <span>·</span>}
+              {fila.sku && <span className="font-mono">{fila.sku}</span>}
+              {!fila.track_stock && (
+                <span className="px-1 py-0.5 bg-gray-100 text-gray-400 rounded text-[9px] uppercase">sin stock</span>
+              )}
+            </div>
+          )}
+        </div>
+        {estadoSave === 'saving' && <span className="w-2 h-2 rounded-full bg-gray-300 animate-pulse flex-shrink-0 mt-1" />}
+        {estadoSave === 'ok'     && <span className="w-2 h-2 rounded-full bg-emerald-500 flex-shrink-0 mt-1" />}
+        {estadoSave === 'error'  && <span className="w-2 h-2 rounded-full bg-red-500 flex-shrink-0 mt-1" />}
+      </div>
+
+      {/* Grid 2-col: Ventas + Inicial (arriba), Teorico + Final (medio), Variacion (abajo) */}
+      <div className="grid grid-cols-2 gap-2 text-sm">
+        <div>
+          <div className="text-[10px] uppercase tracking-wider text-gray-400 mb-0.5">Ventas día</div>
+          {fila.ventas_cantidad === 0 ? (
+            <div className="text-gray-300">—</div>
+          ) : (
+            <div>
+              <div className="text-gray-900 font-medium tabular-nums">{formatNum(fila.ventas_cantidad)}</div>
+              <div className="text-[10px] text-gray-400 tabular-nums">Q {formatNum(fila.ventas_monto)}</div>
+            </div>
+          )}
+        </div>
+        <div>
+          <div className="text-[10px] uppercase tracking-wider text-gray-400 mb-0.5">Inicial</div>
+          <div className="flex items-center gap-1">
+            <input
+              type="number" step="any" inputMode="decimal"
+              value={inicial}
+              disabled={!esAdmin}
+              onChange={e => setInicial(e.target.value)}
+              onBlur={e => commitInicial(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter') e.target.blur() }}
+              placeholder="—"
+              className="w-full text-right tabular-nums px-2 py-1 border border-gray-200 rounded-md focus:outline-none focus:border-julia-red focus:bg-white bg-gray-50 text-sm disabled:bg-transparent disabled:border-transparent"
+            />
+          </div>
+          {esAdmin && fila.inventario_inicial == null && fila.inicial_sugerido_ayer != null && (
+            <button
+              type="button"
+              onClick={() => { const v = String(fila.inicial_sugerido_ayer); setInicial(v); commitInicial(v) }}
+              className="text-[10px] text-amber-700 hover:text-amber-900 mt-0.5 tabular-nums">
+              ← usar {formatNum(fila.inicial_sugerido_ayer)} (ayer)
+            </button>
+          )}
+        </div>
+        <div>
+          <div className="text-[10px] uppercase tracking-wider text-gray-400 mb-0.5">Teórico (auto)</div>
+          <div className="tabular-nums">
+            {teorico != null ? (
+              <span className="text-gray-900 font-medium">{formatNum(teorico)}</span>
+            ) : (
+              <span className="text-gray-300 text-xs italic">requiere inicial</span>
+            )}
+          </div>
+        </div>
+        <div>
+          <div className="text-[10px] uppercase tracking-wider text-gray-400 mb-0.5">Final físico</div>
+          <input
+            type="number" step="any" inputMode="decimal"
+            value={final}
+            disabled={!esAdmin}
+            onChange={e => setFinal(e.target.value)}
+            onBlur={e => commitFinal(e.target.value)}
+            onKeyDown={e => { if (e.key === 'Enter') e.target.blur() }}
+            placeholder="—"
+            className="w-full text-right tabular-nums px-2 py-1 border border-gray-200 rounded-md focus:outline-none focus:border-julia-red focus:bg-white bg-white text-sm disabled:bg-transparent disabled:border-transparent"
+          />
+        </div>
+        {variacion != null && (
+          <div className="col-span-2 flex items-center justify-between border-t border-gray-100 pt-2 mt-1">
+            <span className="text-[10px] uppercase tracking-wider text-gray-400">Variación</span>
+            <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium ${varTone}`}>
+              {variacion > 0 ? '+' : ''}{formatNum(variacion)}
+            </span>
+          </div>
+        )}
+      </div>
+    </div>
   )
 }
 
