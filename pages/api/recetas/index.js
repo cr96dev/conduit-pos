@@ -32,6 +32,7 @@ async function create(req, res) {
 
   const { loyverse_item_id, nombre, rinde_cantidad = 1, rinde_unidad = 'unidad',
           merma_pct = 0, precio_venta = null, costo_personalizado = null,
+          peso_unitario_g = null,
           notas, ingredientes = [] } = req.body || {}
   if (!nombre?.trim()) return res.status(400).json({ error: 'nombre requerido' })
 
@@ -113,6 +114,7 @@ async function create(req, res) {
     costo_calculado: costoCalc,
     costo_personalizado: costoPers,
     margen_pct: margenPct,
+    peso_unitario_g: peso_unitario_g != null && peso_unitario_g !== '' ? Number(peso_unitario_g) : null,
     notas: notas?.trim() || null,
     created_by: auth.user.id,
   }).select().single()

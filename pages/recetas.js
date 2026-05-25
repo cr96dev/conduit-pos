@@ -144,7 +144,12 @@ export default function Recetas({ session }) {
                     <td className="px-3 py-2 text-xs text-gray-500">
                       {r.loyverse_items?.item_name || <span className="text-amber-500">— sin enlace —</span>}
                     </td>
-                    <td className="px-3 py-2 text-right text-gray-600 tabular-nums">{fmt(r.rinde_cantidad)} <span className="text-xs text-gray-400">{r.rinde_unidad}</span></td>
+                    <td className="px-3 py-2 text-right text-gray-600 tabular-nums">
+                      {fmt(r.rinde_cantidad)} <span className="text-xs text-gray-400">{r.rinde_unidad}</span>
+                      {r.peso_unitario_g != null && (
+                        <div className="text-[10px] text-gray-400 tabular-nums">{fmt(r.peso_unitario_g)} g/u</div>
+                      )}
+                    </td>
                     <td className="px-3 py-2 text-right text-gray-700 tabular-nums">
                       {efectivo > 0 ? fmtQ(efectivo) : '—'}
                       {esPersonalizado && <span className="ml-1 text-[10px] bg-violet-100 text-violet-700 px-1 rounded">manual</span>}
@@ -202,6 +207,7 @@ function ModalReceta({ recetaId, loyverseItems, insumos, recetas, onClose, onSav
     merma_pct: 0,
     precio_venta: '',
     costo_personalizado: '',
+    peso_unitario_g: '',
     notas: '',
     activa: true,
   })
@@ -225,6 +231,7 @@ function ModalReceta({ recetaId, loyverseItems, insumos, recetas, onClose, onSav
         merma_pct: json.receta.merma_pct || 0,
         precio_venta: json.receta.precio_venta ?? '',
         costo_personalizado: json.receta.costo_personalizado ?? '',
+        peso_unitario_g: json.receta.peso_unitario_g ?? '',
         notas: json.receta.notas || '',
         activa: json.receta.activa,
       })
@@ -339,6 +346,7 @@ function ModalReceta({ recetaId, loyverseItems, insumos, recetas, onClose, onSav
       ...cab,
       precio_venta: cab.precio_venta === '' ? null : Number(cab.precio_venta),
       costo_personalizado: cab.costo_personalizado === '' ? null : Number(cab.costo_personalizado),
+      peso_unitario_g: cab.peso_unitario_g === '' ? null : Number(cab.peso_unitario_g),
       loyverse_item_id: cab.loyverse_item_id || null,
       ingredientes: ingredientesPayload,
     }
@@ -386,7 +394,7 @@ function ModalReceta({ recetaId, loyverseItems, insumos, recetas, onClose, onSav
           </Campo>
         </div>
 
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           <Campo label="Rinde (cantidad)" required>
             <input type="number" step="any" required value={cab.rinde_cantidad} onChange={e => setCab({...cab, rinde_cantidad: e.target.value})} className="input" />
           </Campo>
@@ -395,6 +403,11 @@ function ModalReceta({ recetaId, loyverseItems, insumos, recetas, onClose, onSav
           </Campo>
           <Campo label="Merma %">
             <input type="number" step="any" value={cab.merma_pct} onChange={e => setCab({...cab, merma_pct: e.target.value})} className="input" placeholder="0" />
+          </Campo>
+          <Campo label="Peso unitario (g)">
+            <input type="number" step="any" min="0" value={cab.peso_unitario_g}
+              onChange={e => setCab({...cab, peso_unitario_g: e.target.value})}
+              className="input" placeholder="ej. 80" title="Peso de UNA unidad del producto terminado, en gramos. Informativo, no afecta el costeo." />
           </Campo>
         </div>
 
