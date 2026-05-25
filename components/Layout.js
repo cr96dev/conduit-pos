@@ -2,8 +2,11 @@ import { useRouter } from 'next/router'
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 
-const navItems = [
-  { href: '/dashboard',  label: 'Inicio',     icon: 'M3 12l9-9 9 9M5 10v10h14V10' },
+// Item 0 ('Inicio') queda fijo arriba (es la landing del usuario);
+// el resto se ordena alfabeticamente con localeCompare('es') para que
+// acentos y ñ ordenen como correspondan en español.
+const _itemInicio = { href: '/dashboard', label: 'Inicio', icon: 'M3 12l9-9 9 9M5 10v10h14V10' }
+const _restoItems = [
   { href: '/ventas',     label: 'Ventas',     icon: 'M3 17l4-8 4 4 4-7 4 6' },
   { href: '/caja',       label: 'Caja',       icon: 'M3 10h18M7 15h.01M11 15h2M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z' },
   { href: '/productos',  label: 'Productos',  icon: 'M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-14L4 7m8 4v10M4 7v10l8 4' },
@@ -19,7 +22,9 @@ const navItems = [
   { href: '/reportes',      label: 'Reportes',      icon: 'M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z' },
   { href: '/facturacion',   label: 'Facturación',   icon: 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z' },
   { href: '/bancos',        label: 'Bancos',        icon: 'M4 10h16M5 6l7-3 7 3M4 10v10h16V10M9 14h6m-6 4h6' },
-]
+].sort((a, b) => a.label.localeCompare(b.label, 'es', { sensitivity: 'base' }))
+
+const navItems = [_itemInicio, ..._restoItems]
 
 // Subset que aparece en la barra inferior movil (limite practico: 6).
 // El resto sigue accesible desde el menu hamburguesa.
