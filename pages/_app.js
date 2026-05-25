@@ -1,5 +1,6 @@
 import '../styles/globals.css'
 import { useEffect, useState } from 'react'
+import Head from 'next/head'
 import { supabase } from '../lib/supabase'
 
 export default function App({ Component, pageProps }) {
@@ -17,11 +18,21 @@ export default function App({ Component, pageProps }) {
     return () => subscription.unsubscribe()
   }, [])
 
-  if (loading) return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50">
-      <div className="text-gray-500 text-sm">Cargando...</div>
-    </div>
+  return (
+    <>
+      <Head>
+        {/* Title default. Cualquier pagina puede sobreescribirlo con su
+            propio <Head><title>...</title></Head>. */}
+        <title>Julia Bakery</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+      </Head>
+      {loading ? (
+        <div className="min-h-screen flex items-center justify-center bg-gray-50">
+          <div className="text-gray-500 text-sm">Cargando...</div>
+        </div>
+      ) : (
+        <Component {...pageProps} session={session} />
+      )}
+    </>
   )
-
-  return <Component {...pageProps} session={session} />
 }
