@@ -5,6 +5,20 @@
 
 import { requireAuth, requireAdmin } from '../../../lib/auth'
 
+// Si vienen costo_compra y cantidad_por_unidad_compra (>0), el costo por
+// unidad base se DERIVA y pisa lo que se haya pasado en costo_unitario.
+// Si no, se respeta costo_unitario tal cual (backward-compatible).
+function deriveCostoUnitario(costoUnitarioCrudo, costoCompra, cantidadPorUnidadCompra) {
+  const cc  = costoCompra
+  const cpc = cantidadPorUnidadCompra
+  if (cc != null && cc !== '' && cpc != null && cpc !== '' && Number(cpc) > 0) {
+    return Math.round((Number(cc) / Number(cpc)) * 10000) / 10000
+  }
+  return costoUnitarioCrudo != null && costoUnitarioCrudo !== ''
+    ? Number(costoUnitarioCrudo)
+    : null
+}
+
 export default async function handler(req, res) {
   if (req.method === 'GET') return list(req, res)
   if (req.method === 'POST') return create(req, res)
@@ -37,6 +51,9 @@ async function create(req, res) {
     unidad = 'unidad',
     stock_minimo = 0,
     costo_unitario = null,
+    unidad_compra = null,
+    cantidad_por_unidad_compra = null,
+    costo_compra = null,
     proveedor = null,
     notas = null,
     stock_inicial = 0,
@@ -45,6 +62,8 @@ async function create(req, res) {
   if (!nombre || typeof nombre !== 'string' || nombre.trim().length === 0) {
     return res.status(400).json({ error: 'nombre requerido' })
   }
+
+  const costoUnitarioFinal = deriveCostoUnitario(costo_unitario, costo_compra, cantidad_por_unidad_compra)
 
   // 1. Crear el insumo con stock_actual = 0 (el trigger lo ajustara si hay stock_inicial)
   const { data: insumo, error: insErr } = await auth.admin
@@ -55,7 +74,12 @@ async function create(req, res) {
       unidad,
       stock_actual: 0,
       stock_minimo: Number(stock_minimo) || 0,
-      costo_unitario: costo_unitario != null ? Number(costo_unitario) : null,
+      costo_unitario: costoUnitarioFinal,
+      unidad_compra: unidad_compra?.trim() || null,
+      cantidad_por_unidad_compra: cantidad_por_unidad_compra != null && cantidad_por_unidad_compra !== ''
+        ? Number(cantidad_por_unidad_compra) : null,
+      costo_compra: costo_compra != null && costo_compra !== ''
+        ? Number(costo_compra) : null,
       proveedor: proveedor?.trim() || null,
       notas: notas?.trim() || null,
     })

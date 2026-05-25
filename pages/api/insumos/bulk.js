@@ -38,13 +38,26 @@ export default async function handler(req, res) {
     }
 
     const stockInicial = Number(raw.stock_inicial) || 0
+
+    // Si la fila trae unidad_compra + cantidad_por_unidad_compra (>0) + costo_compra,
+    // derivar costo_unitario = costo_compra / cantidad_por_unidad_compra (Q por unidad base).
+    // Si no, usar costo_unitario crudo si vino, sino null. Backward-compatible.
+    const cpc = raw.cantidad_por_unidad_compra
+    const cc  = raw.costo_compra
+    const costoUnitarioFinal = (cc != null && cc !== '' && cpc != null && cpc !== '' && Number(cpc) > 0)
+      ? Math.round((Number(cc) / Number(cpc)) * 10000) / 10000
+      : (raw.costo_unitario != null && raw.costo_unitario !== '' ? Number(raw.costo_unitario) : null)
+
     const insumoData = {
       nombre,
       categoria:      raw.categoria?.trim() || null,
       unidad:         raw.unidad?.trim() || 'unidad',
       stock_actual:   0, // se ajusta despues con el movimiento de entrada
       stock_minimo:   Number(raw.stock_minimo) || 0,
-      costo_unitario: raw.costo_unitario != null && raw.costo_unitario !== '' ? Number(raw.costo_unitario) : null,
+      costo_unitario: costoUnitarioFinal,
+      unidad_compra:              raw.unidad_compra?.trim() || null,
+      cantidad_por_unidad_compra: cpc != null && cpc !== '' ? Number(cpc) : null,
+      costo_compra:               cc  != null && cc  !== '' ? Number(cc)  : null,
       proveedor:      raw.proveedor?.trim() || null,
       notas:          raw.notas?.trim() || null,
     }

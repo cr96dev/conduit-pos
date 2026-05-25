@@ -965,21 +965,26 @@ function TabInsumos({ esAdmin }) {
         <ImportarCSV
           titulo="Importar insumos desde CSV"
           schema={{
-            nombre:         ['nombre', 'name', 'producto', 'insumo'],
-            categoria:      ['categoria', 'category', 'tipo'],
-            unidad:         ['unidad', 'unit', 'um'],
-            stock_inicial:  ['stock_inicial', 'stock', 'cantidad', 'existencia'],
-            stock_minimo:   ['stock_minimo', 'minimo', 'min'],
-            costo_unitario: ['costo_unitario', 'costo', 'precio', 'cost'],
-            proveedor:      ['proveedor', 'supplier'],
-            notas:          ['notas', 'notes', 'observaciones'],
+            nombre:                     ['nombre', 'name', 'producto', 'insumo'],
+            categoria:                  ['categoria', 'category', 'tipo'],
+            unidad:                     ['unidad', 'unidad_base', 'unit', 'um'],
+            stock_inicial:              ['stock_inicial', 'stock', 'cantidad', 'existencia'],
+            stock_minimo:               ['stock_minimo', 'minimo', 'min'],
+            costo_unitario:             ['costo_unitario', 'costo', 'precio', 'cost'],
+            unidad_compra:              ['unidad_compra', 'unidad_de_compra', 'empaque'],
+            cantidad_por_unidad_compra: ['cantidad_por_unidad_compra', 'cantidad_compra', 'unidades_por_compra', 'cant_compra'],
+            costo_compra:               ['costo_compra', 'precio_compra', 'costo_total'],
+            proveedor:                  ['proveedor', 'supplier'],
+            notas:                      ['notas', 'notes', 'observaciones'],
           }}
           requeridos={['nombre']}
           endpoint="/api/insumos/bulk"
-          ejemplo={`nombre,categoria,unidad,stock_inicial,stock_minimo,costo_unitario,proveedor
-Harina dura,harinas,lb,200,50,4.50,Molino Excelsior
-Levadura seca,levaduras,kg,5,2,180,Distribuidora La Espiga
-Mantequilla,lacteos,lb,15,5,28,Lactosa`}
+          ejemplo={`nombre,categoria,unidad,unidad_compra,cantidad_por_unidad_compra,costo_compra,costo_unitario,stock_inicial,stock_minimo,proveedor
+Cafe en grano,bebidas,lb,quintal,100,7000,,50,10,Tostadora Central
+Harina dura,harinas,kg,saco,25,225,,75,25,Molino Excelsior
+Huevo,frescos,unidad,carton,30,75,,180,60,Granja San Pedro
+Levadura seca,levaduras,g,bolsa,500,45,,2000,500,Distribuidora La Espiga
+Mantequilla,lacteos,lb,,,,28,15,5,Lactosa`}
           onClose={() => setModal(null)}
           onImportado={() => { setModal(null); cargar() }}
         />
@@ -1094,6 +1099,9 @@ function ModalInsumo({ insumo, onClose, onSaved }) {
     unidad:         insumo?.unidad || 'kg',
     stock_minimo:   insumo?.stock_minimo ?? 0,
     costo_unitario: insumo?.costo_unitario ?? '',
+    unidad_compra:              insumo?.unidad_compra || '',
+    cantidad_por_unidad_compra: insumo?.cantidad_por_unidad_compra ?? '',
+    costo_compra:               insumo?.costo_compra ?? '',
     proveedor:      insumo?.proveedor || '',
     notas:          insumo?.notas || '',
     stock_inicial:  0,
@@ -1102,6 +1110,14 @@ function ModalInsumo({ insumo, onClose, onSaved }) {
   const [err, setErr] = useState(null)
 
   function set(k, v) { setForm(f => ({ ...f, [k]: v })) }
+
+  // Costo derivado por unidad base = costo_compra / cantidad_por_unidad_compra
+  // Si los dos están con valor positivo, esto es la fuente de verdad y el
+  // input "Costo por unidad base" queda read-only. Si no, el input es editable.
+  const cpcNum = Number(form.cantidad_por_unidad_compra)
+  const ccNum  = Number(form.costo_compra)
+  const tieneCompra = form.cantidad_por_unidad_compra !== '' && form.costo_compra !== '' && cpcNum > 0
+  const costoDerivado = tieneCompra ? (ccNum / cpcNum) : null
 
   async function guardar(e) {
     e.preventDefault()
@@ -1112,6 +1128,9 @@ function ModalInsumo({ insumo, onClose, onSaved }) {
       unidad: form.unidad,
       stock_minimo: Number(form.stock_minimo) || 0,
       costo_unitario: form.costo_unitario === '' ? null : Number(form.costo_unitario),
+      unidad_compra:              form.unidad_compra?.trim() || null,
+      cantidad_por_unidad_compra: form.cantidad_por_unidad_compra === '' ? null : Number(form.cantidad_por_unidad_compra),
+      costo_compra:               form.costo_compra === '' ? null : Number(form.costo_compra),
       proveedor: form.proveedor,
       notas: form.notas,
     }
@@ -1139,20 +1158,52 @@ function ModalInsumo({ insumo, onClose, onSaved }) {
             <input type="text" value={form.categoria} onChange={e => set('categoria', e.target.value)}
               placeholder="harinas, lácteos…" className="input" />
           </Campo>
-          <Campo label="Unidad">
-            <select value={form.unidad} onChange={e => set('unidad', e.target.value)} className="input">
-              {['kg', 'lb', 'g', 'lt', 'ml', 'unidad', 'docena', 'caja', 'bolsa'].map(u => <option key={u}>{u}</option>)}
+          <Campo label="Unidad base">
+            <select value={form.unidad} onChange={e => set('unidad', e.target.value)} className="input"
+              title="Unidad en que se LLEVA EL STOCK y se consume en las recetas.">
+              {['kg', 'lb', 'g', 'lt', 'ml', 'unidad', 'docena'].map(u => <option key={u}>{u}</option>)}
             </select>
           </Campo>
         </div>
+
+        {/* Bloque "Compra": si se llena, costo por unidad base se calcula solo. */}
+        <fieldset className="border border-gray-100 rounded-lg p-3 space-y-3">
+          <legend className="text-xs uppercase tracking-wide text-gray-500 font-medium px-1">Cómo se compra (opcional)</legend>
+          <div className="grid grid-cols-3 gap-3">
+            <Campo label="Unidad de compra">
+              <input type="text" value={form.unidad_compra} onChange={e => set('unidad_compra', e.target.value)}
+                className="input" placeholder="quintal, saco, caja…"
+                title="Unidad en que se compra (ej. 'quintal'). Dejá vacío si compra y unidad base son iguales." />
+            </Campo>
+            <Campo label="Cantidad / und. compra">
+              <input type="number" step="any" min="0" value={form.cantidad_por_unidad_compra}
+                onChange={e => set('cantidad_por_unidad_compra', e.target.value)}
+                className="input" placeholder={`${form.unidad || 'unid'} por compra`}
+                title={`Cuántas unidades base (${form.unidad}) trae una ${form.unidad_compra || 'unidad de compra'}.`} />
+            </Campo>
+            <Campo label="Costo de compra (Q)">
+              <input type="number" step="any" min="0" value={form.costo_compra}
+                onChange={e => set('costo_compra', e.target.value)}
+                className="input" placeholder={`Q por ${form.unidad_compra || 'compra'}`}
+                title="Cuánto cuesta UNA unidad de compra (ej. Q7000 por quintal)." />
+            </Campo>
+          </div>
+        </fieldset>
+
         <div className="grid grid-cols-2 gap-3">
           <Campo label="Stock mínimo">
             <input type="number" step="any" value={form.stock_minimo} onChange={e => set('stock_minimo', e.target.value)}
               className="input" />
           </Campo>
-          <Campo label="Costo unitario (Q)">
-            <input type="number" step="any" value={form.costo_unitario} onChange={e => set('costo_unitario', e.target.value)}
-              className="input" placeholder="opcional" />
+          <Campo label={tieneCompra ? `Costo / ${form.unidad} (calculado)` : `Costo / ${form.unidad} (Q)`}>
+            {tieneCompra ? (
+              <input type="text" value={`Q ${costoDerivado.toFixed(4)}`} readOnly
+                className="input bg-gray-50 text-gray-600 cursor-default"
+                title={`Calculado: Q${ccNum} / ${cpcNum} ${form.unidad} = Q${costoDerivado.toFixed(4)} por ${form.unidad}`} />
+            ) : (
+              <input type="number" step="any" value={form.costo_unitario} onChange={e => set('costo_unitario', e.target.value)}
+                className="input" placeholder="opcional" />
+            )}
           </Campo>
         </div>
         <Campo label="Proveedor">

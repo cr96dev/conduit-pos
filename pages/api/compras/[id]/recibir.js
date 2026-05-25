@@ -60,15 +60,26 @@ export default async function handler(req, res) {
     if (!l.insumo_id) continue  // linea de gasto no inventariable
 
     const { data: insumo, error: gErr } = await auth.admin
-      .from('insumos').select('stock_actual').eq('id', l.insumo_id).single()
+      .from('insumos')
+      .select('stock_actual, unidad, unidad_compra, cantidad_por_unidad_compra')
+      .eq('id', l.insumo_id).single()
     if (gErr || !insumo) {
       errores.push(`linea "${l.descripcion}": insumo no encontrado`)
       continue
     }
 
+    // Si la linea declara unidad de compra y el insumo tiene factor cargado,
+    // convertir a unidad base: stock += cantidad * factor; costo unit = costo/factor.
+    // Si no, asumimos que la linea ya viene en unidad base (backward-compatible).
+    const unidadLinea = (l.unidad || '').trim()
+    const cpc = Number(insumo.cantidad_por_unidad_compra) || 0
+    const fracciona = !!(insumo.unidad_compra && unidadLinea === insumo.unidad_compra && cpc > 0)
+    const factor = fracciona ? cpc : 1
+
     const stockAntes = Number(insumo.stock_actual) || 0
-    const delta = Number(l.cantidad)
-    const stockDespues = stockAntes + delta
+    const delta = Number(l.cantidad) * factor
+    const stockDespues = Math.round((stockAntes + delta) * 10000) / 10000
+    const costoUnitarioBase = Math.round((Number(l.costo_unitario) / factor) * 10000) / 10000
 
     const { error: mErr } = await auth.admin
       .from('insumos_movimientos')
@@ -78,9 +89,10 @@ export default async function handler(req, res) {
         delta,
         stock_antes: stockAntes,
         stock_despues: stockDespues,
-        costo_unitario: Number(l.costo_unitario),
-        motivo: `Recepcion compra ${actualizada.numero_factura || actualizada.id.slice(0, 8)}`,
-        referencia: { compra_id: id, compra_linea_id: l.id },
+        costo_unitario: costoUnitarioBase,
+        motivo: `Recepcion compra ${actualizada.numero_factura || actualizada.id.slice(0, 8)}`
+              + (fracciona ? ` · ${l.cantidad} ${unidadLinea} × ${factor} = ${delta} ${insumo.unidad}` : ''),
+        referencia: { compra_id: id, compra_linea_id: l.id, fracciona, factor },
         created_by: auth.user.id,
       })
 
@@ -90,10 +102,12 @@ export default async function handler(req, res) {
     }
     creados++
 
-    // Actualizar costo del insumo al ultimo costo de compra.
-    await auth.admin.from('insumos')
-      .update({ costo_unitario: Number(l.costo_unitario), updated_at: new Date().toISOString() })
-      .eq('id', l.insumo_id)
+    // Actualizar costo del insumo al ultimo costo de compra (en unidad base).
+    // Si la linea fracciono, tambien sincronizar costo_compra al ultimo precio
+    // de compra (asi el form lo muestra actualizado).
+    const updPayload = { costo_unitario: costoUnitarioBase, updated_at: new Date().toISOString() }
+    if (fracciona) updPayload.costo_compra = Number(l.costo_unitario)
+    await auth.admin.from('insumos').update(updPayload).eq('id', l.insumo_id)
   }
 
   // Asiento contable automatico (best effort).
