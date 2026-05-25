@@ -9,12 +9,12 @@ export default function Document() {
   return (
     <Html lang="es">
       <Head>
-        {/* Favicon: SVG vectorial para browsers modernos (se ve nitido en
-            cualquier tamaño), PNG raster como fallback / apple-touch-icon. */}
-        <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-        <link rel="alternate icon" type="image/png" href="/logo.png" />
-        <link rel="apple-touch-icon" href="/logo.png" />
-        <meta name="theme-color" content="#8B5A3C" />
+        {/* Favicon: logo oficial del manual de marca (pagina "LOGO", v. canonica
+            rojo sobre blanco). PNG 512x512 — los browsers lo escalan a 16/32
+            para la pestaña, e iOS lo usa como apple-touch-icon. */}
+        <link rel="icon" type="image/png" href="/favicon-marca.png" />
+        <link rel="apple-touch-icon" href="/favicon-marca.png" />
+        <meta name="theme-color" content="#C8232A" />
       </Head>
       <body>
         <Main />
