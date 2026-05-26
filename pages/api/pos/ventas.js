@@ -23,7 +23,7 @@
 //   4b. Si certificación falla: borrar borrador, devolver error claro.
 
 import { requireAdmin } from '../../../lib/auth'
-import { crearCliente, InfileError } from '../../../lib/infile/client'
+import { crearCliente, InfileError, frasesDesdeConfig } from '../../../lib/infile/client'
 import { construirDteFactura } from '../../../lib/infile/construirDte'
 import { generarAsientoVentaPos } from '../../../lib/contabilidad/generador'
 import { explotarPlan } from '../../../lib/produccion'
@@ -131,13 +131,19 @@ export default async function handler(req, res) {
   }
 
   // ===== 2. Construir XML y certificar =====
+  // Frases: si el caller pasa explicitamente `frases`, se respeta; sino se
+  // derivan de la config del emisor (Frase Tipo 1 base + extras como
+  // Agente Retencion IVA si aplica).
+  const frasesFinales = (Array.isArray(frases) && frases.length > 0)
+    ? frases
+    : frasesDesdeConfig(config)
   let xmlInfo
   try {
     xmlInfo = construirDteFactura({
       config,
       factura: { ...facturaBorrador, frase_iva: '1', escenario_iva: 1 },
       items: itemsNorm,
-      opciones: Array.isArray(frases) && frases.length > 0 ? { frases } : {},
+      opciones: { frases: frasesFinales },
     })
   } catch (e) {
     await auth.admin.from('facturas_fel_items').delete().eq('factura_id', facturaBorrador.id)

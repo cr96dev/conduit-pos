@@ -38,6 +38,13 @@ const VACIO = {
   infile_usuario_cert: '',
   infile_llave_cert: '',
   infile_ambiente: 'demo',
+  infile_frases_extras: [],   // jsonb. UI expone un checkbox para agente de retencion IVA.
+}
+
+// Tipo 2 = Agente de Retencion del IVA en el catalogo SAT-Infile.
+const FRASE_AGENTE_RETENCION = { escenario: 1, tipo: 2 }
+function esAgenteRetencion(frasesExtras) {
+  return Array.isArray(frasesExtras) && frasesExtras.some(f => Number(f?.tipo) === 2)
 }
 
 export default function ConfiguracionFEL({ session }) {
@@ -184,7 +191,24 @@ export default function ConfiguracionFEL({ session }) {
                   <option value="prod">prod (real)</option>
                 </select>
               </Campo>
-              <div /> {/* spacer */}
+              <Campo label="Régimen tributario especial">
+                <label className="flex items-center gap-2 mt-1 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={esAgenteRetencion(form.infile_frases_extras)}
+                    onChange={e => {
+                      const sin2 = (form.infile_frases_extras || []).filter(f => Number(f?.tipo) !== 2)
+                      set('infile_frases_extras', e.target.checked ? [...sin2, FRASE_AGENTE_RETENCION] : sin2)
+                    }}
+                    disabled={!esAdmin}
+                    className="rounded"
+                  />
+                  <span className="text-sm text-gray-700">Emisor es <strong>Agente de Retención del IVA</strong></span>
+                </label>
+                <span className="text-[10px] text-gray-400 mt-1 block">
+                  Si el NIT del emisor está catalogado así en RTU/SAT, marcalo. Sin esto, SAT rechaza el DTE con error 2615.
+                </span>
+              </Campo>
               <Campo label="Alias firma (alias en el firmador / usuario certificador / emisor_codigo NIT)" required>
                 <input type="text" value={form.infile_alias_firma} onChange={e => set('infile_alias_firma', e.target.value)} className="input" disabled={!esAdmin} placeholder="alias que asigna Infile" />
               </Campo>

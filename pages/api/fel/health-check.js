@@ -10,7 +10,7 @@
 // ensuciamos la tabla).
 
 import { requireAdmin } from '../../../lib/auth'
-import { crearCliente, InfileError } from '../../../lib/infile/client'
+import { crearCliente, InfileError, frasesDesdeConfig } from '../../../lib/infile/client'
 import { construirDteFactura } from '../../../lib/infile/construirDte'
 
 const PRECIO_DEMO = 1.00  // Q 1.00 — minimo que SAT acepta sin problemas.
@@ -69,7 +69,10 @@ export default async function handler(req, res) {
 
   let xmlInfo
   try {
-    xmlInfo = construirDteFactura({ config, factura: facturaDraft, items })
+    xmlInfo = construirDteFactura({
+      config, factura: facturaDraft, items,
+      opciones: { frases: frasesDesdeConfig(config) },
+    })
   } catch (e) {
     return res.status(500).json({ ok: false, etapa: 'construir_xml', error: e.message })
   }

@@ -12,7 +12,7 @@
 // usamos el `factura.id` (UUID de Postgres) — garantiza idempotencia.
 
 import { requireAdmin } from '../../../../../lib/auth'
-import { crearCliente, InfileError } from '../../../../../lib/infile/client'
+import { crearCliente, InfileError, frasesDesdeConfig } from '../../../../../lib/infile/client'
 import { construirDteFactura } from '../../../../../lib/infile/construirDte'
 
 export default async function handler(req, res) {
@@ -67,9 +67,13 @@ export default async function handler(req, res) {
   }
 
   // 1) Construir XML
+  // Frases: derivadas de config (Tipo 1 base + extras del emisor).
   let xmlInfo
   try {
-    xmlInfo = construirDteFactura({ config, factura, items })
+    xmlInfo = construirDteFactura({
+      config, factura, items,
+      opciones: { frases: frasesDesdeConfig(config) },
+    })
   } catch (e) {
     return res.status(500).json({ ok: false, error: 'Error construyendo XML: ' + e.message })
   }

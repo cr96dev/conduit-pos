@@ -21,7 +21,7 @@ export default async function handler(req, res) {
       'infile_url_firma','infile_url_cert','infile_url_consulta_nit',
       'infile_alias_firma','infile_llave_firma',
       'infile_usuario_cert','infile_llave_cert',
-      'infile_ambiente',
+      'infile_ambiente','infile_frases_extras',
       // Digifact (legacy — se mantiene editable hasta limpiar la migracion)
       'digifact_url_base','digifact_token',
       'digifact_token_vence','digifact_usuario','digifact_ambiente',
