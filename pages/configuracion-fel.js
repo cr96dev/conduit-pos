@@ -186,7 +186,7 @@ export default function ConfiguracionFEL({ session }) {
               </Campo>
               <div /> {/* spacer */}
               <Campo label="Alias firma (alias en el firmador / usuario certificador / emisor_codigo NIT)" required>
-                <input type="text" value={form.infile_alias_firma} onChange={e => set('infile_alias_firma', e.target.value)} className="input" disabled={!esAdmin} placeholder="ej. CARLOSR_DEMO" />
+                <input type="text" value={form.infile_alias_firma} onChange={e => set('infile_alias_firma', e.target.value)} className="input" disabled={!esAdmin} placeholder="alias que asigna Infile" />
               </Campo>
               <Campo label="Llave firma" required>
                 <input type="password" value={form.infile_llave_firma} onChange={e => set('infile_llave_firma', e.target.value)} className="input font-mono" disabled={!esAdmin} placeholder="••••••••" autoComplete="off" />
