@@ -4,7 +4,7 @@
 // descuenta inventario PT, y genera asiento contable. Si la certificacion FEL
 // falla, la venta NO se completa.
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/router'
 import Head from 'next/head'
 import { supabase } from '../lib/supabase'
@@ -67,8 +67,13 @@ export default function POS({ session }) {
   const [enviando, setEnviando] = useState(false)
   const [resultado, setResultado] = useState(null)
   const [consultando, setConsultando] = useState(false)
+  const [nitMsg, setNitMsg] = useState(null)        // 'NIT no encontrado en RTU' o null
   const [err, setErr] = useState(null)
   const [mostrarCarritoMobile, setMostrarCarritoMobile] = useState(false)
+  // Memoria del ultimo NIT consultado para no repetir el call al RTU si el
+  // usuario sale del input y vuelve sin cambiar.
+  const ultimoNitConsultado = useRef('')
+  const debounceTimer = useRef(null)
 
   // Cargar perfil + catálogo
   useEffect(() => {
@@ -139,22 +144,55 @@ export default function POS({ session }) {
     setCarrito(prev => prev.filter((_, idx) => idx !== i))
   }
 
-  async function consultarNit() {
-    const nit = (receptor.nit || '').trim()
+  // Sanea el NIT: quita guiones/espacios/letras minúsculas; SAT acepta sufijo
+  // "K" en mayúscula (digito verificador).
+  function normalizarNit(s) {
+    return String(s || '').replace(/[^0-9Kk]/g, '').toUpperCase()
+  }
+
+  async function consultarNit(nitArg) {
+    const nit = normalizarNit(nitArg ?? receptor.nit)
     if (!nit || nit === 'CF') return
-    setConsultando(true); setErr(null)
-    const r = await apiFetch(`/api/fel/consultar-nit?nit=${encodeURIComponent(nit)}`)
-    const j = await r.json()
-    setConsultando(false)
-    if (!r.ok) { setErr(j.error || 'Error consultando NIT'); return }
-    if (j.receptor?.nombre) {
-      setReceptor(rec => ({ ...rec, nombre: j.receptor.nombre }))
-    } else {
-      setErr(j.mensaje || 'NIT no encontrado en RTU')
+    if (nit === ultimoNitConsultado.current) return  // ya consultado, no repetir
+    setConsultando(true); setNitMsg(null)
+    ultimoNitConsultado.current = nit
+    try {
+      const r = await apiFetch(`/api/fel/consultar-nit?nit=${encodeURIComponent(nit)}`)
+      const j = await r.json()
+      if (r.ok && j.receptor?.nombre) {
+        setReceptor(rec => ({ ...rec, nombre: j.receptor.nombre }))
+        setNitMsg(null)
+      } else if (r.ok) {
+        // Endpoint OK pero NIT no figura en RTU. Dejamos el nombre editable.
+        setNitMsg(j.mensaje || 'NIT no encontrado en RTU — ingresá el nombre manualmente')
+      } else {
+        // Error en endpoint o en Infile — NO bloquea la venta.
+        setNitMsg(j.error || 'No se pudo consultar el RTU — ingresá el nombre manualmente')
+      }
+    } catch (e) {
+      setNitMsg('Sin conexión al RTU — ingresá el nombre manualmente')
+    } finally {
+      setConsultando(false)
     }
   }
 
+  // Debounce automático: consulta 600 ms despues de que el usuario dejo de
+  // tipear, si el NIT cambio. Si pierde foco (onBlur del input) se gatilla
+  // inmediato. Validacion: 5+ caracteres tras normalizar.
+  useEffect(() => {
+    if (debounceTimer.current) clearTimeout(debounceTimer.current)
+    const nit = normalizarNit(receptor.nit)
+    if (!nit || nit === 'CF' || nit.length < 5) return
+    if (nit === ultimoNitConsultado.current) return
+    debounceTimer.current = setTimeout(() => {
+      consultarNit(nit)
+    }, 600)
+    return () => debounceTimer.current && clearTimeout(debounceTimer.current)
+  }, [receptor.nit])
+
   function setNitMode(esCF) {
+    ultimoNitConsultado.current = ''   // resetear memo al cambiar de modo
+    setNitMsg(null)
     if (esCF) setReceptor({ nit: 'CF', nombre: 'CONSUMIDOR FINAL', email: '' })
     else setReceptor(r => ({ ...r, nit: '', nombre: '' }))
   }
@@ -326,14 +364,18 @@ export default function POS({ session }) {
             </div>
             {receptor.nit !== 'CF' && (
               <>
-                <div className="flex gap-1">
+                <div className="relative">
                   <input type="text" placeholder="NIT (sin guiones)" value={receptor.nit}
                     onChange={e => setReceptor(r => ({ ...r, nit: e.target.value }))}
-                    className="input flex-1 text-sm" />
-                  <button onClick={consultarNit} disabled={consultando || !receptor.nit}
-                    className="text-xs px-3 py-1.5 border border-gray-200 text-gray-700 rounded hover:border-julia-red hover:text-julia-red bg-white">
-                    {consultando ? '…' : '🔍'}
-                  </button>
+                    onBlur={() => consultarNit(receptor.nit)}
+                    className="input w-full text-sm pr-9" inputMode="text" autoComplete="off" />
+                  {consultando ? (
+                    <span className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 border-2 border-gray-200 border-t-julia-red rounded-full animate-spin" title="Consultando RTU…" />
+                  ) : (
+                    receptor.nit && ultimoNitConsultado.current === normalizarNit(receptor.nit) && receptor.nombre && !nitMsg && (
+                      <span className="absolute right-2 top-1/2 -translate-y-1/2 text-emerald-600 text-sm" title="NIT confirmado en RTU">✓</span>
+                    )
+                  )}
                 </div>
                 <input type="text" placeholder="Nombre receptor" value={receptor.nombre}
                   onChange={e => setReceptor(r => ({ ...r, nombre: e.target.value }))}
@@ -341,6 +383,11 @@ export default function POS({ session }) {
                 <input type="email" placeholder="Email (opcional)" value={receptor.email}
                   onChange={e => setReceptor(r => ({ ...r, email: e.target.value }))}
                   className="input text-sm" />
+                {nitMsg && (
+                  <div className="text-[11px] text-amber-700 bg-amber-50 border border-amber-100 rounded px-2 py-1.5">
+                    {nitMsg}
+                  </div>
+                )}
               </>
             )}
           </div>
