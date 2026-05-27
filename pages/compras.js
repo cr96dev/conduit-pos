@@ -602,6 +602,15 @@ function ModalDetalleCompra({ compraId, esAdmin, onClose, onChanged, onEdit }) {
 
         {err && <div className="bg-red-50 border border-red-100 rounded-lg px-3 py-2 text-xs text-red-700">{err}</div>}
 
+        <div className="flex justify-end pt-2">
+          <button
+            onClick={() => window.open(`/compras-imprimir?compraId=${compra.id}`, '_blank')}
+            className="text-xs px-3 py-2 border border-gray-200 text-gray-600 rounded-lg hover:border-julia-red hover:text-julia-red"
+            title="Abre una vista lista para imprimir o guardar como PDF">
+            Imprimir / PDF
+          </button>
+        </div>
+
         {esAdmin && (
           <div className="flex flex-wrap gap-2 justify-end pt-2 border-t border-gray-100">
             {compra.estado === 'borrador' && (
