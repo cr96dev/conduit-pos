@@ -4,6 +4,7 @@
 // Auth: Bearer (admin)
 
 import { requireAdmin } from '../../../lib/auth'
+import { derivarCostoUnitario } from '../../../lib/unidades'
 
 export default async function handler(req, res) {
   const auth = await requireAdmin(req)
@@ -37,18 +38,32 @@ async function update(req, res, auth, id) {
     if (patch[k] === '') patch[k] = null
   }
 
-  // Derivar costo_unitario si el patch toca costo_compra o cantidad_por_unidad_compra:
-  // releer los valores actuales para los campos que no vienen en el patch,
-  // asi se respeta el estado actual del insumo. Si costo_compra y cpc quedan
-  // ambos con valor positivo, pisa cualquier costo_unitario explicito.
-  if ('costo_compra' in patch || 'cantidad_por_unidad_compra' in patch) {
+  // Derivar costo_unitario si el patch toca cualquiera de los campos de la
+  // presentacion de compra (costo_compra, cantidad_por_unidad_compra,
+  // unidad_compra) o cambia la unidad base. Releemos el estado actual del
+  // insumo para combinar lo que viene en el patch con lo que ya existe,
+  // y aplicamos conversion de unidades si ambas son conocidas.
+  const tocaPresentacion = (
+    'costo_compra' in patch ||
+    'cantidad_por_unidad_compra' in patch ||
+    'unidad_compra' in patch ||
+    'unidad' in patch
+  )
+  if (tocaPresentacion) {
     const { data: actual } = await auth.admin
-      .from('insumos').select('costo_compra, cantidad_por_unidad_compra').eq('id', id).single()
-    const cc  = 'costo_compra' in patch ? patch.costo_compra : actual?.costo_compra
+      .from('insumos').select('unidad, unidad_compra, costo_compra, cantidad_por_unidad_compra').eq('id', id).single()
+    const unidad        = 'unidad'        in patch ? patch.unidad        : actual?.unidad
+    const unidad_compra = 'unidad_compra' in patch ? patch.unidad_compra : actual?.unidad_compra
+    const cc  = 'costo_compra'               in patch ? patch.costo_compra               : actual?.costo_compra
     const cpc = 'cantidad_por_unidad_compra' in patch ? patch.cantidad_por_unidad_compra : actual?.cantidad_por_unidad_compra
-    if (cc != null && cpc != null && Number(cpc) > 0) {
-      patch.costo_unitario = Math.round((Number(cc) / Number(cpc)) * 10000) / 10000
-    }
+    const derivado = derivarCostoUnitario({
+      unidad,
+      unidad_compra,
+      cantidad_por_unidad_compra: cpc,
+      costo_compra: cc,
+      costo_unitario_crudo: 'costo_unitario' in patch ? patch.costo_unitario : null,
+    })
+    if (derivado != null) patch.costo_unitario = derivado
   }
 
   patch.updated_at = new Date().toISOString()

@@ -13,6 +13,7 @@
 
 import { requireAdmin } from '../../../../lib/auth'
 import { generarAsientoCompraRecibida } from '../../../../lib/contabilidad/generador'
+import { factorEntre, parseUnidad } from '../../../../lib/unidades'
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' })
@@ -68,13 +69,35 @@ export default async function handler(req, res) {
       continue
     }
 
-    // Si la linea declara unidad de compra y el insumo tiene factor cargado,
-    // convertir a unidad base: stock += cantidad * factor; costo unit = costo/factor.
-    // Si no, asumimos que la linea ya viene en unidad base (backward-compatible).
+    // Determinar el factor de conversion entre la unidad de la linea y la
+    // unidad base del insumo. Prioridad:
+    //   1. Si ambas son unidades estandar (lb, kg, g, lt, ml, etc.) y de la
+    //      misma categoria -> usar factor canonico (lb->g = 453.59).
+    //   2. Si no, pero la unidad de la linea matchea (vía parseUnidad, tolera
+    //      plurales/case) con la unidad_compra del insumo -> usar el factor
+    //      personalizado cantidad_por_unidad_compra (cuantas unid. base trae
+    //      la presentacion, ej. "saco" = 11340 g).
+    //   3. Si nada de eso -> factor = 1 (asumir que ya viene en unidad base).
     const unidadLinea = (l.unidad || '').trim()
     const cpc = Number(insumo.cantidad_por_unidad_compra) || 0
-    const fracciona = !!(insumo.unidad_compra && unidadLinea === insumo.unidad_compra && cpc > 0)
-    const factor = fracciona ? cpc : 1
+    let factor = 1
+    let convDesc = ''
+    const fCanonico = factorEntre(unidadLinea, insumo.unidad)
+    if (fCanonico != null) {
+      factor = fCanonico
+      convDesc = `${l.cantidad} ${unidadLinea} = ${(Number(l.cantidad) * factor).toFixed(2)} ${insumo.unidad}`
+    } else if (insumo.unidad_compra && cpc > 0) {
+      const uLinea  = parseUnidad(unidadLinea)
+      const uCompra = parseUnidad(insumo.unidad_compra)
+      const sameClave = (uLinea && uCompra && uLinea.clave === uCompra.clave)
+                     || (!uLinea && !uCompra
+                         && unidadLinea.toLowerCase().trim() === insumo.unidad_compra.toLowerCase().trim())
+      if (sameClave) {
+        factor = cpc
+        convDesc = `${l.cantidad} ${unidadLinea} × ${cpc} = ${(Number(l.cantidad) * factor).toFixed(2)} ${insumo.unidad}`
+      }
+    }
+    const fracciona = factor !== 1
 
     const stockAntes = Number(insumo.stock_actual) || 0
     const delta = Number(l.cantidad) * factor
@@ -91,7 +114,7 @@ export default async function handler(req, res) {
         stock_despues: stockDespues,
         costo_unitario: costoUnitarioBase,
         motivo: `Recepcion compra ${actualizada.numero_factura || actualizada.id.slice(0, 8)}`
-              + (fracciona ? ` · ${l.cantidad} ${unidadLinea} × ${factor} = ${delta} ${insumo.unidad}` : ''),
+              + (convDesc ? ` · ${convDesc}` : ''),
         referencia: { compra_id: id, compra_linea_id: l.id, fracciona, factor },
         created_by: auth.user.id,
       })

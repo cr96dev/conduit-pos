@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase'
 import Layout from '../components/Layout'
 import { SkeletonRow } from '../components/Skeleton'
 import ImportarCSV from '../components/ImportarCSV'
+import { PRESETS_UI, factorEntre, unidadesBasePorCompra } from '../lib/unidades'
 
 // ============================================================================
 // Helpers
@@ -1096,7 +1097,7 @@ function ModalInsumo({ insumo, onClose, onSaved }) {
   const [form, setForm] = useState({
     nombre:         insumo?.nombre || '',
     categoria:      insumo?.categoria || '',
-    unidad:         insumo?.unidad || 'kg',
+    unidad:         insumo?.unidad || 'g',
     stock_minimo:   insumo?.stock_minimo ?? 0,
     costo_unitario: insumo?.costo_unitario ?? '',
     unidad_compra:              insumo?.unidad_compra || '',
@@ -1149,13 +1150,29 @@ function ModalInsumo({ insumo, onClose, onSaved }) {
     setTimeout(onSaved, 2200)
   }
 
-  // Costo derivado por unidad base = costo_compra / cantidad_por_unidad_compra
-  // Si los dos están con valor positivo, esto es la fuente de verdad y el
-  // input "Costo por unidad base" queda read-only. Si no, el input es editable.
+  // Si el usuario llena la presentacion de compra, el costo por unidad base
+  // se DERIVA con conversion: si unidad_compra y unidad son ambas conocidas
+  // (lb<->g, kg<->g, lt<->ml...) se aplica el factor canonico. Sino, fallback:
+  // se asume que cantidad_por_unidad_compra ya esta en unidad base.
   const cpcNum = Number(form.cantidad_por_unidad_compra)
   const ccNum  = Number(form.costo_compra)
   const tieneCompra = form.cantidad_por_unidad_compra !== '' && form.costo_compra !== '' && cpcNum > 0
-  const costoDerivado = tieneCompra ? (ccNum / cpcNum) : null
+
+  // Cantidad real en unidad base que trae UNA compra (aplicando conversion).
+  const baseEnUnaCompra = tieneCompra
+    ? unidadesBasePorCompra({
+        unidad: form.unidad,
+        unidad_compra: form.unidad_compra,
+        cantidad_por_unidad_compra: cpcNum,
+      })
+    : null
+  const costoDerivado = (tieneCompra && baseEnUnaCompra > 0) ? (ccNum / baseEnUnaCompra) : null
+
+  // Diagnostico: ¿se convirtio o se interpreto la cantidad como base?
+  const factorAplicado = (form.unidad_compra && form.unidad)
+    ? factorEntre(form.unidad_compra, form.unidad)
+    : null
+  const huboConversion = factorAplicado != null && factorAplicado !== 1
 
   async function guardar(e) {
     e.preventDefault()
@@ -1197,10 +1214,8 @@ function ModalInsumo({ insumo, onClose, onSaved }) {
               placeholder="harinas, lácteos…" className="input" />
           </Campo>
           <Campo label="Unidad base">
-            <select value={form.unidad} onChange={e => set('unidad', e.target.value)} className="input"
-              title="Unidad en que se LLEVA EL STOCK y se consume en las recetas.">
-              {['kg', 'lb', 'g', 'lt', 'ml', 'unidad', 'docena'].map(u => <option key={u}>{u}</option>)}
-            </select>
+            <SelectUnidad value={form.unidad} onChange={v => set('unidad', v)}
+              title="Unidad en que se LLEVA EL STOCK y se consume en las recetas." />
           </Campo>
         </div>
 
@@ -1209,23 +1224,55 @@ function ModalInsumo({ insumo, onClose, onSaved }) {
           <legend className="text-xs uppercase tracking-wide text-gray-500 font-medium px-1">Cómo se compra (opcional)</legend>
           <div className="grid grid-cols-3 gap-3">
             <Campo label="Unidad de compra">
-              <input type="text" value={form.unidad_compra} onChange={e => set('unidad_compra', e.target.value)}
-                className="input" placeholder="quintal, saco, caja…"
-                title="Unidad en que se compra (ej. 'quintal'). Dejá vacío si compra y unidad base son iguales." />
+              <SelectUnidad value={form.unidad_compra} onChange={v => set('unidad_compra', v)}
+                permitirVacio
+                placeholder="igual a unidad base"
+                title="Unidad en que se compra (ej. libra, quintal, saco). Si es distinta de la unidad base, el sistema convierte automáticamente." />
             </Campo>
-            <Campo label="Cantidad / und. compra">
+            <Campo label={
+              huboConversion
+                ? `Cantidad (en ${form.unidad_compra})`
+                : `Cantidad (${form.unidad || 'unidad base'} por compra)`
+            }>
               <input type="number" step="any" min="0" value={form.cantidad_por_unidad_compra}
                 onChange={e => set('cantidad_por_unidad_compra', e.target.value)}
-                className="input" placeholder={`${form.unidad || 'unid'} por compra`}
-                title={`Cuántas unidades base (${form.unidad}) trae una ${form.unidad_compra || 'unidad de compra'}.`} />
+                className="input"
+                placeholder={huboConversion ? `ej. 25 ${form.unidad_compra}` : `${form.unidad || 'unid'} por compra`}
+                title={huboConversion
+                  ? `Cuántas ${form.unidad_compra} trae UNA compra. El sistema convierte: 1 ${form.unidad_compra} = ${factorAplicado} ${form.unidad}.`
+                  : `Cuántas unidades base (${form.unidad}) trae una ${form.unidad_compra || 'unidad de compra'}.`} />
             </Campo>
             <Campo label="Costo de compra (Q)">
               <input type="number" step="any" min="0" value={form.costo_compra}
                 onChange={e => set('costo_compra', e.target.value)}
                 className="input" placeholder={`Q por ${form.unidad_compra || 'compra'}`}
-                title="Cuánto cuesta UNA unidad de compra (ej. Q7000 por quintal)." />
+                title="Cuánto cuesta UNA unidad de compra (ej. Q175 por saco de 25 lb)." />
             </Campo>
           </div>
+          {tieneCompra && (
+            <div className="text-[11px] text-gray-600 bg-gray-50 border border-gray-100 rounded-md px-2 py-1.5 font-mono leading-snug">
+              {huboConversion ? (
+                <>
+                  📐 <strong>{cpcNum} {form.unidad_compra}</strong> ×{' '}
+                  {factorAplicado.toLocaleString('es-GT', { maximumFractionDigits: 4 })} {form.unidad}/{form.unidad_compra} ={' '}
+                  <strong>{baseEnUnaCompra.toLocaleString('es-GT', { maximumFractionDigits: 2 })} {form.unidad}</strong> por compra
+                  <br />
+                  Q{ccNum} ÷ {baseEnUnaCompra.toLocaleString('es-GT', { maximumFractionDigits: 2 })} {form.unidad} ={' '}
+                  <strong>Q{costoDerivado.toFixed(4)} / {form.unidad}</strong>
+                </>
+              ) : (
+                <>
+                  {form.unidad_compra && !factorAplicado && (
+                    <span className="text-amber-700">
+                      ⚠ "{form.unidad_compra}" no es una unidad estándar reconocida. Cantidad interpretada como{' '}
+                      <strong>{cpcNum} {form.unidad}</strong>.<br />
+                    </span>
+                  )}
+                  Q{ccNum} ÷ {cpcNum} {form.unidad} = <strong>Q{costoDerivado.toFixed(4)} / {form.unidad}</strong>
+                </>
+              )}
+            </div>
+          )}
         </fieldset>
 
         <div className="grid grid-cols-2 gap-3">
@@ -1678,4 +1725,51 @@ function formatFechaCorta(fecha) {
   const [y, m, d] = fecha.split('-').map(Number)
   const dt = new Date(Date.UTC(y, m - 1, d, 12, 0, 0))
   return dt.toLocaleDateString('es-GT', { day: 'numeric', month: 'short' })
+}
+
+// Select de unidad con presets agrupados por categoria (peso/volumen/conteo)
+// + opcion "otra" que abre un input de texto libre (para casos como saco,
+// quintal con tamaño no estandar, caja, etc.). Cuando el value es una clave
+// conocida usa el dropdown; cuando es texto libre, usa el input.
+function SelectUnidad({ value, onChange, permitirVacio = false, placeholder = '', title }) {
+  const todasClaves = new Set([
+    ...PRESETS_UI.peso.map(p => p.value),
+    ...PRESETS_UI.volumen.map(p => p.value),
+    ...PRESETS_UI.conteo.map(p => p.value),
+  ])
+  const esEstandar = !value || todasClaves.has(value)
+  const [modoOtra, setModoOtra] = useState(!esEstandar)
+
+  function setEstandar(v) {
+    if (v === '__otra__') { setModoOtra(true); onChange(''); return }
+    setModoOtra(false)
+    onChange(v)
+  }
+
+  if (modoOtra) {
+    return (
+      <div className="flex gap-1">
+        <input type="text" value={value || ''} onChange={e => onChange(e.target.value)}
+          className="input flex-1" placeholder={placeholder || 'saco, quintal, caja…'} title={title} autoFocus />
+        <button type="button" onClick={() => { setModoOtra(false); onChange('') }}
+          className="text-xs text-gray-400 hover:text-gray-700 px-2" title="Volver a unidades estándar">↺</button>
+      </div>
+    )
+  }
+
+  return (
+    <select value={value || ''} onChange={e => setEstandar(e.target.value)} className="input" title={title}>
+      {permitirVacio && <option value="">— {placeholder || 'sin elegir'} —</option>}
+      <optgroup label="Peso">
+        {PRESETS_UI.peso.map(p => <option key={p.value} value={p.value}>{p.label}</option>)}
+      </optgroup>
+      <optgroup label="Volumen">
+        {PRESETS_UI.volumen.map(p => <option key={p.value} value={p.value}>{p.label}</option>)}
+      </optgroup>
+      <optgroup label="Conteo">
+        {PRESETS_UI.conteo.map(p => <option key={p.value} value={p.value}>{p.label}</option>)}
+      </optgroup>
+      <option value="__otra__">— otra (escribir) —</option>
+    </select>
+  )
 }

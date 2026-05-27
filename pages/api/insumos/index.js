@@ -4,20 +4,7 @@
 // Auth: Bearer <supabase access_token>
 
 import { requireAuth, requireAdmin } from '../../../lib/auth'
-
-// Si vienen costo_compra y cantidad_por_unidad_compra (>0), el costo por
-// unidad base se DERIVA y pisa lo que se haya pasado en costo_unitario.
-// Si no, se respeta costo_unitario tal cual (backward-compatible).
-function deriveCostoUnitario(costoUnitarioCrudo, costoCompra, cantidadPorUnidadCompra) {
-  const cc  = costoCompra
-  const cpc = cantidadPorUnidadCompra
-  if (cc != null && cc !== '' && cpc != null && cpc !== '' && Number(cpc) > 0) {
-    return Math.round((Number(cc) / Number(cpc)) * 10000) / 10000
-  }
-  return costoUnitarioCrudo != null && costoUnitarioCrudo !== ''
-    ? Number(costoUnitarioCrudo)
-    : null
-}
+import { derivarCostoUnitario } from '../../../lib/unidades'
 
 export default async function handler(req, res) {
   if (req.method === 'GET') return list(req, res)
@@ -63,7 +50,13 @@ async function create(req, res) {
     return res.status(400).json({ error: 'nombre requerido' })
   }
 
-  const costoUnitarioFinal = deriveCostoUnitario(costo_unitario, costo_compra, cantidad_por_unidad_compra)
+  const costoUnitarioFinal = derivarCostoUnitario({
+    unidad,
+    unidad_compra,
+    cantidad_por_unidad_compra,
+    costo_compra,
+    costo_unitario_crudo: costo_unitario,
+  })
 
   // 1. Crear el insumo con stock_actual = 0 (el trigger lo ajustara si hay stock_inicial)
   const { data: insumo, error: insErr } = await auth.admin

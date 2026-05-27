@@ -6,6 +6,7 @@
 // Por cada insumo nuevo crea registro + movimiento "entrada" si stock_inicial > 0.
 
 import { requireAdmin } from '../../../lib/auth'
+import { derivarCostoUnitario } from '../../../lib/unidades'
 
 const round2 = (n) => Math.round((Number(n) + Number.EPSILON) * 100) / 100
 
@@ -39,23 +40,29 @@ export default async function handler(req, res) {
 
     const stockInicial = Number(raw.stock_inicial) || 0
 
-    // Si la fila trae unidad_compra + cantidad_por_unidad_compra (>0) + costo_compra,
-    // derivar costo_unitario = costo_compra / cantidad_por_unidad_compra (Q por unidad base).
-    // Si no, usar costo_unitario crudo si vino, sino null. Backward-compatible.
     const cpc = raw.cantidad_por_unidad_compra
     const cc  = raw.costo_compra
-    const costoUnitarioFinal = (cc != null && cc !== '' && cpc != null && cpc !== '' && Number(cpc) > 0)
-      ? Math.round((Number(cc) / Number(cpc)) * 10000) / 10000
-      : (raw.costo_unitario != null && raw.costo_unitario !== '' ? Number(raw.costo_unitario) : null)
+    const unidadBase   = raw.unidad?.trim() || 'unidad'
+    const unidadCompra = raw.unidad_compra?.trim() || null
+    // Si la fila trae presentacion de compra, derivar costo_unitario por
+    // unidad base aplicando conversion cuando unidad y unidad_compra son
+    // ambas conocidas (lb->g, kg->g, etc.). Sino, fallback al costo crudo.
+    const costoUnitarioFinal = derivarCostoUnitario({
+      unidad: unidadBase,
+      unidad_compra: unidadCompra,
+      cantidad_por_unidad_compra: cpc,
+      costo_compra: cc,
+      costo_unitario_crudo: raw.costo_unitario,
+    })
 
     const insumoData = {
       nombre,
       categoria:      raw.categoria?.trim() || null,
-      unidad:         raw.unidad?.trim() || 'unidad',
+      unidad:         unidadBase,
       stock_actual:   0, // se ajusta despues con el movimiento de entrada
       stock_minimo:   Number(raw.stock_minimo) || 0,
       costo_unitario: costoUnitarioFinal,
-      unidad_compra:              raw.unidad_compra?.trim() || null,
+      unidad_compra:              unidadCompra,
       cantidad_por_unidad_compra: cpc != null && cpc !== '' ? Number(cpc) : null,
       costo_compra:               cc  != null && cc  !== '' ? Number(cc)  : null,
       proveedor:      raw.proveedor?.trim() || null,

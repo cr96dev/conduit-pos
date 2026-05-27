@@ -3,6 +3,7 @@ import { useRouter } from 'next/router'
 import { supabase } from '../lib/supabase'
 import Layout from '../components/Layout'
 import { SkeletonRow } from '../components/Skeleton'
+import { factorEntre, parseUnidad } from '../lib/unidades'
 
 // ============================================================================
 // Helpers compartidos
@@ -313,12 +314,29 @@ function ModalCompra({ proveedores, insumos, compra, onClose, onSaved }) {
     setLineas(ls => ls.map((l, idx) => {
       if (idx !== i) return l
       if (!insumo) return { ...l, insumo_id: '' }
+      // Sugerencia de unidad y costo:
+      // - Si el insumo tiene 'unidad_compra' cargada (ej. 'lb', 'saco'), la
+      //   compra normalmente viene en esa unidad => sugerirla.
+      // - Si tiene 'costo_compra' (Q por presentacion de compra), usar ese
+      //   como costo_unitario de la linea. Sino el costo_unitario por unidad
+      //   base del insumo.
+      const unidadSugerida = l.unidad || insumo.unidad_compra || insumo.unidad
+      let costoSugerido = l.costo_unitario
+      if (!costoSugerido) {
+        if (insumo.unidad_compra && insumo.costo_compra != null) {
+          costoSugerido = insumo.costo_compra
+        } else if (insumo.costo_unitario != null) {
+          costoSugerido = insumo.costo_unitario
+        } else {
+          costoSugerido = ''
+        }
+      }
       return {
         ...l,
         insumo_id,
         descripcion: l.descripcion || insumo.nombre,
-        unidad: l.unidad || insumo.unidad,
-        costo_unitario: l.costo_unitario || (insumo.costo_unitario ?? ''),
+        unidad: unidadSugerida,
+        costo_unitario: costoSugerido,
       }
     }))
   }
@@ -415,6 +433,31 @@ function ModalCompra({ proveedores, insumos, compra, onClose, onSaved }) {
               <tbody>
                 {lineas.map((l, i) => {
                   const sub = (Number(l.cantidad) || 0) * (Number(l.costo_unitario) || 0)
+                  const insumoSel = l.insumo_id && insumos.find(x => x.id === l.insumo_id)
+                  // Calcular cuánta cantidad entrará al stock al recibir, para
+                  // que el usuario vea el efecto de la conversión ANTES de guardar.
+                  let entradaStock = null
+                  let entradaWarn = null
+                  if (insumoSel && l.cantidad && l.unidad) {
+                    const cant = Number(l.cantidad)
+                    const fCan = factorEntre(l.unidad, insumoSel.unidad)
+                    if (fCan != null && fCan !== 1) {
+                      entradaStock = `${(cant * fCan).toLocaleString('es-GT', { maximumFractionDigits: 2 })} ${insumoSel.unidad}`
+                    } else if (fCan == null && insumoSel.unidad_compra && insumoSel.cantidad_por_unidad_compra) {
+                      const uLinea  = parseUnidad(l.unidad)
+                      const uCompra = parseUnidad(insumoSel.unidad_compra)
+                      const sameClave = (uLinea && uCompra && uLinea.clave === uCompra.clave)
+                                     || (!uLinea && !uCompra && l.unidad.toLowerCase().trim() === insumoSel.unidad_compra.toLowerCase().trim())
+                      if (sameClave) {
+                        const total = cant * Number(insumoSel.cantidad_por_unidad_compra)
+                        entradaStock = `${total.toLocaleString('es-GT', { maximumFractionDigits: 2 })} ${insumoSel.unidad}`
+                      } else {
+                        entradaWarn = `unidad "${l.unidad}" no reconocida → entrará como ${cant} ${insumoSel.unidad}`
+                      }
+                    } else if (fCan == null && l.unidad !== insumoSel.unidad) {
+                      entradaWarn = `unidad "${l.unidad}" no estándar → entrará como ${cant} ${insumoSel.unidad}`
+                    }
+                  }
                   return (
                     <tr key={i} className="border-t border-gray-100">
                       <td className="px-2 py-1">
@@ -431,10 +474,21 @@ function ModalCompra({ proveedores, insumos, compra, onClose, onSaved }) {
                       <td className="px-2 py-1">
                         <input type="number" step="any" value={l.cantidad} onChange={e => setLin(i, 'cantidad', e.target.value)}
                           className="w-full border border-gray-200 rounded px-2 py-1 text-xs text-right" />
+                        {entradaStock && (
+                          <div className="text-[10px] text-emerald-700 text-right tabular-nums mt-0.5" title="Cantidad que entrará al inventario tras conversión">
+                            → {entradaStock}
+                          </div>
+                        )}
+                        {entradaWarn && (
+                          <div className="text-[10px] text-amber-700 text-right mt-0.5" title="Sin conversión automática">
+                            ⚠ {entradaWarn}
+                          </div>
+                        )}
                       </td>
                       <td className="px-2 py-1">
                         <input type="text" value={l.unidad} onChange={e => setLin(i, 'unidad', e.target.value)}
-                          className="w-full border border-gray-200 rounded px-2 py-1 text-xs" />
+                          className="w-full border border-gray-200 rounded px-2 py-1 text-xs"
+                          placeholder={insumoSel ? (insumoSel.unidad_compra || insumoSel.unidad) : ''} />
                       </td>
                       <td className="px-2 py-1">
                         <input type="number" step="any" value={l.costo_unitario} onChange={e => setLin(i, 'costo_unitario', e.target.value)}
