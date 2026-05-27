@@ -35,7 +35,7 @@ async function editar(req, res, id) {
   const auth = await requireAdmin(req)
   if (auth.error) return res.status(auth.status).json({ error: auth.error })
 
-  const editables = ['loyverse_item_id', 'nombre', 'rinde_cantidad', 'rinde_unidad', 'merma_pct', 'precio_venta', 'costo_personalizado', 'peso_unitario_g', 'notas', 'activa']
+  const editables = ['loyverse_item_id', 'nombre', 'rinde_cantidad', 'rinde_unidad', 'merma_pct', 'precio_venta', 'costo_personalizado', 'peso_unitario_g', 'tipo', 'notas', 'activa']
   const patch = {}
   for (const k of editables) {
     if (!req.body || !(k in req.body)) continue
@@ -47,6 +47,9 @@ async function editar(req, res, id) {
   if ('costo_personalizado' in patch) {
     patch.costo_personalizado = patch.costo_personalizado === '' || patch.costo_personalizado == null
       ? null : Number(patch.costo_personalizado)
+  }
+  if ('tipo' in patch && !['comida', 'bebida'].includes(patch.tipo)) {
+    return res.status(400).json({ error: "tipo invalido (debe ser 'comida' o 'bebida')" })
   }
 
   if (Array.isArray(req.body?.ingredientes)) {

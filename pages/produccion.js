@@ -85,7 +85,12 @@ export default function Produccion({ session }) {
   async function cargarRecetas() {
     const res = await apiFetch('/api/recetas')
     const json = await res.json()
-    setRecetas((json.recetas || []).filter(r => r.activa))
+    // La planificacion de produccion solo aplica a recetas de comida; las
+    // bebidas no pasan por el plan diario. Default seguro: tratar receta sin
+    // 'tipo' como comida.
+    setRecetas((json.recetas || [])
+      .filter(r => r.activa)
+      .filter(r => (r.tipo || 'comida') !== 'bebida'))
   }
 
   async function buscarPlan(f) {
@@ -383,6 +388,14 @@ function PanelPlan({ plan, recetas, editable, esAdmin, fecha, onGuardarLineas, o
           <div className="px-5 py-3.5 border-b border-gray-100 flex items-center justify-between">
             <h2 className="text-sm font-medium text-gray-900">Productos a producir</h2>
             <div className="flex gap-2 items-center">
+              {draft.length > 0 && (
+                <button
+                  onClick={() => window.open(`/produccion-imprimir?planId=${plan.plan.id}`, '_blank')}
+                  className="text-xs px-3 py-1.5 border border-gray-200 text-gray-600 rounded-md hover:border-julia-red hover:text-julia-red"
+                  title="Abre una vista lista para imprimir o guardar como PDF">
+                  Imprimir / PDF
+                </button>
+              )}
               {editable && (
                 <button onClick={sugerirCantidades} disabled={sugiriendo}
                   className="text-xs px-3 py-1.5 border border-gray-200 text-gray-600 rounded-md hover:border-julia-red hover:text-julia-red disabled:opacity-50">

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { Fragment, useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/router'
 import { supabase } from '../lib/supabase'
 import Layout from '../components/Layout'
@@ -29,6 +29,7 @@ export default function Recetas({ session }) {
   const [modal, setModal] = useState(null)
   const [recalculando, setRecalculando] = useState(false)
   const [busqueda, setBusqueda] = useState('')
+  const [tipoFiltro, setTipoFiltro] = useState('todas') // 'todas' | 'comida' | 'bebida'
 
   useEffect(() => {
     if (!session) { router.push('/'); return }
@@ -68,8 +69,18 @@ export default function Recetas({ session }) {
   const esAdmin = perfil?.rol === 'admin'
 
   const filtradas = useMemo(() =>
-    items.filter(r => !busqueda || r.nombre.toLowerCase().includes(busqueda.toLowerCase())),
-    [items, busqueda])
+    items
+      .filter(r => !busqueda || r.nombre.toLowerCase().includes(busqueda.toLowerCase()))
+      .filter(r => tipoFiltro === 'todas' || (r.tipo || 'comida') === tipoFiltro),
+    [items, busqueda, tipoFiltro])
+
+  const conteoTipos = useMemo(() => {
+    let comida = 0, bebida = 0
+    for (const r of items) {
+      if ((r.tipo || 'comida') === 'bebida') bebida++; else comida++
+    }
+    return { comida, bebida, total: items.length }
+  }, [items])
 
   const stats = useMemo(() => {
     const conMargen = items.filter(r => r.margen_pct != null)
@@ -104,8 +115,21 @@ export default function Recetas({ session }) {
           <KpiBox label="Margen promedio" value={fmtPct(stats.avg_margen)} />
         </div>
 
-        <input type="text" placeholder="Buscar receta…" value={busqueda} onChange={e => setBusqueda(e.target.value)}
-          className="input max-w-md mb-3" />
+        <div className="flex flex-wrap gap-2 items-center mb-3">
+          <input type="text" placeholder="Buscar receta…" value={busqueda} onChange={e => setBusqueda(e.target.value)}
+            className="input max-w-md flex-1" />
+          <div className="flex gap-1 bg-gray-100 rounded-lg p-0.5 text-sm">
+            <FiltroTipoBtn active={tipoFiltro === 'todas'}  onClick={() => setTipoFiltro('todas')}>
+              Todas <span className="opacity-50">({conteoTipos.total})</span>
+            </FiltroTipoBtn>
+            <FiltroTipoBtn active={tipoFiltro === 'comida'} onClick={() => setTipoFiltro('comida')}>
+              Comida <span className="opacity-50">({conteoTipos.comida})</span>
+            </FiltroTipoBtn>
+            <FiltroTipoBtn active={tipoFiltro === 'bebida'} onClick={() => setTipoFiltro('bebida')}>
+              Bebidas <span className="opacity-50">({conteoTipos.bebida})</span>
+            </FiltroTipoBtn>
+          </div>
+        </div>
 
         {err && <div className="bg-red-50 border border-red-100 rounded-lg px-3 py-2 text-xs text-red-700 mb-3">{err}</div>}
 
@@ -132,14 +156,32 @@ export default function Recetas({ session }) {
                     <button onClick={() => setModal({tipo:'nueva'})} className="text-julia-red hover:underline ml-1">Crear la primera →</button>
                   )}
                 </td></tr>
-              ) : filtradas.map(r => {
+              ) : filtradas
+                .slice()
+                .sort((a, b) => {
+                  const ta = (a.tipo || 'comida'), tb = (b.tipo || 'comida')
+                  if (ta !== tb) return ta === 'comida' ? -1 : 1
+                  return a.nombre.localeCompare(b.nombre, 'es')
+                })
+                .map((r, idx, arr) => {
                 const margenCls = r.margen_pct == null ? 'text-gray-400'
                                 : Number(r.margen_pct) < 30 ? 'text-amber-600'
                                 : 'text-green-700'
                 const efectivo = costoEfectivo(r)
                 const esPersonalizado = r.costo_personalizado != null
+                const tipoR = r.tipo || 'comida'
+                const tipoPrev = idx > 0 ? (arr[idx - 1].tipo || 'comida') : null
+                const mostrarHeader = tipoFiltro === 'todas' && tipoR !== tipoPrev
                 return (
-                  <tr key={r.id} className="border-t border-gray-50 hover:bg-gray-50">
+                  <Fragment key={r.id}>
+                  {mostrarHeader && (
+                    <tr className="bg-gray-50/80">
+                      <td colSpan={7} className="px-3 py-1.5 text-[11px] uppercase tracking-wider text-gray-500 font-medium">
+                        {tipoR === 'bebida' ? 'Bebidas' : 'Comida'}
+                      </td>
+                    </tr>
+                  )}
+                  <tr className="border-t border-gray-50 hover:bg-gray-50">
                     <td className="px-3 py-2 text-gray-800">{r.nombre}</td>
                     <td className="px-3 py-2 text-xs text-gray-500">
                       {r.loyverse_items?.item_name || <span className="text-amber-500">— sin enlace —</span>}
@@ -160,6 +202,7 @@ export default function Recetas({ session }) {
                       <button onClick={() => setModal({ tipo: 'editar', id: r.id })} className="text-xs text-julia-red hover:underline">abrir</button>
                     </td>
                   </tr>
+                  </Fragment>
                 )
               })}
             </tbody>
@@ -178,6 +221,15 @@ export default function Recetas({ session }) {
         )}
       </div>
     </Layout>
+  )
+}
+
+function FiltroTipoBtn({ active, onClick, children }) {
+  return (
+    <button onClick={onClick}
+      className={`px-3 py-1.5 rounded-md text-xs font-medium transition ${
+        active ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500 hover:text-gray-800'
+      }`}>{children}</button>
   )
 }
 
@@ -208,6 +260,7 @@ function ModalReceta({ recetaId, loyverseItems, insumos, recetas, onClose, onSav
     precio_venta: '',
     costo_personalizado: '',
     peso_unitario_g: '',
+    tipo: 'comida',
     notas: '',
     activa: true,
   })
@@ -232,6 +285,7 @@ function ModalReceta({ recetaId, loyverseItems, insumos, recetas, onClose, onSav
         precio_venta: json.receta.precio_venta ?? '',
         costo_personalizado: json.receta.costo_personalizado ?? '',
         peso_unitario_g: json.receta.peso_unitario_g ?? '',
+        tipo: json.receta.tipo || 'comida',
         notas: json.receta.notas || '',
         activa: json.receta.activa,
       })
@@ -344,6 +398,7 @@ function ModalReceta({ recetaId, loyverseItems, insumos, recetas, onClose, onSav
       })
     const payload = {
       ...cab,
+      tipo: cab.tipo || 'comida',
       precio_venta: cab.precio_venta === '' ? null : Number(cab.precio_venta),
       costo_personalizado: cab.costo_personalizado === '' ? null : Number(cab.costo_personalizado),
       peso_unitario_g: cab.peso_unitario_g === '' ? null : Number(cab.peso_unitario_g),
@@ -393,6 +448,28 @@ function ModalReceta({ recetaId, loyverseItems, insumos, recetas, onClose, onSav
             <input type="text" required value={cab.nombre} onChange={e => setCab({...cab, nombre: e.target.value})} className="input" />
           </Campo>
         </div>
+
+        <Campo label="Tipo">
+          <div className="flex gap-2">
+            {[
+              { v: 'comida', label: 'Comida' },
+              { v: 'bebida', label: 'Bebida' },
+            ].map(opt => (
+              <label key={opt.v}
+                className={`flex-1 cursor-pointer text-center px-3 py-2 border rounded-lg text-sm transition ${
+                  cab.tipo === opt.v
+                    ? 'bg-julia-red/10 border-julia-red text-julia-red font-medium'
+                    : 'border-gray-200 text-gray-600 hover:border-gray-300'
+                }`}>
+                <input type="radio" name="tipo" value={opt.v}
+                  checked={cab.tipo === opt.v}
+                  onChange={() => setCab({ ...cab, tipo: opt.v })}
+                  className="sr-only" />
+                {opt.label}
+              </label>
+            ))}
+          </div>
+        </Campo>
 
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           <Campo label="Rinde (cantidad)" required>
