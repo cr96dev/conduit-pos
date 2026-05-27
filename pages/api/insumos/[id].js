@@ -66,15 +66,52 @@ async function update(req, res, auth, id) {
   return res.status(200).json({ ok: true, insumo: data })
 }
 
+// Si el insumo no tiene referencias en ninguna tabla (recetas, movimientos,
+// compras), se borra fisicamente. Si tiene aunque sea una referencia, se
+// hace baja logica (activo=false) y se devuelve { modo: 'baja', usos: {...} }
+// para que la UI muestre un mensaje claro de por que no se borro de verdad.
 async function baja(req, res, auth, id) {
+  const [ingsRes, movsRes, compRes] = await Promise.all([
+    auth.admin.from('receta_ingredientes')
+      .select('receta_id, recetas:receta_id(nombre)', { count: 'exact', head: false })
+      .eq('insumo_id', id).limit(5),
+    auth.admin.from('insumos_movimientos')
+      .select('id', { count: 'exact', head: true })
+      .eq('insumo_id', id),
+    auth.admin.from('compras_lineas')
+      .select('id', { count: 'exact', head: true })
+      .eq('insumo_id', id),
+  ])
+
+  const usos = {
+    recetas: ingsRes.count || (ingsRes.data?.length || 0),
+    movimientos: movsRes.count || 0,
+    compras: compRes.count || 0,
+  }
+  const recetasNombres = (ingsRes.data || [])
+    .map(r => r.recetas?.nombre).filter(Boolean)
+  const tieneUsos = usos.recetas > 0 || usos.movimientos > 0 || usos.compras > 0
+
+  if (!tieneUsos) {
+    const { error } = await auth.admin.from('insumos').delete().eq('id', id)
+    if (error) {
+      console.error('[insumos.baja] hard-delete ERROR:', error.message)
+      return res.status(500).json({ ok: false, error: error.message })
+    }
+    return res.status(200).json({ ok: true, modo: 'eliminado', usos })
+  }
+
   const { data, error } = await auth.admin
     .from('insumos')
     .update({ activo: false, updated_at: new Date().toISOString() })
     .eq('id', id).select().single()
 
   if (error) {
-    console.error('[insumos.baja] ERROR:', error.message)
+    console.error('[insumos.baja] soft-delete ERROR:', error.message)
     return res.status(500).json({ ok: false, error: error.message })
   }
-  return res.status(200).json({ ok: true, insumo: data })
+  return res.status(200).json({
+    ok: true, modo: 'baja', insumo: data, usos,
+    recetas_que_lo_usan: recetasNombres,
+  })
 }

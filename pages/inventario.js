@@ -1107,9 +1107,47 @@ function ModalInsumo({ insumo, onClose, onSaved }) {
     stock_inicial:  0,
   })
   const [guardando, setGuardando] = useState(false)
+  const [borrando, setBorrando] = useState(false)
   const [err, setErr] = useState(null)
+  const [aviso, setAviso] = useState(null)
 
   function set(k, v) { setForm(f => ({ ...f, [k]: v })) }
+
+  // Dar de baja / eliminar. El backend decide: si no hay referencias, hace
+  // hard-delete; si las hay, soft-delete (activo=false) y devuelve el listado
+  // para que mostremos un mensaje claro.
+  async function darDeBaja() {
+    if (!edicion) return
+    const ok = confirm(
+      `¿Dar de baja "${insumo.nombre}"?\n\n` +
+      `Si el insumo no se usa en ninguna receta, movimiento o compra, se ` +
+      `eliminará por completo.\n\n` +
+      `Si está en uso, queda oculto del catálogo pero el historial se conserva.`
+    )
+    if (!ok) return
+    setBorrando(true); setErr(null); setAviso(null)
+    const res = await apiFetch(`/api/insumos/${insumo.id}`, { method: 'DELETE' })
+    const json = await res.json()
+    setBorrando(false)
+    if (!res.ok) {
+      setErr(json.error || 'Error al dar de baja')
+      return
+    }
+    if (json.modo === 'eliminado') {
+      onSaved()
+      return
+    }
+    // soft-delete: mostramos detalle antes de cerrar
+    const partes = []
+    if (json.usos?.recetas > 0) {
+      const lista = (json.recetas_que_lo_usan || []).slice(0, 3).join(', ')
+      partes.push(`${json.usos.recetas} receta${json.usos.recetas === 1 ? '' : 's'}${lista ? ` (${lista}${json.usos.recetas > 3 ? '…' : ''})` : ''}`)
+    }
+    if (json.usos?.movimientos > 0) partes.push(`${json.usos.movimientos} movimiento${json.usos.movimientos === 1 ? '' : 's'} de inventario`)
+    if (json.usos?.compras > 0) partes.push(`${json.usos.compras} línea${json.usos.compras === 1 ? '' : 's'} de compra`)
+    setAviso(`Insumo dado de baja. Quedó oculto porque ya está referenciado en: ${partes.join('; ')}. El historial se conserva.`)
+    setTimeout(onSaved, 2200)
+  }
 
   // Costo derivado por unidad base = costo_compra / cantidad_por_unidad_compra
   // Si los dos están con valor positivo, esto es la fuente de verdad y el
@@ -1220,12 +1258,23 @@ function ModalInsumo({ insumo, onClose, onSaved }) {
         </Campo>
 
         {err && <div className="bg-red-50 border border-red-100 rounded-lg px-3 py-2 text-xs text-red-700">{err}</div>}
+        {aviso && <div className="bg-amber-50 border border-amber-100 rounded-lg px-3 py-2 text-xs text-amber-800">{aviso}</div>}
 
-        <div className="flex justify-end gap-2 pt-2">
-          <button type="button" onClick={onClose} className="btn-secundario">Cancelar</button>
-          <button type="submit" disabled={guardando} className="btn-primario">
-            {guardando ? 'Guardando…' : 'Guardar'}
-          </button>
+        <div className="flex justify-between items-center gap-2 pt-2">
+          <div>
+            {edicion && (
+              <button type="button" onClick={darDeBaja} disabled={borrando || guardando}
+                className="text-xs px-3 py-2 text-red-600 hover:bg-red-50 rounded-lg disabled:opacity-50">
+                {borrando ? 'Dando de baja…' : 'Dar de baja'}
+              </button>
+            )}
+          </div>
+          <div className="flex gap-2">
+            <button type="button" onClick={onClose} className="btn-secundario">Cancelar</button>
+            <button type="submit" disabled={guardando || borrando} className="btn-primario">
+              {guardando ? 'Guardando…' : 'Guardar'}
+            </button>
+          </div>
         </div>
       </form>
 
