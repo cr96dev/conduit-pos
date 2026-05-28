@@ -476,23 +476,32 @@ export default function POS({ session }) {
     )
   }
 
+  // Cantidades por variant_id en el carrito — para mostrar badge en cards.
+  const carritoPorVariant = useMemo(() => {
+    const m = new Map()
+    for (const l of carrito) {
+      if (l.variant_id) m.set(l.variant_id, (m.get(l.variant_id) || 0) + Number(l.cantidad))
+    }
+    return m
+  }, [carrito])
+
   return (
     <POSChrome perfil={perfil} kiosko={kiosko} turno={turno}>
       <Head><title>Punto de Venta · Julia Bakery</title></Head>
 
       {/* Overlay mientras se esta autorizando la tarjeta con NeoPOS */}
       {neonetFase && (
-        <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-sm w-full p-6 text-center">
-            <div className="w-12 h-12 mx-auto mb-4 border-4 border-julia-cream border-t-julia-red rounded-full animate-spin"></div>
-            <h2 className="text-base font-semibold text-gray-900 mb-1">Procesando tarjeta</h2>
-            <p className="text-2xl font-bold text-julia-red tabular-nums my-3">{fmtQ(neonetFase.monto)}</p>
-            <p className="text-xs text-gray-500">
+        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl shadow-2xl max-w-md w-full p-8 text-center">
+            <div className="w-16 h-16 mx-auto mb-5 border-4 border-julia-cream border-t-julia-red rounded-full animate-spin"></div>
+            <h2 className="text-lg font-semibold text-gray-900 mb-1">Procesando tarjeta</h2>
+            <p className="text-4xl font-bold text-julia-red tabular-nums my-4">{fmtQ(neonetFase.monto)}</p>
+            <p className="text-sm text-gray-500">
               {typeof window !== 'undefined' && window.JuliaPOS
-                ? 'Insertá / acercá la tarjeta al lector y seguí las instrucciones del PIN pad.'
+                ? 'Insertá o acercá la tarjeta al lector y seguí las instrucciones del PIN pad.'
                 : '⚙ Modo desarrollo (mock) — no hay dispositivo real conectado.'}
             </p>
-            <p className="text-[10px] text-gray-300 mt-3 font-mono">idsale {neonetFase.idsale}</p>
+            <p className="text-[10px] text-gray-300 mt-4 font-mono">idsale {neonetFase.idsale}</p>
           </div>
         </div>
       )}
@@ -502,80 +511,218 @@ export default function POS({ session }) {
         <PantallaExito resultado={resultado} onNueva={nuevaVenta} />
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-[1fr_360px] gap-0 min-h-[calc(100vh-3rem)]">
-        {/* COLUMNA IZQUIERDA: productos */}
-        <div className="p-4 md:p-6 border-r border-gray-100">
-          <div className="flex flex-col gap-2 mb-3">
-            <h1 className="text-xl font-semibold text-gray-900">Punto de Venta</h1>
-            <p className="text-xs text-gray-500">
-              Ventas que no pasan por Loyverse. Cada cobro emite factura FEL e impacta inventario.
-            </p>
-          </div>
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_440px] gap-0 min-h-[calc(100vh-3.5rem)] bg-gray-50">
 
-          <div className="flex gap-2 mb-3 flex-wrap">
-            <input
-              type="text" placeholder="Buscar producto..."
-              value={busqueda} onChange={e => setBusqueda(e.target.value)}
-              className="input flex-1 min-w-[180px]" autoFocus />
-            <select value={catSel} onChange={e => setCatSel(e.target.value)} className="input max-w-[180px]">
-              <option value="">Todas las categorías</option>
-              {categoriasUnicas.map(c => <option key={c}>{c}</option>)}
-            </select>
-          </div>
-
-          {cargandoCat ? (
-            <div className="space-y-2"><SkeletonRow /><SkeletonRow /><SkeletonRow /></div>
-          ) : productosFiltrados.length === 0 ? (
-            <div className="text-center text-xs text-gray-400 py-8">
-              {productos.length === 0 ? 'No hay productos sincronizados desde Loyverse.' : 'Sin resultados.'}
+        {/* ============================================================
+            COLUMNA IZQUIERDA — Catálogo de productos
+           ============================================================ */}
+        <div className="flex flex-col min-h-0">
+          {/* Header sticky con búsqueda + filtros + título */}
+          <div className="bg-white border-b border-gray-100 px-5 md:px-8 pt-5 pb-4 sticky top-0 z-20">
+            <div className="flex items-center justify-between mb-3">
+              <div>
+                <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Punto de venta</h1>
+                <p className="text-xs text-gray-400 mt-0.5">
+                  Cada cobro emite factura FEL e impacta inventario
+                </p>
+              </div>
+              <div className="text-right hidden sm:block">
+                <div className="text-[10px] uppercase tracking-wider text-gray-400 font-medium">Total venta</div>
+                <div className="text-2xl font-bold text-gray-900 tabular-nums">{fmtQ(totales.total)}</div>
+              </div>
             </div>
-          ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
-              {productosFiltrados.map(p => (
-                <button
-                  key={p.variant_id}
-                  onClick={() => agregarProducto(p)}
-                  className="text-left p-3 border border-gray-100 rounded-xl bg-white hover:border-julia-red hover:bg-julia-cream/30 transition-colors group">
-                  <div className="text-sm font-medium text-gray-900 leading-tight line-clamp-2">{p.item_name}</div>
-                  {p.variant_name && <div className="text-[10px] text-gray-400 mt-0.5">{p.variant_name}</div>}
-                  <div className="text-julia-red font-semibold mt-1.5 tabular-nums">{p.precio != null ? fmtQ(p.precio) : '—'}</div>
+
+            <div className="flex gap-2 items-center">
+              <div className="relative flex-1">
+                <svg className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-4.35-4.35M11 19a8 8 0 100-16 8 8 0 000 16z" />
+                </svg>
+                <input
+                  type="text" placeholder="Buscar producto, SKU o variante..."
+                  value={busqueda} onChange={e => setBusqueda(e.target.value)}
+                  className="w-full pl-10 pr-3 py-3 text-base border border-gray-200 rounded-xl focus:outline-none focus:border-julia-red focus:ring-2 focus:ring-julia-red/10 transition-all"
+                  autoFocus />
+              </div>
+              <select value={catSel} onChange={e => setCatSel(e.target.value)}
+                className="text-sm border border-gray-200 rounded-xl px-3 py-3 bg-white focus:outline-none focus:border-julia-red min-w-[160px]">
+                <option value="">Todas las categorías</option>
+                {categoriasUnicas.map(c => <option key={c}>{c}</option>)}
+              </select>
+            </div>
+
+            {/* Pills de categorías para filtro rápido */}
+            {!cargandoCat && categoriasUnicas.length > 0 && (
+              <div className="flex gap-1.5 mt-3 overflow-x-auto pb-1 -mx-1 px-1 scrollbar-none">
+                <button onClick={() => setCatSel('')}
+                  className={`flex-shrink-0 text-xs font-medium px-3 py-1.5 rounded-full whitespace-nowrap transition-colors ${
+                    catSel === ''
+                      ? 'bg-julia-red text-white'
+                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  }`}>
+                  Todas
                 </button>
-              ))}
-            </div>
-          )}
+                {categoriasUnicas.map(c => (
+                  <button key={c} onClick={() => setCatSel(c)}
+                    className={`flex-shrink-0 text-xs font-medium px-3 py-1.5 rounded-full whitespace-nowrap transition-colors ${
+                      catSel === c
+                        ? 'bg-julia-red text-white'
+                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                    }`}>
+                    {c}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Grid de productos */}
+          <div className="flex-1 overflow-y-auto px-5 md:px-8 py-5">
+            {cargandoCat ? (
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
+                {Array.from({ length: 10 }).map((_, i) => (
+                  <div key={i} className="bg-white border border-gray-100 rounded-2xl overflow-hidden animate-pulse">
+                    <div className="aspect-square bg-gray-100" />
+                    <div className="p-3 space-y-2">
+                      <div className="h-3 bg-gray-100 rounded w-3/4" />
+                      <div className="h-5 bg-gray-100 rounded w-1/2" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : productosFiltrados.length === 0 ? (
+              <div className="text-center py-20 text-gray-400">
+                <div className="text-6xl mb-3">🥖</div>
+                <div className="text-base font-medium text-gray-600">
+                  {productos.length === 0 ? 'Sin productos sincronizados desde Loyverse' : 'Sin resultados para tu búsqueda'}
+                </div>
+                <div className="text-xs mt-1">
+                  {productos.length === 0 ? 'El cron de Loyverse corre cada 15 minutos' : 'Probá con otro término o categoría'}
+                </div>
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
+                {productosFiltrados.map(p => {
+                  const cantEnCarrito = carritoPorVariant.get(p.variant_id) || 0
+                  return (
+                    <button
+                      key={p.variant_id}
+                      onClick={() => agregarProducto(p)}
+                      className={`group relative text-left bg-white border-2 rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-all active:scale-[0.98] ${
+                        cantEnCarrito > 0 ? 'border-julia-red/40 ring-2 ring-julia-red/10' : 'border-gray-100 hover:border-julia-red/30'
+                      }`}>
+                      {/* Imagen / placeholder */}
+                      <div className="aspect-square bg-gray-50 overflow-hidden relative">
+                        {p.image_url ? (
+                          <img
+                            src={p.image_url}
+                            alt={p.item_name}
+                            loading="lazy"
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                            onError={(e) => { e.target.style.display = 'none' }} />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-julia-cream/40 to-julia-cream/10">
+                            <span className="text-4xl font-bold text-julia-red/30 tracking-tight">
+                              {(p.item_name || '?').slice(0, 2).toUpperCase()}
+                            </span>
+                          </div>
+                        )}
+                        {/* Badge con cantidad en carrito */}
+                        {cantEnCarrito > 0 && (
+                          <div className="absolute top-2 right-2 bg-julia-red text-white text-xs font-bold rounded-full w-7 h-7 flex items-center justify-center shadow-lg">
+                            {cantEnCarrito}
+                          </div>
+                        )}
+                        {/* Categoría pill */}
+                        {p.categoria && (
+                          <div className="absolute top-2 left-2 bg-white/95 backdrop-blur-sm text-gray-600 text-[10px] font-medium px-2 py-0.5 rounded-full uppercase tracking-wide">
+                            {p.categoria}
+                          </div>
+                        )}
+                      </div>
+                      {/* Info */}
+                      <div className="p-3">
+                        <div className="text-sm font-semibold text-gray-900 leading-snug line-clamp-2 min-h-[2.5rem]">
+                          {p.item_name}
+                        </div>
+                        {p.variant_name && (
+                          <div className="text-[11px] text-gray-500 mt-1 truncate">{p.variant_name}</div>
+                        )}
+                        <div className="text-lg font-bold text-julia-red mt-2 tabular-nums">
+                          {p.precio != null ? fmtQ(p.precio) : '—'}
+                        </div>
+                      </div>
+                    </button>
+                  )
+                })}
+              </div>
+            )}
+          </div>
         </div>
 
-        {/* COLUMNA DERECHA: carrito (desktop fijo, mobile drawer abajo) */}
-        <div className={`bg-white border-t md:border-t-0 md:border-l border-gray-100 flex flex-col ${mostrarCarritoMobile ? 'fixed inset-0 z-40 md:static' : 'hidden md:flex'}`}>
-          {/* Header carrito */}
-          <div className="p-4 border-b border-gray-100 flex items-center justify-between">
+        {/* ============================================================
+            COLUMNA DERECHA — Carrito + checkout
+           ============================================================ */}
+        <div className={`bg-white border-t-2 lg:border-t-0 lg:border-l border-gray-100 flex flex-col ${mostrarCarritoMobile ? 'fixed inset-0 z-40 lg:static' : 'hidden lg:flex'}`}>
+          {/* Header */}
+          <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between bg-white sticky top-0 z-10">
             <div>
-              <div className="text-sm font-medium text-gray-900">Venta actual</div>
-              <div className="text-[11px] text-gray-400">{carrito.length} {carrito.length === 1 ? 'línea' : 'líneas'}</div>
+              <h2 className="text-base font-bold text-gray-900">Venta actual</h2>
+              <p className="text-xs text-gray-400">
+                {carrito.length === 0 ? 'Sin productos aún' : `${carrito.length} ${carrito.length === 1 ? 'línea' : 'líneas'}`}
+              </p>
             </div>
-            <button onClick={() => setMostrarCarritoMobile(false)} className="md:hidden text-gray-400 hover:text-gray-700 text-xl">✕</button>
+            {carrito.length > 0 && (
+              <button onClick={() => setCarrito([])}
+                className="text-xs text-gray-400 hover:text-red-500 transition-colors">
+                Vaciar
+              </button>
+            )}
+            <button onClick={() => setMostrarCarritoMobile(false)} className="lg:hidden text-gray-400 hover:text-gray-700 text-2xl ml-2">✕</button>
           </div>
 
           {/* Líneas */}
-          <div className="flex-1 overflow-y-auto p-4 space-y-2">
+          <div className="flex-1 overflow-y-auto px-4 py-3 space-y-2">
             {carrito.length === 0 ? (
-              <div className="text-center text-xs text-gray-400 py-8">Agregá productos del catálogo</div>
+              <div className="text-center py-16 text-gray-400">
+                <div className="text-5xl mb-3 opacity-50">🛒</div>
+                <div className="text-sm font-medium text-gray-500">El carrito está vacío</div>
+                <div className="text-xs mt-1">Tocá un producto para agregarlo</div>
+              </div>
             ) : carrito.map((l, i) => (
-              <div key={i} className="border border-gray-100 rounded-lg p-2.5">
-                <div className="flex items-start justify-between gap-2">
+              <div key={i} className="bg-gray-50 border border-gray-100 rounded-xl p-3 hover:border-gray-200 transition-colors">
+                <div className="flex items-start justify-between gap-2 mb-2">
                   <div className="flex-1 min-w-0">
-                    <div className="text-xs text-gray-800 leading-tight line-clamp-2">{l.descripcion}</div>
-                    <div className="text-[10px] text-gray-400 mt-0.5">{l.variant_id?.slice(0, 8)}</div>
+                    <div className="text-sm font-medium text-gray-900 leading-tight line-clamp-2">{l.descripcion}</div>
                   </div>
-                  <button onClick={() => quitarLinea(i)} className="text-gray-300 hover:text-red-500 text-sm">✕</button>
+                  <button onClick={() => quitarLinea(i)}
+                    className="flex-shrink-0 text-gray-300 hover:text-red-500 transition-colors w-6 h-6 flex items-center justify-center">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
                 </div>
-                <div className="flex items-center gap-2 mt-2">
-                  <input type="number" step="any" min="0" value={l.cantidad} onChange={e => setLinea(i, { cantidad: Number(e.target.value) || 0 })}
-                    className="w-16 text-center text-sm px-1 py-1 border border-gray-200 rounded tabular-nums" />
-                  <span className="text-gray-400 text-xs">×</span>
-                  <input type="number" step="any" min="0" value={l.precio_unitario} onChange={e => setLinea(i, { precio_unitario: Number(e.target.value) || 0 })}
-                    className="flex-1 text-right text-sm px-2 py-1 border border-gray-200 rounded tabular-nums" />
-                  <span className="text-sm font-medium text-gray-800 tabular-nums w-20 text-right">
+                <div className="flex items-center gap-2">
+                  {/* Cantidad con +/- */}
+                  <div className="flex items-center bg-white border border-gray-200 rounded-lg overflow-hidden">
+                    <button
+                      onClick={() => setLinea(i, { cantidad: Math.max(0, Number(l.cantidad) - 1) })}
+                      className="w-8 h-8 text-gray-500 hover:bg-gray-100 active:bg-gray-200 transition-colors font-medium">
+                      −
+                    </button>
+                    <input type="number" step="any" min="0" value={l.cantidad}
+                      onChange={e => setLinea(i, { cantidad: Number(e.target.value) || 0 })}
+                      className="w-12 text-center text-sm tabular-nums focus:outline-none border-x border-gray-200" />
+                    <button
+                      onClick={() => setLinea(i, { cantidad: Number(l.cantidad) + 1 })}
+                      className="w-8 h-8 text-gray-500 hover:bg-gray-100 active:bg-gray-200 transition-colors font-medium">
+                      +
+                    </button>
+                  </div>
+                  <span className="text-xs text-gray-400">×</span>
+                  <input type="number" step="any" min="0" value={l.precio_unitario}
+                    onChange={e => setLinea(i, { precio_unitario: Number(e.target.value) || 0 })}
+                    className="flex-1 text-right text-sm px-2 py-1.5 bg-white border border-gray-200 rounded-lg tabular-nums focus:outline-none focus:border-julia-red" />
+                  <span className="text-sm font-bold text-gray-900 tabular-nums min-w-[80px] text-right">
                     {fmtQ(Number(l.cantidad) * Number(l.precio_unitario))}
                   </span>
                 </div>
@@ -584,151 +731,227 @@ export default function POS({ session }) {
           </div>
 
           {/* Totales */}
-          <div className="border-t border-gray-100 p-4 bg-gray-50/40 space-y-2">
-            <div className="flex justify-between text-xs text-gray-500">
+          <div className="border-t border-gray-100 px-5 py-4 bg-gradient-to-b from-gray-50/50 to-white space-y-1.5">
+            <div className="flex justify-between text-sm text-gray-500">
               <span>Subtotal (sin IVA)</span><span className="tabular-nums">{fmtQ(totales.gravable)}</span>
             </div>
-            <div className="flex justify-between text-xs text-gray-500">
+            <div className="flex justify-between text-sm text-gray-500">
               <span>IVA 12%</span><span className="tabular-nums">{fmtQ(totales.iva)}</span>
             </div>
-            <div className="flex justify-between text-base font-semibold text-gray-900 pt-2 border-t border-gray-200">
-              <span>Total</span><span className="tabular-nums">{fmtQ(totales.total)}</span>
+            <div className="flex justify-between text-2xl font-bold text-gray-900 pt-3 mt-2 border-t-2 border-gray-200">
+              <span>Total</span><span className="tabular-nums text-julia-red">{fmtQ(totales.total)}</span>
             </div>
           </div>
 
           {/* Receptor */}
-          <div className="p-4 border-t border-gray-100 space-y-2">
-            <div className="text-[11px] uppercase tracking-wide text-gray-400 font-medium">Receptor</div>
-            <div className="flex gap-1 bg-gray-100 p-0.5 rounded-lg">
+          <div className="px-5 py-4 border-t border-gray-100 space-y-2.5">
+            <div className="text-[11px] uppercase tracking-wider text-gray-500 font-bold">Receptor</div>
+            <div className="flex gap-1 bg-gray-100 p-1 rounded-xl">
               <button onClick={() => setNitMode(true)}
-                className={`flex-1 text-xs py-1.5 rounded ${receptor.nit === 'CF' ? 'bg-white shadow-sm text-julia-red font-medium' : 'text-gray-600'}`}>
-                Consumidor Final
+                className={`flex-1 text-sm py-2 rounded-lg font-medium transition-colors ${
+                  receptor.nit === 'CF' ? 'bg-white shadow-sm text-julia-red' : 'text-gray-500'
+                }`}>
+                Consumidor final
               </button>
               <button onClick={() => setNitMode(false)}
-                className={`flex-1 text-xs py-1.5 rounded ${receptor.nit !== 'CF' ? 'bg-white shadow-sm text-julia-red font-medium' : 'text-gray-600'}`}>
+                className={`flex-1 text-sm py-2 rounded-lg font-medium transition-colors ${
+                  receptor.nit !== 'CF' ? 'bg-white shadow-sm text-julia-red' : 'text-gray-500'
+                }`}>
                 Con NIT
               </button>
             </div>
             {receptor.nit !== 'CF' && (
-              <>
+              <div className="space-y-2">
                 <div className="relative">
                   <input type="text" placeholder="NIT (sin guiones)" value={receptor.nit}
                     onChange={e => setReceptor(r => ({ ...r, nit: e.target.value }))}
                     onBlur={() => consultarNit(receptor.nit)}
-                    className="input w-full text-sm pr-9" inputMode="text" autoComplete="off" />
+                    className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-julia-red pr-10"
+                    inputMode="text" autoComplete="off" />
                   {consultando ? (
-                    <span className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 border-2 border-gray-200 border-t-julia-red rounded-full animate-spin" title="Consultando RTU…" />
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 border-2 border-gray-200 border-t-julia-red rounded-full animate-spin" title="Consultando RTU…" />
                   ) : (
                     receptor.nit && ultimoNitConsultado.current === normalizarNit(receptor.nit) && receptor.nombre && !nitMsg && (
-                      <span className="absolute right-2 top-1/2 -translate-y-1/2 text-emerald-600 text-sm" title="NIT confirmado en RTU">✓</span>
+                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-emerald-600" title="NIT confirmado en RTU">
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                        </svg>
+                      </span>
                     )
                   )}
                 </div>
                 <input type="text" placeholder="Nombre receptor" value={receptor.nombre}
                   onChange={e => setReceptor(r => ({ ...r, nombre: e.target.value }))}
-                  className="input text-sm" />
+                  className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-julia-red" />
                 <input type="email" placeholder="Email (opcional)" value={receptor.email}
                   onChange={e => setReceptor(r => ({ ...r, email: e.target.value }))}
-                  className="input text-sm" />
+                  className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-julia-red" />
                 {nitMsg && (
-                  <div className="text-[11px] text-amber-700 bg-amber-50 border border-amber-100 rounded px-2 py-1.5">
+                  <div className="text-xs text-amber-700 bg-amber-50 border border-amber-100 rounded-lg px-3 py-2">
                     {nitMsg}
                   </div>
                 )}
-              </>
+              </div>
             )}
           </div>
 
           {/* Método de pago */}
-          <div className="p-4 border-t border-gray-100">
-            <div className="text-[11px] uppercase tracking-wide text-gray-400 font-medium mb-2">Método de pago</div>
-            <div className="grid grid-cols-2 gap-1.5">
+          <div className="px-5 py-4 border-t border-gray-100">
+            <div className="text-[11px] uppercase tracking-wider text-gray-500 font-bold mb-2.5">Método de pago</div>
+            <div className="grid grid-cols-2 gap-2">
               {METODOS_PAGO.map(m => (
                 <button key={m.id} onClick={() => setMetodoPago(m.id)}
-                  className={`text-xs py-2 rounded border transition-colors ${
+                  className={`text-sm py-3 rounded-xl font-medium transition-all ${
                     metodoPago === m.id
-                      ? 'border-julia-red bg-julia-red text-white font-medium'
-                      : 'border-gray-200 text-gray-700 hover:border-julia-red bg-white'
+                      ? 'bg-julia-red text-white shadow-md ring-2 ring-julia-red/20'
+                      : 'border border-gray-200 text-gray-700 hover:border-julia-red/40 bg-white'
                   }`}>{m.label}</button>
               ))}
             </div>
           </div>
 
           {err && (
-            <div className="px-4 pb-2">
-              <div className="bg-red-50 border border-red-100 rounded-lg px-3 py-2 text-xs text-red-700">{err}</div>
+            <div className="px-5 pb-2">
+              <div className="bg-red-50 border border-red-100 rounded-xl px-3 py-2.5 text-sm text-red-700 flex items-start gap-2">
+                <svg className="w-4 h-4 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <span>{err}</span>
+              </div>
             </div>
           )}
 
           {/* Botón cobrar */}
-          <div className="p-4 border-t border-gray-100 bg-white">
+          <div className="px-5 py-4 border-t border-gray-100 bg-white">
             <button onClick={cobrar} disabled={enviando || carrito.length === 0}
-              className="w-full py-3 bg-julia-red text-white font-medium rounded-lg disabled:opacity-50 hover:bg-red-700 transition-colors">
-              {enviando ? 'Procesando…' : `Cobrar y facturar · ${fmtQ(totales.total)}`}
+              className="w-full py-4 bg-julia-red text-white text-base font-bold rounded-xl disabled:opacity-50 disabled:cursor-not-allowed hover:bg-red-700 active:scale-[0.98] transition-all shadow-md hover:shadow-lg flex items-center justify-center gap-2">
+              {enviando ? (
+                <>
+                  <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                  <span>Procesando...</span>
+                </>
+              ) : (
+                <>
+                  <span>Cobrar</span>
+                  <span className="tabular-nums">{fmtQ(totales.total)}</span>
+                </>
+              )}
             </button>
           </div>
         </div>
       </div>
 
       {/* FAB para abrir carrito en mobile */}
-      <button onClick={() => setMostrarCarritoMobile(true)}
-        className="md:hidden fixed bottom-20 right-4 z-30 bg-julia-red text-white rounded-full px-5 py-3 shadow-lg flex items-center gap-2 font-medium">
-        <span>🛒</span>
-        <span>{carrito.length}</span>
-        <span className="tabular-nums">{fmtQ(totales.total)}</span>
-      </button>
+      {!mostrarCarritoMobile && carrito.length > 0 && (
+        <button onClick={() => setMostrarCarritoMobile(true)}
+          className="lg:hidden fixed bottom-6 right-6 z-30 bg-julia-red text-white rounded-2xl px-5 py-3.5 shadow-2xl flex items-center gap-3 font-medium active:scale-95 transition-transform">
+          <div className="relative">
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
+            </svg>
+            <span className="absolute -top-2 -right-2 bg-white text-julia-red text-[10px] font-bold rounded-full w-5 h-5 flex items-center justify-center">
+              {carrito.length}
+            </span>
+          </div>
+          <span className="tabular-nums font-bold">{fmtQ(totales.total)}</span>
+        </button>
+      )}
     </POSChrome>
   )
 }
 
 function PantallaExito({ resultado, onNueva }) {
   const f = resultado.factura
+  const comandaCreada = resultado.comanda?.ok && resultado.comanda?.comanda
   return (
-    <div className="fixed inset-0 z-50 bg-white flex flex-col items-center justify-center p-6">
-      <div className="text-5xl mb-3">✓</div>
-      <h2 className="text-2xl font-semibold text-emerald-700 mb-1">Factura certificada</h2>
-      <p className="text-sm text-gray-500 mb-6">UUID SAT confirmado por Infile</p>
+    <div className="fixed inset-0 z-50 bg-gradient-to-b from-gray-50 to-white flex flex-col items-center justify-center p-6 overflow-y-auto">
+      {/* Check animado */}
+      <div className="relative mb-5">
+        <div className="absolute inset-0 bg-emerald-200/40 rounded-full blur-2xl animate-pulse"></div>
+        <div className="relative w-24 h-24 bg-emerald-500 rounded-full flex items-center justify-center shadow-lg">
+          <svg className="w-14 h-14 text-white" fill="none" stroke="currentColor" strokeWidth={3} viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+          </svg>
+        </div>
+      </div>
 
-      <div className="bg-gray-50 border border-gray-100 rounded-2xl p-5 max-w-md w-full space-y-3 mb-6">
+      <h2 className="text-3xl font-bold text-gray-900 mb-1">Venta certificada</h2>
+      <p className="text-sm text-gray-500 mb-2">UUID SAT confirmado por Infile</p>
+
+      {/* Total destacado */}
+      <div className="text-5xl font-bold text-julia-red tabular-nums mb-6">
+        {'Q ' + Number(f.total).toLocaleString('es-GT', { minimumFractionDigits: 2 })}
+      </div>
+
+      {/* Detalles */}
+      <div className="bg-white border border-gray-100 rounded-2xl shadow-sm p-6 max-w-md w-full space-y-3 mb-5">
         <Row k="Receptor" v={`${f.receptor_nit} — ${f.receptor_nombre}`} />
-        <Row k="Total" v={'Q ' + Number(f.total).toLocaleString('es-GT', { minimumFractionDigits: 2 })} bold />
-        <Row k="Método pago" v={f.metodo_pago} />
+        <Row k="Método de pago" v={<span className="capitalize">{f.metodo_pago}</span>} />
         {resultado.neonet && (
           <>
-            <hr className="border-gray-200" />
-            <Row k="Tarjeta" v={<span className="font-mono">{resultado.neonet.pan_masked || '—'}</span>} />
-            <Row k="Autorización" v={<span className="font-mono">{resultado.neonet.authorization_code || '—'}</span>} />
-            <Row k="Voucher" v={<span className="font-mono">{resultado.neonet.voucher_code || '—'}</span>} />
+            <div className="border-t border-gray-100 my-2"></div>
+            <Row k="Tarjeta" v={<span className="font-mono text-xs">{resultado.neonet.pan_masked || '—'}</span>} />
+            <Row k="Autorización" v={<span className="font-mono text-xs">{resultado.neonet.authorization_code || '—'}</span>} />
+            <Row k="Voucher" v={<span className="font-mono text-xs">{resultado.neonet.voucher_code || '—'}</span>} />
             {resultado.neonet.origen !== 'prod' && (
-              <Row k="" v={<span className="text-[10px] uppercase tracking-wide bg-amber-100 text-amber-700 px-2 py-0.5 rounded">{resultado.neonet.origen}</span>} />
+              <Row k="" v={<span className="text-[10px] uppercase tracking-wide bg-amber-100 text-amber-700 px-2 py-0.5 rounded font-bold">{resultado.neonet.origen}</span>} />
             )}
           </>
         )}
-        <hr className="border-gray-200" />
-        <Row k="UUID SAT" v={<span className="font-mono text-xs">{f.uuid_sat}</span>} />
-        <Row k="Serie" v={<span className="font-mono">{f.serie_sat || '—'}</span>} />
-        <Row k="Número" v={<span className="font-mono">{f.numero_sat || '—'}</span>} />
-        <Row k="Inventario PT" v={resultado.descuento?.pt?.ok
-          ? `✓ ${resultado.descuento.pt.lineas_procesadas} líneas`
-          : <span className="text-amber-600">⚠ {resultado.descuento?.pt?.error || 'sin descontar'}</span>} />
-        <Row k="Asiento" v={resultado.asiento?.ok
-          ? <span className="text-emerald-600">✓ generado #{resultado.asiento.numero}</span>
-          : <span className="text-amber-600">⚠ {resultado.asiento?.error || 'no generado'}</span>} />
+        <div className="border-t border-gray-100 my-2"></div>
+        <Row k="UUID SAT" v={<span className="font-mono text-[10px] break-all">{f.uuid_sat}</span>} />
+        <Row k="Serie / Número" v={<span className="font-mono text-xs">{f.serie_sat || '—'} / {f.numero_sat || '—'}</span>} />
+      </div>
+
+      {/* Status chips de procesos post-venta */}
+      <div className="flex flex-wrap gap-2 mb-6 max-w-md justify-center">
+        <StatusChip
+          ok={resultado.descuento?.pt?.ok}
+          label="Inventario"
+          detail={resultado.descuento?.pt?.ok
+            ? `${resultado.descuento.pt.lineas_procesadas} líneas`
+            : (resultado.descuento?.pt?.error || 'no descontó')} />
+        <StatusChip
+          ok={resultado.asiento?.ok}
+          label="Asiento"
+          detail={resultado.asiento?.ok
+            ? `#${resultado.asiento.numero}`
+            : (resultado.asiento?.error || 'no generado')} />
+        {comandaCreada && (
+          <StatusChip ok={true} label="Barra" detail="Comanda enviada" />
+        )}
       </div>
 
       <button onClick={onNueva}
-        className="px-6 py-3 bg-julia-red text-white font-medium rounded-lg hover:bg-red-700">
+        className="px-8 py-4 bg-julia-red text-white text-base font-bold rounded-xl hover:bg-red-700 active:scale-[0.98] transition-all shadow-md hover:shadow-lg flex items-center gap-2">
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+        </svg>
         Nueva venta
       </button>
     </div>
   )
 }
 
-function Row({ k, v, bold }) {
+function Row({ k, v }) {
   return (
-    <div className="flex justify-between items-center gap-3">
-      <span className="text-xs uppercase tracking-wide text-gray-400">{k}</span>
-      <span className={`text-sm ${bold ? 'font-semibold text-gray-900' : 'text-gray-700'}`}>{v}</span>
+    <div className="flex justify-between items-baseline gap-3">
+      <span className="text-xs uppercase tracking-wider text-gray-400 font-medium flex-shrink-0">{k}</span>
+      <span className="text-sm text-gray-800 text-right break-words">{v}</span>
+    </div>
+  )
+}
+
+function StatusChip({ ok, label, detail }) {
+  return (
+    <div className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border ${
+      ok
+        ? 'bg-emerald-50 border-emerald-200 text-emerald-700'
+        : 'bg-amber-50 border-amber-200 text-amber-700'
+    }`}>
+      <span className="text-xs">{ok ? '✓' : '⚠'}</span>
+      <span className="text-xs font-medium">{label}:</span>
+      <span className="text-xs">{detail}</span>
     </div>
   )
 }
