@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<network-security-config>
+    <!-- Solo HTTPS hacia los dominios de Julia Bakery (prod + previews de Vercel).
+         Bloquea cleartext en todo lo demas. -->
+    <base-config cleartextTrafficPermitted="false">
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </base-config>
+    <domain-config>
+        <domain includeSubdomains="true">vercel.app</domain>
+        <domain includeSubdomains="true">julia-bakery.vercel.app</domain>
+    </domain-config>
+</network-security-config>

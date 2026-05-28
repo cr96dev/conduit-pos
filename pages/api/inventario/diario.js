@@ -118,7 +118,7 @@ async function list(req, res) {
     // 4) Conteos guardados para esa fecha.
     let conteosQuery = auth.admin
       .from('conteos_diarios_producto')
-      .select('id, variant_id, store_id, inventario_inicial, inventario_final, notas, updated_at, updated_by')
+      .select('id, variant_id, store_id, inventario_inicial, inventario_final, vendido_pos, notas, updated_at, updated_by')
       .eq('fecha', fecha)
     if (store_id) conteosQuery = conteosQuery.eq('store_id', store_id)
     const { data: conteos, error: conteosErr } = await conteosQuery
@@ -163,10 +163,13 @@ async function list(req, res) {
 
       const inicial = conteo?.inventario_inicial != null ? Number(conteo.inventario_inicial) : null
       const final   = conteo?.inventario_final   != null ? Number(conteo.inventario_final)   : null
+      const vendidoPos = Number(conteo?.vendido_pos || 0)
 
-      // Final teorico (automatico) = inicial - ventas del dia.
-      // Requiere inicial cargado: si no hay, no hay teorico ni variacion.
-      const teorico = inicial != null ? round3(inicial - ventas.cantidad) : null
+      // Final teorico (automatico) = inicial - ventas_loyverse - vendido_pos.
+      // vendido_pos lo acumula la RPC pos_descontar_inventario al confirmar
+      // una venta POS propia (origen_tipo=pos_propio). Requiere inicial
+      // cargado: si no hay, no hay teorico ni variacion.
+      const teorico = inicial != null ? round3(inicial - ventas.cantidad - vendidoPos) : null
       const variacion = (teorico != null && final != null) ? round3(final - teorico) : null
 
       totalVentasMonto    += ventas.monto
@@ -188,6 +191,7 @@ async function list(req, res) {
         stock_actual_pos:  v.stock_actual_pos,
         ventas_cantidad:   round3(ventas.cantidad),
         ventas_monto:      Math.round(ventas.monto * 100) / 100,
+        vendido_pos:       round3(vendidoPos),
         inventario_inicial: inicial,
         inventario_final:   final,
         inventario_teorico: teorico,

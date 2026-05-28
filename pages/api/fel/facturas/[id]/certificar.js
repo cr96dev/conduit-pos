@@ -1,16 +1,19 @@
 // pages/api/fel/facturas/:id/certificar
-// POST: arma XML, llama a Digifact, guarda uuid_sat y XML certificado.
+// POST: arma el XML DTE, lo firma+certifica con Infile/FEEL, guarda uuid+xml certificado.
 //
 // Modos:
-//   - Si NO hay token Digifact configurado, devuelve 400 con un mensaje claro.
-//   - Si hay token, intenta certificar y actualiza estado.
+//   - { manual: true, uuid_sat, serie_sat, numero_sat }
+//       Registra como certificada con datos a mano (no llama a Infile).
+//       Sigue funcionando como antes.
+//   - sin body o body normal:
+//       Camino real. Requiere config_fel con infile_alias_firma + llaves.
 //
-// Tambien admite "modo manual" si llega body { manual: true, uuid_sat, serie_sat, numero_sat }:
-//   marca la factura como certificada con esos datos, sin llamar a Digifact.
-//   Util mientras no se tenga API funcionando.
+// El `identificador` que Infile correlaciona entre firmador y certificador
+// usamos el `factura.id` (UUID de Postgres) — garantiza idempotencia.
 
 import { requireAdmin } from '../../../../../lib/auth'
-import { crearCliente, construirXMLDte, DigifactError } from '../../../../../lib/digifact/client'
+import { crearCliente, InfileError, frasesDesdeConfig } from '../../../../../lib/infile/client'
+import { construirDteFactura } from '../../../../../lib/infile/construirDte'
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' })
@@ -27,9 +30,12 @@ export default async function handler(req, res) {
   if (factura.estado === 'certificada') return res.status(400).json({ error: 'Ya certificada' })
   if (factura.estado === 'anulada')     return res.status(400).json({ error: 'Anulada' })
 
-  const { data: items } = await auth.admin.from('facturas_fel_items').select('*').eq('factura_id', id).order('orden')
+  const { data: items } = await auth.admin
+    .from('facturas_fel_items').select('*').eq('factura_id', id).order('orden')
 
+  // ============================================================
   // Modo manual (registrar certificación ingresada a mano)
+  // ============================================================
   if (req.body?.manual) {
     const { uuid_sat, serie_sat, numero_sat } = req.body
     if (!uuid_sat?.trim()) return res.status(400).json({ error: 'uuid_sat requerido en modo manual' })
@@ -47,64 +53,81 @@ export default async function handler(req, res) {
     return res.status(200).json({ ok: true, factura: data, modo: 'manual' })
   }
 
-  // Modo Digifact
+  // ============================================================
+  // Modo Infile/FEEL (camino real)
+  // ============================================================
   const { data: config } = await auth.admin.from('config_fel').select('*').limit(1).maybeSingle()
-  if (!config) return res.status(400).json({ error: 'No hay config_fel. Configurar emisor y token Digifact.' })
-  if (!config.digifact_token) {
-    return res.status(400).json({ error: 'Token Digifact no configurado. Solicitarlo a soporte@digifact.com.gt y guardarlo en /configuracion FEL.' })
+  if (!config) {
+    return res.status(400).json({ error: 'No hay config_fel. Configurá emisor y credenciales Infile en /configuracion-fel.' })
+  }
+  if (!config.infile_alias_firma || !config.infile_llave_firma || !config.infile_llave_cert) {
+    return res.status(400).json({
+      error: 'Credenciales Infile incompletas en config_fel. Faltan: infile_alias_firma, infile_llave_firma o infile_llave_cert.',
+    })
   }
 
-  let xmlDte
+  // 1) Construir XML
+  // Frases: derivadas de config (Tipo 1 base + extras del emisor).
+  let xmlInfo
   try {
-    xmlDte = construirXMLDte({ config, factura, items })
+    xmlInfo = construirDteFactura({
+      config, factura, items,
+      opciones: { frases: frasesDesdeConfig(config) },
+    })
   } catch (e) {
     return res.status(500).json({ ok: false, error: 'Error construyendo XML: ' + e.message })
   }
 
+  // 2) Firmar + certificar
   try {
     const client = crearCliente(config)
-    const respuesta = await client.certificarDTE(xmlDte)
+    const cert = await client.firmarYCertificar(xmlInfo.xml, factura.id, {
+      correoCopia: factura.receptor_email || '',
+    })
 
-    // El parseo de la respuesta depende del formato exacto que devuelva Digifact.
-    // Esperamos algun campo tipo "Uuid", "Serie", "Numero" o equivalente.
-    const uuidSat = respuesta?.uuid || respuesta?.Uuid || respuesta?.uuid_sat || null
-    const serieSat = respuesta?.serie || respuesta?.Serie || null
-    const numeroSat = respuesta?.numero || respuesta?.Numero || null
-
-    if (!uuidSat) {
-      // Guardamos el error pero no fallamos catastróficamente
+    if (!cert.uuid) {
+      const errMsg = 'Infile respondio sin uuid: ' + JSON.stringify(cert.raw).slice(0, 500)
       await auth.admin.from('facturas_fel').update({
         estado: 'error',
-        error_mensaje: 'Digifact respondio sin uuid: ' + JSON.stringify(respuesta).slice(0, 500),
+        error_mensaje: errMsg,
         updated_at: new Date().toISOString(),
       }).eq('id', id)
-      return res.status(502).json({ ok: false, error: 'Respuesta de Digifact sin uuid', respuesta })
+      return res.status(502).json({ ok: false, error: 'Respuesta de Infile sin uuid', respuesta: cert.raw })
     }
 
     const { data, error } = await auth.admin.from('facturas_fel').update({
       estado: 'certificada',
-      uuid_sat: uuidSat,
-      serie_sat: serieSat,
-      numero_sat: numeroSat,
+      uuid_sat: cert.uuid,
+      serie_sat: cert.serie,
+      numero_sat: cert.numero,
       fecha_certificacion: new Date().toISOString(),
-      certificador: 'digifact',
-      xml_dte: xmlDte,
+      certificador: 'infile',
+      xml_dte: cert.xml_certificado || xmlInfo.xml,
       error_mensaje: null,
       updated_at: new Date().toISOString(),
     }).eq('id', id).select().single()
     if (error) return res.status(500).json({ ok: false, error: error.message })
 
-    return res.status(200).json({ ok: true, factura: data, respuesta_digifact: respuesta })
+    return res.status(200).json({
+      ok: true,
+      factura: data,
+      uuid: cert.uuid,
+      serie: cert.serie,
+      numero: cert.numero,
+      respuesta_infile: cert.raw,
+    })
   } catch (e) {
-    if (e instanceof DigifactError) {
+    if (e instanceof InfileError) {
       await auth.admin.from('facturas_fel').update({
         estado: 'error',
-        error_mensaje: e.message,
+        error_mensaje: `[${e.etapa || 'infile'}] ${e.message}`,
         updated_at: new Date().toISOString(),
       }).eq('id', id)
-      return res.status(502).json({ ok: false, error: e.message, payload: e.payload })
+      return res.status(502).json({ ok: false, error: e.message, etapa: e.etapa, payload: e.payload })
     }
     console.error('[fel.certificar] ERROR:', e)
     return res.status(500).json({ ok: false, error: e.message })
   }
 }
+
+export const config = { maxDuration: 60 }

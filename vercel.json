@@ -11,6 +11,10 @@
     {
       "path": "/api/cron/alerta-cierre-faltante",
       "schedule": "0 15 * * *"
+    },
+    {
+      "path": "/api/cron/neonet-settlement",
+      "schedule": "0 5 * * *"
     }
   ],
   "functions": {
@@ -25,6 +29,21 @@
     },
     "pages/api/cron/alerta-cierre-faltante.js": {
       "maxDuration": 60
+    },
+    "pages/api/cron/neonet-settlement.js": {
+      "maxDuration": 60
+    },
+    "pages/api/neonet/settlement.js": {
+      "maxDuration": 60
+    },
+    "pages/api/neonet/transaction-detail.js": {
+      "maxDuration": 60
+    },
+    "pages/api/neonet/voucher-reprint.js": {
+      "maxDuration": 60
+    },
+    "pages/api/pos/cobrar-tarjeta.js": {
+      "maxDuration": 120
     }
   }
 }

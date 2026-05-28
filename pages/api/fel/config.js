@@ -16,7 +16,14 @@ export default async function handler(req, res) {
     const editables = [
       'nit_emisor','nombre_comercial','razon_social','direccion','codigo_postal',
       'municipio','departamento','pais','afiliacion_iva','codigo_establecimiento',
-      'email_emisor','telefono_emisor','digifact_url_base','digifact_token',
+      'email_emisor','telefono_emisor',
+      // Infile / FEEL
+      'infile_url_firma','infile_url_cert','infile_url_consulta_nit',
+      'infile_alias_firma','infile_llave_firma',
+      'infile_usuario_cert','infile_llave_cert',
+      'infile_ambiente','infile_frases_extras',
+      // Digifact (legacy — se mantiene editable hasta limpiar la migracion)
+      'digifact_url_base','digifact_token',
       'digifact_token_vence','digifact_usuario','digifact_ambiente',
     ]
     const patch = {}
