@@ -3,7 +3,7 @@ import { useRouter } from 'next/router'
 import { supabase } from '../lib/supabase'
 import Layout from '../components/Layout'
 import { SkeletonRow } from '../components/Skeleton'
-import { calcularMargen, costoEfectivo } from '../lib/recetas'
+import { calcularMargen, costoEfectivo, factorIngrediente } from '../lib/recetas'
 
 async function apiFetch(path, opts = {}) {
   const { data: { session } } = await supabase.auth.getSession()
@@ -355,17 +355,25 @@ function ModalReceta({ recetaId, loyverseItems, insumos, recetas, onClose, onSav
   }
 
   // Costeo en vivo
+  // Conversion de unidades: si `i.unidad` y `op.unidad` (unidad base del insumo
+  // o rinde_unidad de la sub-receta) son convertibles via lib/unidades.js, se
+  // aplica el factor automaticamente. Sino, factor=1 (legacy).
   const costeoVivo = useMemo(() => {
     const detalle = ings.filter(i => i.componente_id && Number(i.cantidad) > 0).map(i => {
       const op = opcionesComponente.find(o => o.value === i.componente_id)
       const cant = Number(i.cantidad) || 0
-      const subtotal = cant * (op?.costo || 0)
+      const { factor, convertido, dudoso } = factorIngrediente(i.unidad, op?.unidad)
+      const subtotal = cant * factor * (op?.costo || 0)
       return {
         cantidad: cant,
         costo_unit: op?.costo || 0,
         nombre: op?.label || '',
         tipo: op?.tipo,
         unidad: i.unidad || op?.unidad,
+        unidad_base: op?.unidad,
+        factor_conversion: factor,
+        convertido,
+        dudoso,
         sin_costo: !op || op.sin_costo,
         subtotal,
       }
@@ -534,7 +542,8 @@ function ModalReceta({ recetaId, loyverseItems, insumos, recetas, onClose, onSav
               <tbody>
                 {ings.map((l, i) => {
                   const op = opcionesComponente.find(o => o.value === l.componente_id)
-                  const sub = (Number(l.cantidad) || 0) * (op?.costo || 0)
+                  const conv = factorIngrediente(l.unidad, op?.unidad)
+                  const sub = (Number(l.cantidad) || 0) * conv.factor * (op?.costo || 0)
                   return (
                     <tr key={i} className="border-t border-gray-100">
                       <td className="px-2 py-1">
@@ -568,9 +577,22 @@ function ModalReceta({ recetaId, loyverseItems, insumos, recetas, onClose, onSav
                       </td>
                       <td className="px-2 py-1">
                         <input type="text" value={l.unidad} onChange={e => setLin(i, 'unidad', e.target.value)}
-                          className="w-full border border-gray-200 rounded px-1 py-1 text-xs" placeholder={op?.unidad || ''} />
+                          className={`w-full border rounded px-1 py-1 text-xs ${
+                            conv.dudoso ? 'border-amber-300 bg-amber-50' : 'border-gray-200'
+                          }`}
+                          placeholder={op?.unidad || ''}
+                          title={conv.dudoso
+                            ? `La unidad "${l.unidad}" no es convertible a "${op?.unidad}" — el costo se calcula como si la cantidad ya estuviera en la unidad base.`
+                            : conv.convertido
+                              ? `Convertido: 1 ${l.unidad} = ${conv.factor} ${op?.unidad}`
+                              : ''} />
                       </td>
-                      <td className="px-2 py-1 text-right tabular-nums text-gray-700">{sub > 0 ? fmt(sub) : ''}</td>
+                      <td className="px-2 py-1 text-right tabular-nums text-gray-700">
+                        {sub > 0 ? fmt(sub) : ''}
+                        {conv.convertido && sub > 0 && (
+                          <div className="text-[10px] text-gray-400">×{conv.factor < 1 ? conv.factor.toFixed(4) : conv.factor.toFixed(2)}</div>
+                        )}
+                      </td>
                       <td className="px-2 py-1">
                         <input type="text" value={l.notas} onChange={e => setLin(i, 'notas', e.target.value)}
                           className="w-full border border-gray-200 rounded px-1 py-1 text-xs" />
@@ -601,6 +623,17 @@ function ModalReceta({ recetaId, loyverseItems, insumos, recetas, onClose, onSav
         {costeoVivo.detalle.some(i => i.sin_costo) && (
           <div className="bg-amber-50 border border-amber-100 rounded-lg px-3 py-2 text-xs text-amber-800">
             ⚠ Algunos insumos/sub-recetas no tienen costo cargado — el costeo no es exacto.
+          </div>
+        )}
+        {costeoVivo.detalle.some(i => i.dudoso) && (
+          <div className="bg-amber-50 border border-amber-100 rounded-lg px-3 py-2 text-xs text-amber-800">
+            ⚠ Hay ingredientes cuya unidad no se puede convertir automáticamente a la unidad base del insumo (resaltados en ámbar).
+            El costeo asume que la cantidad ya está en unidad base — revisá manualmente.
+          </div>
+        )}
+        {costeoVivo.detalle.some(i => i.convertido) && !costeoVivo.detalle.some(i => i.dudoso) && (
+          <div className="text-xs text-gray-500">
+            ✓ Conversión de unidades aplicada automáticamente donde corresponde.
           </div>
         )}
 
