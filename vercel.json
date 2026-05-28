@@ -44,9 +44,6 @@
     },
     "pages/api/pos/cobrar-tarjeta.js": {
       "maxDuration": 120
-    },
-    "pages/api/neonet/diagnostic.js": {
-      "maxDuration": 240
     }
   }
 }
