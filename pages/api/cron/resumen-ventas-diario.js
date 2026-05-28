@@ -16,10 +16,14 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' })
   }
 
+  // Auth: Vercel Cron inyecta `Authorization: Bearer ${CRON_SECRET}` automaticamente.
+  // NO aceptar user-agent vercel-cron sin token (es spoofeable desde internet).
   const expectedSecret = process.env.CRON_SECRET || process.env.INTERNAL_API_SECRET
-  const isVercelCron = req.headers['user-agent']?.includes('vercel-cron')
+  if (!expectedSecret) {
+    return res.status(500).json({ error: 'CRON_SECRET / INTERNAL_API_SECRET no configurada' })
+  }
   const hasValidSecret = req.headers.authorization === `Bearer ${expectedSecret}`
-  if (!isVercelCron && !hasValidSecret) {
+  if (!hasValidSecret) {
     return res.status(401).json({ error: 'Unauthorized' })
   }
 

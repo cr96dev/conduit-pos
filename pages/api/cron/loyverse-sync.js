@@ -16,14 +16,18 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' })
   }
 
-  const isVercelCron = req.headers['user-agent']?.includes('vercel-cron')
+  // Auth: Vercel Cron inyecta automaticamente `Authorization: Bearer ${CRON_SECRET}`
+  // cuando dispara el endpoint. NO confiar solo en el user-agent (spoofeable).
   const auth = req.headers.authorization
-  const validCron     = auth === `Bearer ${process.env.CRON_SECRET}`
-  const validInternal = auth === `Bearer ${process.env.INTERNAL_API_SECRET}`
+  const validCron     = !!process.env.CRON_SECRET         && auth === `Bearer ${process.env.CRON_SECRET}`
+  const validInternal = !!process.env.INTERNAL_API_SECRET && auth === `Bearer ${process.env.INTERNAL_API_SECRET}`
 
-  if (!isVercelCron && !validCron && !validInternal) {
+  if (!validCron && !validInternal) {
     return res.status(401).json({ error: 'Unauthorized' })
   }
+
+  // El user-agent solo se conserva para el log de origen, no para autenticar.
+  const isVercelCron = req.headers['user-agent']?.includes('vercel-cron')
 
   if (!process.env.LOYVERSE_ACCESS_TOKEN) {
     return res.status(500).json({ error: 'LOYVERSE_ACCESS_TOKEN no configurada' })
