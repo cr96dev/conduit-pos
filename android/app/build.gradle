@@ -6,12 +6,12 @@ plugins {
 
 android {
     namespace 'com.juliabakery.pos'
-    compileSdk 34
+    compileSdk 35
 
     defaultConfig {
         applicationId "com.juliabakery.pos"
         minSdk 24                 // Android 7.0 — Sunmi D3 Mini ship con 7.1+
-        targetSdk 34
+        targetSdk 35
         versionCode 1
         versionName "0.1.0"
 
