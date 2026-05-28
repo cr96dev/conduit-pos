@@ -46,6 +46,7 @@ import { construirDteFactura } from '../../../lib/infile/construirDte'
 import { generarAsientoVentaPos } from '../../../lib/contabilidad/generador'
 import { explotarPlan } from '../../../lib/produccion'
 import { turnoAbiertoDeCajero } from '../../../lib/turnos/helpers'
+import { crearComandaParaFactura } from '../../../lib/comandas/helpers'
 
 const round2 = (n) => Math.round((Number(n) + Number.EPSILON) * 100) / 100
 
@@ -382,6 +383,17 @@ export default async function handler(req, res) {
     asiento = { ok: false, error: e.message }
   }
 
+  // ===== 7. Comanda de barra (best effort) =====
+  // Si la venta tiene items en categorias con es_barra=true, abre comanda.
+  // El iPad de la barra se subscribe via Supabase Realtime y la ve aparecer.
+  let comanda = null
+  try {
+    const r = await crearComandaParaFactura(auth.admin, facturaCert, itemsNorm)
+    comanda = r
+  } catch (e) {
+    comanda = { error: e.message }
+  }
+
   return res.status(200).json({
     ok: true,
     factura: {
@@ -398,6 +410,7 @@ export default async function handler(req, res) {
     },
     descuento,
     asiento,
+    comanda,
     // Solo si la venta fue con tarjeta:
     neonet: neonetParsed ? {
       transaccion_id: neonetTransaccionId,
