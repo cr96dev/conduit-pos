@@ -42,12 +42,17 @@ async function neonetPost({ token, user, pass, path, body }) {
   const text = await r.text()
   let payload
   try { payload = text ? JSON.parse(text) : null } catch { payload = text }
-  return {
-    status: r.ok ? (payload?.responseCode === '00' ? 'ok' : 'error_neonet') : 'error_http',
-    httpStatus: r.status,
-    payload,
-    ms: Date.now() - start,
-  }
+  // Clasificacion:
+  //   ok                = HTTP 2xx + body con responseCode=='00'
+  //   sin_datos         = HTTP 204 o body vacio (lectura sin resultados, normal)
+  //   error_neonet      = HTTP 2xx pero responseCode != '00'
+  //   error_http        = HTTP no-2xx
+  let status
+  if (!r.ok) status = 'error_http'
+  else if (!text || r.status === 204) status = 'sin_datos'
+  else if (payload?.responseCode === '00') status = 'ok'
+  else status = 'error_neonet'
+  return { status, httpStatus: r.status, payload, ms: Date.now() - start }
 }
 
 export default async function handler(req, res) {
