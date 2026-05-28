@@ -61,7 +61,7 @@ if [[ $# -ge 2 && -n "$2" ]]; then
 fi
 
 # 6. Build release.
-./gradlew assembleRelease "${EXTRA_ARGS[@]}"
+./gradlew assembleRelease ${EXTRA_ARGS[@]+"${EXTRA_ARGS[@]}"}
 
 APK=app/build/outputs/apk/release/app-release.apk
 if [[ -f "$APK" ]]; then
