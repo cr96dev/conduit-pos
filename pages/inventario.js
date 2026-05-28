@@ -1081,12 +1081,12 @@ function PillTipo({ tipo }) {
 function ModalShell({ titulo, onClose, children }) {
   return (
     <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={onClose}>
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-md" onClick={e => e.stopPropagation()}>
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+      <div className="bg-white rounded-2xl shadow-xl w-full max-w-md max-h-[90vh] overflow-hidden flex flex-col" onClick={e => e.stopPropagation()}>
+        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 flex-shrink-0">
           <h2 className="text-base font-semibold text-gray-900">{titulo}</h2>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-xl">✕</button>
         </div>
-        <div className="px-6 py-5">{children}</div>
+        <div className="px-6 py-5 overflow-y-auto flex-1">{children}</div>
       </div>
     </div>
   )
@@ -1222,7 +1222,7 @@ function ModalInsumo({ insumo, onClose, onSaved }) {
         {/* Bloque "Compra": si se llena, costo por unidad base se calcula solo. */}
         <fieldset className="border border-gray-100 rounded-lg p-3 space-y-3">
           <legend className="text-xs uppercase tracking-wide text-gray-500 font-medium px-1">Cómo se compra (opcional)</legend>
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <Campo label="Unidad de compra">
               <SelectUnidad value={form.unidad_compra} onChange={v => set('unidad_compra', v)}
                 permitirVacio
@@ -1250,7 +1250,7 @@ function ModalInsumo({ insumo, onClose, onSaved }) {
             </Campo>
           </div>
           {tieneCompra && (
-            <div className="text-[11px] text-gray-600 bg-gray-50 border border-gray-100 rounded-md px-2 py-1.5 font-mono leading-snug">
+            <div className="text-[11px] text-gray-600 bg-gray-50 border border-gray-100 rounded-md px-2 py-1.5 font-mono leading-snug break-words">
               {huboConversion ? (
                 <>
                   📐 <strong>{cpcNum} {form.unidad_compra}</strong> ×{' '}
