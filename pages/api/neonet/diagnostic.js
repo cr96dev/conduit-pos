@@ -20,21 +20,24 @@ import { requireAdmin } from '../../../lib/auth'
 const BASE_URL = process.env.NEONET_API_URL
   || 'https://developervisanet.com.gt:60800/NEO_POS_SOCKET/api/v1/pospayment'
 
-async function neonetPost({ token, user, pass, path, body }) {
+async function neonetPost({ token, user, pass, path, body, method = 'POST', extraHeaders = {}, authMode = 'bearer' }) {
   const url = BASE_URL.replace(/\/+$/, '') + '/' + path.replace(/^\/+/, '')
   const start = Date.now()
+  const authValue = authMode === 'raw' ? token : authMode === 'none' ? null : `Bearer ${token}`
+  const headers = {
+    ...(authValue ? { 'Authorization': authValue } : {}),
+    'merchantUser': user,
+    'merchantPasswd': pass,
+    'Content-Type': 'application/json',
+    'Accept': 'application/json',
+    ...extraHeaders,
+  }
   let r
   try {
     r = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'merchantUser': user,
-        'merchantPasswd': pass,
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-      },
-      body: JSON.stringify(body),
+      method,
+      headers,
+      ...(method === 'POST' || method === 'PUT' ? { body: JSON.stringify(body) } : {}),
     })
   } catch (e) {
     return { status: 'error_red', httpStatus: 0, payload: null, error: e.message, ms: Date.now() - start }
@@ -42,17 +45,15 @@ async function neonetPost({ token, user, pass, path, body }) {
   const text = await r.text()
   let payload
   try { payload = text ? JSON.parse(text) : null } catch { payload = text }
-  // Clasificacion:
-  //   ok                = HTTP 2xx + body con responseCode=='00'
-  //   sin_datos         = HTTP 204 o body vacio (lectura sin resultados, normal)
-  //   error_neonet      = HTTP 2xx pero responseCode != '00'
-  //   error_http        = HTTP no-2xx
+  // Capturar TODOS los headers de respuesta — pueden tener pistas de por que fallo.
+  const responseHeaders = {}
+  r.headers.forEach((value, key) => { responseHeaders[key] = value })
   let status
   if (!r.ok) status = 'error_http'
   else if (!text || r.status === 204) status = 'sin_datos'
   else if (payload?.responseCode === '00') status = 'ok'
   else status = 'error_neonet'
-  return { status, httpStatus: r.status, payload, ms: Date.now() - start }
+  return { status, httpStatus: r.status, payload, responseHeaders, ms: Date.now() - start }
 }
 
 export default async function handler(req, res) {
@@ -89,54 +90,76 @@ export default async function handler(req, res) {
     privateUse63: { lodgingFolioNumber14: '', cashbackAmount41: '', taxAmount1: '' },
   })
 
+  // Round v2: hipotesis NUEVAS despues de que el v1 mostro que TODOS los
+  // terminales dan -90 (no es device-specific). Buscamos algo del lado de
+  // como llamamos el endpoint.
   const tests = [
     {
-      name: '1. transactiondetail TID Charles (solo lectura, sin device)',
-      hipotesis: 'Si responde 200/data, TID 20042026 esta en sistema. Si AUTH INCORRECTA, no dado de alta.',
-      path: 'transactiondetail',
-      body: { merchant: baseAuth(tidCharles, cidCharles) },
-    },
-    {
-      name: '2. settlementbatch TID Charles (solo lectura)',
-      hipotesis: 'Idem test 1.',
-      path: 'settlementbatch',
-      body: { merchant: baseAuth(tidCharles, cidCharles) },
-    },
-    {
-      name: '3. paymentcommercesettlement TID Charles',
-      hipotesis: 'Si sin_lote => TID activo. Si AUTH => no dado de alta.',
-      path: 'paymentcommercesettlement',
-      body: { merchant: baseAuth(tidCharles, cidCharles) },
-    },
-    {
-      name: '4. SA con IDs INVERTIDOS (20260420/20042026)',
-      hipotesis: 'Si cambia el error a 00, Angel anoto al reves los IDs.',
+      name: 'V2.1: SA TID Charles, Authorization RAW (sin Bearer)',
+      hipotesis: 'Quizas authorizationpaymentcommerce no quiere el prefijo Bearer (aunque settlement con Bearer si funciono)',
       path: 'authorizationpaymentcommerce',
-      body: baseSale(cidCharles, tidCharles, '000005'),
+      body: baseSale(tidCharles, cidCharles, '000010'),
+      authMode: 'raw',
     },
     {
-      name: '5. AN (anulacion) TID Charles',
-      hipotesis: 'Si AN devuelve algo distinto a -90, SA esta bloqueado pero AN no.',
+      name: 'V2.2: SA TID Charles con User-Agent del POS',
+      hipotesis: 'Quizas Neonet filtra requests sin User-Agent reconocido (algunas APIs tienen whitelist)',
       path: 'authorizationpaymentcommerce',
-      body: baseSale(tidCharles, cidCharles, '000006', 'AN'),
+      body: baseSale(tidCharles, cidCharles, '000011'),
+      extraHeaders: { 'User-Agent': 'NeoPOS-Android/1.0.0' },
     },
     {
-      name: '6. SA monto Q10.00 TID Charles',
-      hipotesis: 'Si Q10 funciona pero Q1 no, hay monto minimo.',
+      name: 'V2.3: SA TID Charles con additionalData=LU (catalogo)',
+      hipotesis: 'El manual lista LU, VC##, EF##, VD############ como catalogo de additionalData. Quizas exige uno.',
       path: 'authorizationpaymentcommerce',
-      body: baseSale(tidCharles, cidCharles, '000007', 'SA', '1000'),
+      body: { ...baseSale(tidCharles, cidCharles, '000012'), additionalData: 'LU' },
     },
     {
-      name: '7. CONTROL: SA contra QA_HIDROCOM (18070542)',
-      hipotesis: 'Si QA da 00 o algo distinto a -90, nuestras creds funcionan. Aisla el problema a la P5L de Charles.',
+      name: 'V2.4: SA TID Charles con taxDetail IVA Guatemala',
+      hipotesis: 'taxDetail vacio puede no pasar validacion. Probamos con IVA 12% real.',
       path: 'authorizationpaymentcommerce',
-      body: baseSale('18070542', '42072024', '000008'),
+      body: {
+        ...baseSale(tidCharles, cidCharles, '000013'),
+        amount: {
+          amountTrans: '100',
+          additionalAmounts: '',
+          taxDetail: [{ type: 'IVA', grossAmount: '89', taxAmountNet: '11', rate: '12' }],
+        },
+      },
+    },
+    {
+      name: 'V2.5: SA TID Charles SIN Authorization header',
+      hipotesis: 'Si sin auth da 401 limpio, confirmamos que el server valida. Si da -90, el error no es por auth.',
+      path: 'authorizationpaymentcommerce',
+      body: baseSale(tidCharles, cidCharles, '000014'),
+      authMode: 'none',
+    },
+    {
+      name: 'V2.6: GET / (raiz del API, ver si responde swagger o spec)',
+      hipotesis: 'Quizas hay swagger / spec / discovery que nos diga formato real.',
+      path: '',
+      body: null,
+      method: 'GET',
+    },
+    {
+      name: 'V2.7: GET /authorizationpaymentcommerce (OPTIONS-style)',
+      hipotesis: 'Algunos servidores responden a GET con la spec o un help.',
+      path: 'authorizationpaymentcommerce',
+      body: null,
+      method: 'GET',
     },
   ]
 
   const results = []
   for (const t of tests) {
-    const r = await neonetPost({ ...ctx, path: t.path, body: t.body })
+    const r = await neonetPost({
+      ...ctx,
+      path: t.path,
+      body: t.body,
+      method: t.method || 'POST',
+      extraHeaders: t.extraHeaders || {},
+      authMode: t.authMode || 'bearer',
+    })
     results.push({
       name: t.name,
       hipotesis: t.hipotesis,
