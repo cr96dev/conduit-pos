@@ -50,7 +50,7 @@ export default function Ventas({ session }) {
         <h1 className="text-xl font-semibold text-gray-900 mb-4">Ventas</h1>
 
         <div className="flex items-center gap-2 mb-4">
-          {[['hoy','Hoy'],['semana','7 dias'],['mes','30 dias']].map(([k,l]) => (
+          {[['hoy','Hoy'],['semana','7 días'],['mes','30 días']].map(([k,l]) => (
             <button key={k} onClick={() => setFiltro(k)}
               className={`text-xs px-3 py-1.5 rounded-lg border transition-colors ${
                 filtro === k ? 'bg-julia-red text-white border-julia-red' : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
