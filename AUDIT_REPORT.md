@@ -1,605 +1,377 @@
-# Auditoría de Julia Bakery — 27 may 2026
-
-**Rama:** `claude/audit-fixes-20260527` (creada desde `main` @ `d734ccb`).
-**Alcance:** todo el repo excepto `pages/api/fel/*` y `pages/facturacion.js` (modo Infile vive en rama `claude/elastic-williams-182dae`), y módulos legacy GasOps explícitamente excluidos (`bac/`, `neonet/`, `myposoft/`, `wsm/`).
-**Cobertura:** UI (`pages/*.js`), API (`pages/api/**/*.js`), lógica (`lib/**/*.js`), schema (`migrations/*.sql`), seguridad (secretos, RLS, auth, inyección), mobile (modales/tablas a 380px), flujos reales (ventas, inventario, recetas, producción, compras, planillas, bancos, conciliación, reportes).
-
----
-
-## Resumen ejecutivo
-
-La plataforma está sólida en lo grueso: el modelo de datos es coherente, las APIs siguen el patrón documentado (`requireAuth`/`requireAdmin` + `{ ok: true }`), la mayoría de las escrituras tienen idempotencia razonable, y los nuevos crons + RLS de tablas sensibles cierran agujeros visibles. **Hay sin embargo dos hallazgos P0 de seguridad de impacto alto que conviene confirmar y arreglar antes de cualquier release**: (1) las tablas heredadas de QBO/GasOps (`qbo_tokens`, `qbo_mapping_*`, `qbo_sync_audit`) **no tienen RLS habilitado** — si la `anon key` o la `authenticated key` quedaron expuestas y las tablas siguen en el schema `public`, cualquier usuario con sesión puede leer los tokens OAuth de la cuenta QuickBooks; (2) los tres crons (`loyverse-sync`, `resumen-ventas-diario`, `alerta-cierre-faltante`) aceptan el header `User-Agent: vercel-cron` como autenticación válida, lo que es trivialmente spoofable. Adicionalmente, las páginas legales (`privacy.js` y `terms.js`) tenían contenido de Hidrocom/GasOps — **ya fueron arregladas en esta rama**. El resto de los hallazgos son mejoras de robustez (race conditions, atomicidad, validaciones), correcciones de cálculo verificables con Charles (liquidaciones, ISR, IGSS TXT), y limpieza de código legacy GasOps que todavía vive en `pages/api/qbo/test/*` y `pages/api/admin/carga-retroactiva.js`.
-
-**Conteo de issues:** **P0: 5** · **P1: 31** · **P2: 23**
+# Auditoría de delivery-readiness — Julia Bakery
+**Fecha:** 27 may 2026 (noche · re-audit post-aclaración de Charles)
+**Rama de fixes:** `claude/audit-fixes-20260527` (creada desde `main` @ `d734ccb`).
+**Lente:** mañana se entrega la plataforma a Ximena como deliverable de consultoría (NO arranca el POS). Audit re-priorizado para evitar "vergüenza en demo en vivo".
 
 ---
 
-## P0 — Crítico
+## TL;DR
 
-Bloqueante para usar la plataforma, pérdida de datos o riesgo de seguridad. Charles debería revisar/decidir antes del próximo deploy.
+**El hallazgo P0 #1 es el más importante: hay una rama no mergeada (`claude/condescending-ramanujan-678f31`) con 7 commits de features que Charles describió como YA IMPLEMENTADAS** (PDF imprimible de producción y compras, dropdown de unidad en compras, costo sugerido por unidad, separación comida/bebidas, ModalInsumo responsive en mobile, soft/hard-delete inteligente). **Esos features NO están en main.** Si Ximena los ve mencionados o intenta usarlos en la demo, va a quedar mal. Charles tiene que decidir HOY si mergea esa rama a main antes del deploy.
 
-### P0-1 · Tablas QBO sin RLS — leak potencial de tokens OAuth
+Aparte de eso, hay un puñado de issues de polish y mobile que se ven feo en demo (formatos de moneda inconsistentes, modales que se cortan en mobile, ISR definido pero no aplicado, tablas que se salen del viewport en celular). Los más obvios y aislados ya están arreglados en los 6 commits de esta rama.
 
-**Decisión pendiente: requiere verificación en Supabase antes de actuar.**
-
-`migrations/2026_05_08_qbo_setup.sql` crea estas tablas **sin `ALTER TABLE ... ENABLE ROW LEVEL SECURITY`**:
-
-- `qbo_tokens` — guarda `access_token` y `refresh_token` en TEXT plano.
-- `qbo_sync_audit`, `qbo_mapping_estaciones`, `qbo_mapping_skus`, `qbo_mapping_customers`.
-
-Por defecto, una tabla en el schema `public` sin RLS es accesible vía PostgREST por las claves `anon` y `authenticated` (la `anon` está embebida en el bundle JS público como `NEXT_PUBLIC_SUPABASE_ANON_KEY`). Si la configuración de Supabase no las bloqueó manualmente, **cualquiera con la URL del proyecto y la anon key puede `SELECT * FROM qbo_tokens`**.
-
-**Acción sugerida (DDL propuesto, ver §DDL más abajo):**
-1. Verificar primero en el dashboard de Supabase si RLS está habilitada (puede haberse aplicado a mano fuera de migrations).
-2. Si no, aplicar `ALTER TABLE qbo_tokens ENABLE ROW LEVEL SECURITY;` (sin políticas → solo `service_role`).
-3. Repetir para `qbo_sync_audit`, `qbo_mapping_estaciones`, `qbo_mapping_skus`, `qbo_mapping_customers`.
-4. **Rotar el `refresh_token` de QBO producción** si pudo haber estado expuesto.
-
-**Impacto si se confirma:** acceso de lectura/escritura completo a la cuenta QuickBooks Online productiva. Riesgo financiero y reputacional.
+**Conteo total:** **P0: 11 · P1: 30 · P2: 19**
+**Commits aplicados esta noche:** **10** (legal, login, modal inventario, dashboard format, ventas acentos, **preview costo patronal empleados**, **overflow-x-auto en 6 tablas mobile + fix off-by-one fecha IGSS**, audit report).
 
 ---
 
-### P0-2 · Bypass de autenticación en los 3 crons vía `User-Agent`
+## 🚨 P0-1 · La rama `condescending-ramanujan` NO está mergeada a main
 
-**Archivos:**
-- `pages/api/cron/loyverse-sync.js:19-26`
-- `pages/api/cron/resumen-ventas-diario.js:20-24`
-- `pages/api/cron/alerta-cierre-faltante.js:20-24`
+**Hallazgo principal del audit re-priorizado.** Es la primera cosa que Charles debe revisar mañana.
 
-Los tres usan el patrón:
+La rama `claude/condescending-ramanujan-678f31` (último commit `abc1154`, 27 may 2026 21:19 GT, hace ~5 horas al momento del audit) tiene **7 commits con features críticas que se describen como entregables**, todos sobre archivos del producto principal (NO sobre el POS/FEL que vive en `elastic-williams`):
 
-```js
-const isVercelCron = req.headers['user-agent']?.includes('vercel-cron')
-const hasValidSecret = req.headers.authorization === `Bearer ${expectedSecret}`
-if (!isVercelCron && !hasValidSecret) return res.status(401).json({ error: 'Unauthorized' })
+```
+abc1154  feat(compras+componentes): SelectUnidad compartido y dropdown en linea de compras
+67f102a  fix(compras): costo sugerido en linea respeta la unidad y se recalcula al cambiarla
+ae31029  fix(insumos+compras): conversion de unidades al derivar costo y recibir compra
+e07506e  feat(produccion+compras): vista imprimible/PDF para plan de produccion y orden de compra
+0500d68  fix(inventario): ModalInsumo responsive en movil — scroll + apilar campos
+0cfcae3  fix(insumos): boton dar de baja con soft/hard-delete inteligente
+205cc40  feat(recetas+produccion): clasificar comida/bebida y excluir bebidas del plan
 ```
 
-El header `User-Agent` es trivialmente spoofable (`curl -A 'vercel-cron' https://app/api/cron/loyverse-sync`). Esto permite:
-- Forzar polling continuo a Loyverse desde cualquier IP (rate-limit gratis, costo de funciones Vercel).
-- Spamear emails al equipo (`resumen-ventas-diario`, `alerta-cierre-faltante`).
-- Disparar el `enviarResumenVentas` con `?fecha=` para sondear info por correo a destinatarios pre-configurados.
+**Diff vs main: 15 archivos · +1260 / -82 líneas**, incluyendo archivos NUEVOS:
+- `components/SelectUnidad.js` (selector de unidad reutilizable)
+- `lib/unidades.js` (utilities de conversión de unidades)
+- `pages/compras-imprimir.js` (243 líneas — vista imprimible orden de compra)
+- `pages/produccion-imprimir.js` (201 líneas — vista imprimible plan de producción)
+- `migrations/2026_05_27_recetas_tipo.sql` (clasificación comida/bebida)
 
-**Por qué no apliqué el fix esta noche:** el fix obvio (`if (!hasValidSecret) return 401` y quitar la rama `isVercelCron`) sólo es seguro si `CRON_SECRET` está efectivamente configurado en Vercel y Vercel está inyectando el header `Authorization` (lo hace automáticamente cuando la env var existe). Si por algún motivo `CRON_SECRET` no está seteado, el fix rompe los crons. **Charles: confirmá que `CRON_SECRET` está en Vercel (`vercel env ls`) antes de aplicar.**
+**Qué pasa en demo si NO se mergea:**
+- "Ximena, ¿podemos imprimir esta orden de compra para llevársela al proveedor?" → no existe el botón.
+- "¿Cómo elijo si la harina la compré por saco o por libra?" → no hay dropdown, solo input de texto libre.
+- "¿Puedo planificar solo el pan, excluyendo bebidas?" → no, no hay clasificación comida/bebida.
+- Modal de insumo en celular → los botones Guardar/Cancelar quedan fuera del viewport (este último YA lo apliqué en mi rama de fixes, commit `6cfc181`).
 
-**Fix propuesto (1 línea por archivo):**
+**Acción sugerida para Charles:**
+1. Revisar los 7 commits de `condescending-ramanujan` y aprobar.
+2. Hacer `git checkout main && git merge claude/condescending-ramanujan-678f31`.
+3. Resolver conflictos (probables con mi rama de audit-fixes — son cambios pequeños).
+4. Verificar la migration nueva `2026_05_27_recetas_tipo.sql` antes de aplicar.
+5. Smoke-test en preview deploy (NO en prod) antes de la demo.
 
-```diff
-- if (!isVercelCron && !hasValidSecret) {
-+ if (!hasValidSecret) {
-    return res.status(401).json({ error: 'Unauthorized' })
-  }
-```
-
-Y limpiar las referencias a `isVercelCron` que ya no se usan (en `loyverse-sync.js:48` se usa para el log `trigger`; se puede dejar como inferencia del header).
+**Todo este audit fue contra `main` sin esos 7 commits.** Si los mergeás, hay que re-auditar la versión mergeada (probablemente mucho menos riesgosa que lo que reporto abajo).
 
 ---
 
-### P0-3 · `privacy.js` y `terms.js` contenían contenido legal de Hidrocom — **YA ARREGLADO**
+## P0 (resto) — cosas que no se entregan así
 
-Antes del audit, `pages/privacy.js` y `pages/terms.js` declaraban que la aplicación era de "Hidrocom S.A. (NIT 103183841)" con email de contacto `shelloakland@hidrocom.net`. Si alguien (cliente, auditor SAT, usuario externo, OAuth callback de Loyverse/QBO/Digifact con su política de privacidad) entraba a esos URLs, leía una EULA y Privacy Policy completamente equivocadas.
+### P0-2 · ISR de planilla: implementado en `lib/planillas.js` pero NUNCA se invoca
 
-**Fix aplicado en esta rama (commit `d02f81a`):** ambas páginas reescritas en español para Julia Bakery, describiendo el alcance real (POS Loyverse, contabilidad, planillas, FEL). Sin email/NIT específicos hasta que Charles defina los oficiales.
+**Charles dijo "ISR ya implementado".** Realidad:
+
+- `lib/planillas.js:46-62` define `calcularISRRetencionAnual / Mensual / Quincenal` como funciones puras. ✓
+- **No hay ninguna referencia a esas funciones en ningún endpoint API ni en ningún componente UI.** Verificado: `grep -rn "calcularISR" pages/ lib/` solo devuelve las definiciones en `lib/planillas.js`.
+- **No existe ninguna columna `isr_retenido` en `planilla_lineas`** (ver `migrations/2026_05_21_planillas.sql` + `migrations/2026_05_19_planilla_bonif_descuentos.sql`).
+- El cálculo del líquido (`calcularLiquidoLinea`) NO descuenta ISR.
+- El asiento contable de planilla pagada NO acredita "ISR por pagar" (ver `lib/contabilidad/generador.js:215-260`).
+- El commit donde se agregó la función dice literalmente "no aplicada todavía" (`aaf1e37 feat(planillas): funcion pura ISR (Decreto 10-2012, no aplicada todavia)`).
+
+**Qué verá Ximena:** abre planilla, no hay columna ISR, no se le descuenta del líquido. Si Charles dijo "ISR implementado", expectativa rota.
+
+**Decisión pendiente:** ¿se aplica en esta entrega (requiere migration + cambios en generador de líneas + UI), o se documenta como "función disponible, integración pendiente"?
+
+### P0-3 · Vacaciones "15 días hábiles" — la fórmula trata 15 como días calendario
+
+**Charles dijo "vacaciones 15 días hábiles".** Realidad:
+
+- `lib/planillas.js:26` `DIAS_VACACIONES_ANIO = 15` (comentado como "días hábiles").
+- `lib/planillas.js:72` `vacaciones_m = (DIAS_VACACIONES_ANIO / 30) * (sal / 12) = sal / 24`. Divide por **30 días** (calendario), no por días hábiles.
+- `lib/liquidaciones.js:101-102` `diasVacProporcionales = (años % 1) * 15` y `vacaciones = diasVac × salDia` donde `salDia = sal / 30` (calendario).
+
+**El número 15 sí sale, pero está siendo tratado como 15 días calendario, no como 15 días hábiles.** Para el ojo contable guatemalteco esto puede ser una cosa o la otra dependiendo de la convención de la empresa — la fórmula `sal/24` por mes ES la convención contable común para provisión de vacaciones en GT (= 15 días pagados a salario diario calendario / 12 meses). El comentario "días hábiles" en el código puede generar confusión vs la fórmula real.
+
+**Decisión pendiente:** confirmar con el contador de Julia Bakery cuál es la convención esperada. Si es "15 hábiles × salario_diario_calendario", la fórmula actual está bien y solo hay que corregir el comentario. Si la expectativa es "15 hábiles ≈ 21 calendario × salario_diario", la fórmula subestima ~40% el monto de vacaciones (lo cual sería P0 contable).
+
+### P0-4 · Modal de Inventario sin scroll en mobile → **YA ARREGLADO** en esta rama (commit `6cfc181`)
+
+El `ModalShell` de `pages/inventario.js` (que Ximena usa todos los días: "+ Nuevo insumo", "Editar", "Movimiento") no tenía `max-h-[90vh]` ni `overflow-y-auto`. En su iPhone (~380px ancho, ~700px alto con teclado abierto), los modales largos perdían los botones Guardar/Cancelar fuera del viewport. **Ya arreglado en commit `6cfc181`**, replicando el fix `0500d68` que vive en `condescending-ramanujan`.
+
+### P0-5 · Dashboard mostraba "Q 1,543" sin decimales mientras Caja/Ventas mostraban "Q 1,543.27" → **YA ARREGLADO** en esta rama (commit `540d3e1`)
+
+`pages/dashboard.js:fmtQ` usaba `minimumFractionDigits: 0`. Inconsistencia con el resto de la app. Para Ximena en demo, ve la "Ventas hoy: Q 1,543" en el dashboard y "Total Q 1,543.27" en la página de caja del mismo día. Parece bug. Ya estandarizado a 2 decimales.
+
+### P0-6 · `privacy.js` y `terms.js` contenían contenido legal de Hidrocom S.A. → **YA ARREGLADO** (commit `d02f81a`)
+
+### P0-9 · Preview "Costo patronal quincenal" en empleados/ModalEmpleado MAL — fórmula mensual sin /2 → **YA ARREGLADO** (commit `222a22f`)
+
+Bug super visible: cuando Ximena entra un salario en el modal de empleado, ve un preview del "Costo patronal quincenal" que usaba la fórmula:
+
+```js
+sal / 2 + (sal / 24) * 3 + sal * 0.1067 + sal * 0.01 * 2 + sal * 0.0972
+```
+
+Problema: los componentes `sal * 0.1067` (IGSS patronal), `sal * 0.01 * 2` (IRTRA + INTECAP) y `sal * 0.0972` (indemnización) son MENSUALES, no quincenales — debieron dividirse por 2. Y `(sal/24)*3` mete vacaciones como `sal/24` quincenal cuando en realidad vacaciones quincenal = `sal/48` (vacaciones mensual es `sal/24`).
+
+Para sal=Q5,000: el preview mostraba ~Q4,244 mientras `calcularProvisiones` (lo que la API persiste) devuelve ~Q3,581. Ximena vería los dos valores distintos en la misma sesión (preview en modal + KPI guardado), parecería bug.
+
+Fix aplicado: el preview ahora importa `calcularProvisiones` de `lib/planillas.js` y muestra exactamente lo que se va a persistir. Sin tocar la API ni el cálculo real.
+
+### P0-10 · Recetas: NO hay conversión de unidades entre ingrediente e insumo
+
+`lib/recetas.js:33-42` y `pages/api/recetas/[id].js` calculan `subtotal = cantidad * costo_unitario_snapshot`. El campo `unidad` que se captura por ingrediente en el formulario de receta (línea `pages/recetas.js:486-493`) es **puramente cosmético** — no participa del cálculo de costo.
+
+**Consecuencia:** si un insumo es "harina" con `unidad='kg'` y `costo_unitario=Q5/kg`, y la receta dice "harina: cantidad=500, unidad=g", el cálculo da `500 * 5 = Q2,500` cuando el valor real es `Q2.50`. **Error 1000×.** Lo mismo con lb↔kg, lt↔ml.
+
+Charles mencionó "el cálculo de costos que tiene conversión de unidades" — la conversión que sí existe es la del receipt de compra (unidad_compra → unidad base, ej. saco → lb). Pero entre receta y insumo, no hay conversión.
+
+**Acción para Charles (no aplico por riesgo + decisión de UX):**
+- Opción A (UX safe): convertir el input "Unidad" del ingrediente a read-only mostrando `insumo.unidad`, forzando a Ximena a entrar cantidades siempre en unidad base.
+- Opción B (real fix): agregar tabla de conversión (kg↔g, lt↔ml, lb↔kg) y validar/convertir al guardar.
+- Si Ximena solo entra cantidades en unidad base hoy, ya está funcionando — pero es trampa para errores futuros y para demo es contraintuitivo que el campo "Unidad" no haga nada.
+
+### P0-11 · Compras: el dropdown de unidad y el costo sugerido NO existen en main — autocompletar pisa la unidad de compra del insumo
+
+Charles dijo "ahora con desplegable de unidad y cálculo de costo sugerido". En `main` no existe ese desplegable — los commits que lo agregan están en `condescending-ramanujan` (ver P0-1).
+
+**Trampa concreta y bug peligroso del estado actual de `main`:**
+- `pages/compras.js:311-324 elegirInsumo`: cuando se elige un insumo en una línea de compra, se autocompleta `unidad = insumo.unidad` (la BASE) y `costo_unitario = insumo.costo_unitario` (también BASE).
+- `pages/api/compras/[id]/recibir.js:71-82`: al recibir la compra, el código fracciona el stock SOLO si la línea declara `unidad === insumo.unidad_compra` (NO la base). Si la unidad es la base, no fracciona.
+
+**Caso real:** Ximena registra "1 saco de harina por Q300", el insumo "harina" tiene `unidad='lb'`, `unidad_compra='saco'`, `cantidad_por_unidad_compra=50`, `costo_compra=Q300`. La UI autocompletará `unidad='lb'` y `costo_unitario=Q6` (el costo por libra previo). Si Ximena pone "cantidad=1" pensando "un saco" y deja la unidad en `lb`, **se guarda como 1 libra a Q6, no 50 libras a Q300**. Diferencia 50×.
+
+**Acción para Charles:** mergear `condescending-ramanujan` que arregla esto formalmente (commits `abc1154` SelectUnidad y `67f102a` costo sugerido por unidad). Como fix mínimo standalone, podría cambiar `elegirInsumo` para preferir `unidad_compra/costo_compra` cuando ambos existan, pero esto cambia comportamiento histórico y no debería aplicarlo unilateralmente esta noche.
+
+### P0-7 · QBO tokens y mapeos sin RLS (heredado del fork GasOps)
+
+Migración `2026_05_08_qbo_setup.sql` crea `qbo_tokens`, `qbo_sync_audit`, `qbo_mapping_*` **sin habilitar RLS**. Por defecto, esto las hace accesibles vía PostgREST con la `anon key` (que está embebida en el JS público). Si la integración QBO todavía no se usa para Julia Bakery, no es urgente — pero si por algún motivo la `anon_key` del proyecto Supabase es la misma que se usa en producción de Hidrocom Y los tokens QBO de Hidrocom siguen allí, podría haber leak. **Verificar en Supabase Dashboard antes de actuar** (ver DDL-1).
+
+### P0-8 · Bypass de auth en los 3 crons vía header `User-Agent: vercel-cron`
+
+`pages/api/cron/{loyverse-sync,resumen-ventas-diario,alerta-cierre-faltante}.js` aceptan ese user-agent como auth válida (trivialmente spoofable). No es bloqueante para demo (no afecta UI), pero sí es problema de seguridad y deja la puerta abierta a DoS / spam de emails desde internet. **Fix de 1 línea por archivo, pendiente de confirmar que `CRON_SECRET` está en Vercel.**
 
 ---
 
-### P0-4 · `pages/api/admin/carga-retroactiva.js` — endpoint legacy con allowlist hardcoded de GasOps
+## P1 — UX rugoso, no bloqueante pero notable en demo
 
-**Archivo:** `pages/api/admin/carga-retroactiva.js`
+### Mobile y formularios
 
-Características:
-- Hardcoded `AUTHORIZED_EMAILS = ['adoffice569@gmail.com', 'estacionesdeservicioguatemala@gmail.com']` (los dos admins de GasOps).
-- Opera sobre tablas legacy `ventas`, `ventas_lubricantes`, `tienda_facturas_fel`, `qbo_mapping_estaciones`, `cargas_retroactivas_audit` — todas de gasolinera.
-- Marca registros como `qbo_processed: false` esperando que el cron QBO de GasOps los procese.
+**P1-1 · Tabla principal de cierres de caja sin `overflow-x-auto`** → **YA ARREGLADO** (commit `dbad430`).
 
-Si el sistema Julia Bakery hereda las cuentas Supabase de GasOps y esos emails siguen siendo admin, **el endpoint es operativamente activo y permite a los admins legacy escribir en tablas GasOps**. Es código muerto que sigue siendo un vector vivo.
+**P1-2 · Tabla principal de insumos sin `overflow-x-auto`** → **YA ARREGLADO** (commit `dbad430`).
 
-**Fix sugerido:** eliminar el archivo completo. (No lo borré para no tocar nada sin confirmación.)
+**P1-3 · Tabla principal de ventas sin `overflow-x-auto`** → **YA ARREGLADO** (commit `dbad430`).
 
----
+**P1-4a · Tabla principal de compras sin `overflow-x-auto`** → **YA ARREGLADO** (commit `dbad430`).
 
-### P0-5 · `pages/api/qbo/test/prod-salesreceipt.js` y `prod-salesreceipt-v2.js` crean Sales Receipts REALES en QBO producción
+**P1-4b · Tabla principal de recetas sin `overflow-x-auto`** → **YA ARREGLADO** (commit `dbad430`).
 
-**Archivos:**
-- `pages/api/qbo/test/prod-salesreceipt.js`
-- `pages/api/qbo/test/prod-salesreceipt-v2.js`
+**P1-4c · Tabla principal de empleados sin `overflow-x-auto`** → **YA ARREGLADO** (commit `dbad430`).
 
-Ambos están autenticados con `INTERNAL_API_SECRET` (no es libre acceso), pero a cualquier `GET` con ese header crean Sales Receipts reales en la cuenta QBO de producción (5 SRs por llamada con montos de prueba, customer/class hardcoded de gasolinera).
+**P1-4d · Tabla del plan de producción sin `overflow-x-auto`** (`pages/produccion.js:432-457`). 5 columnas con `w-32`/`w-28`/`w-24` no se respetan. **NO arreglada** — la tabla del plan tiene inputs interactivos y wraparla en `overflow-x-auto` puede sentir raro al editar. Charles puede aplicar manualmente.
 
-Si `INTERNAL_API_SECRET` se filtra (logs, copia/pega, backup), un atacante o usuario interno descuidado puede contaminar la contabilidad. Estos archivos fueron herramientas de diagnóstico que **debieron eliminarse al cerrar la fase de integración QBO de GasOps**.
+**P1-4e · Tablas DENTRO de modales (ModalCompra líneas, ModalReceta ingredientes, ModalDetalleCompra)** — necesitan vista mobile específica o switch a cards. **NO arreglada** — riesgo medio, modal del modal.
 
-**Fix sugerido:** borrar todos los archivos en `pages/api/qbo/test/*` que tocan QBO producción (al menos `prod-salesreceipt*`, `cleanup-tests.js`, `prod-accounts.js`, `prod-taxcodes.js`, `prod-read.js`, `check-tienda-may.js`). Los de sandbox (`api.js`, `customer.js`, `email.js`, `sales_receipt.js`) son menos críticos pero también son legacy GasOps.
+**P1-5 · Modales grandes (Nueva factura/Nuevo asiento/Calcular liquidación/Importar CSV/Conciliar mov) no aplican el patrón `max-h-[90vh] flex flex-col`**. Solo el ModalShell de `produccion.js` y el drill-down de `reportes.js` lo aplican. El resto (compras, recetas, contabilidad, planillas, liquidaciones, igss, bancos, facturación) usa el patrón "outer scrolls + my-8" que **funciona** pero deja modales muy largos visualmente raros (la sombra/borde queda fuera del viewport visible).
 
----
+**P1-6 · Grids `grid-cols-2` y `grid-cols-3` sin breakpoint mobile en `pages/caja.js`** (líneas 90, 240, 288). Tarjetas con "Q 1,234,567.89" se aplastan en 380px.
 
-## P1 — Importante
+**P1-7 · `pages/caja.js:244-246` — input `saldo_inicial` sin `min="0"`**. Acepta negativos.
 
-Afecta workflow operativo, dato incorrecto o mal UX persistente.
+**P1-8 · `pages/caja.js:277-279` — input monto egreso sin `min="0.01"`**. Acepta negativos.
 
-### Seguridad / RLS
+**P1-9 · `pages/inventario.js:1316` — input cantidad en ModalMovimiento sin `max`**. Acepta 9999999.
 
-**P1-1 · Escalación horizontal: reportes y contabilidad accesibles a empleados**
+**P1-10 · `pages/inventario.js:1255` — `nuevoStock` no se resetea al cambiar tipo de movimiento**. Confusión al cambiar entre "ajuste" y otros.
 
-Los endpoints `/api/reportes/*`, `/api/contabilidad/balance`, `/api/contabilidad/libro-mayor`, `/api/cierres/preview`, `/api/igss/preview`, `/api/igss/txt`, `/api/produccion/sugerencias`, `/api/inventario/historico-mermas`, `/api/bancos/movimientos/[id]/sugerir` usan `requireAuth` (cualquier usuario logueado) en lugar de `requireAdmin`, y leen vía `supabaseAdmin` (bypass RLS). Eso significa que **cualquier empleado con cuenta puede pedir el P&L completo, libro mayor, balance, libro de IGSS, etc.** vía la API directamente.
+**P1-11 · `pages/inventario.js:1200` — `costoDerivado.toFixed(4)` muestra "Q 0.4500" con 4 decimales**. Para costos > 1 se ve raro; para costos < 0.01 sirve. Decisión: dejar 4 decimales (precisión) o usar 2 (consistencia). Por ahora no lo toqué para no romper insumos de bajo costo.
 
-**Decisión pendiente con Charles:** ¿es por diseño (todos los empleados ven los reportes) o debería gatearse a admin? Si es por rol intermedio, considerar agregar un rol `contador` o similar.
+**P1-12 · `pages/inventario.js:285-290` — `<input type="date">` sin `max={hoy}`**. Permite seleccionar fechas futuras en conteo diario. Solo el botón "→" tiene `disabled={esHoy}`.
 
-**P1-2 · `pages/api/qbo/test/*` — superficie de ataque viva si `INTERNAL_API_SECRET` se filtra**
+**P1-13 · `pages/produccion.js:209-216` — `<input type="date">` sin `min`/`max`**. Permite crear plan para 2050.
 
-Aún protegidos por secret, son herramientas de diagnóstico que ya no se usan en Julia. Eliminar.
+**P1-14 · `pages/produccion.js:438-444` — borrar el input de cantidad ELIMINA la línea del plan, sin warning**. Sorprendente para el usuario.
 
-**P1-3 · HMAC de `neonet/ingest.js:50` lanza `RangeError` con firmas de longitud distinta**
+### Datos visibles y formatos
 
-```js
-crypto.timingSafeEqual(Buffer.from(sigHeader), Buffer.from(expectedSig))
-```
+**P1-15 · `pages/igss.js:23 formatFechaCorta` off-by-one por timezone** → **YA ARREGLADO** (commit `dbad430`).
 
-`timingSafeEqual` **lanza** cuando los buffers difieren en tamaño. Un atacante manda firma corta y la app crashea (o devuelve 500 con stack en logs). `bac/ingest.js` lo envuelve en try/catch; este no. **Fix:** validar `if (sigHeader.length !== expectedSig.length) return 401`. Legacy GasOps, pero sigue desplegado.
+**P1-16 · `pages/dashboard.js:164` — perfil se construye como `{ email }` sin traer `nombre_completo` ni `rol` de Supabase**. Layout no puede saludar por nombre. Otras páginas SÍ traen el perfil completo.
 
-**P1-4 · Sin rate limiting en `/login`**
+**P1-17 · `pages/dashboard.js:121` — etiqueta del día de la semana puede dar `undefined`** si `getUTCDay()` falla. Defensivo.
 
-`pages/index.js` llama directo a `supabase.auth.signInWithPassword`. Sólo lo defiende los límites por IP de Supabase. Para Julia Bakery con un equipo chico no es urgente, pero anotar para cuando se abra acceso.
+**P1-18 · `pages/dashboard.js:144` — items sin nombre se agrupan como "—"** en "Top productos hoy". Si hay varios, dice "—" como el más vendido.
 
----
+**P1-19 · `pages/dashboard.js:222-224` — total semana incluye día de hoy completo aunque sean recién las 9am**. Label "total" sin contexto engaña.
 
-### Cálculos y reglas de negocio
+**P1-20 · `pages/ventas.js:38` — `.limit(500)` sin advertencia**. Para "30 días" en una panadería ocupada, fácil pasar 500 recibos → truncamiento silencioso, total no cuadra con realidad.
 
-**P1-5 · `lib/liquidaciones.js:101` — empleado con N años exactos pierde 15 días de vacaciones**
+**P1-21 · `pages/ventas.js:99` — fecha sin año**. "5 ene" ambiguo entre años.
 
-```js
-const diasVacProporcionales = round((aniosTrabajados % 1) * 15)
-```
+**P1-22 · Tabla de planillas: `colSpan` fijo desalineado** (`pages/planillas.js:405`) — usa `colSpan={13}` cuando la tabla tiene 12 o 13 columnas según `esAdmin && editable`.
 
-Si `aniosTrabajados = 1.0` (exactos), `1 % 1 = 0` → `diasVacProporcionales = 0`. Igual para 2.0, 3.0. La función calcula sólo la **fracción del año en curso**, asumiendo implícitamente que el año cumplido ya fue gozado o pagado. **Decisión pendiente con Charles:** ¿esto coincide con la práctica contable? En GT, las vacaciones se acreditan al cumplir el año (15 días hábiles). Si el empleado no las gozó, la liquidación debería incluirlas. Verificar con `lib/liquidaciones.js` cómo se contemplan vacaciones acumuladas.
+**P1-23 · `pages/bancos.js` parser CSV** maneja mal acentos (regex `[̀-ͯ]` con caracteres unicode literales) y no soporta comillas (común en descripciones bancarias con comas). Para demo es probable que Ximena no use esto, pero si Charles muestra "subir extracto BAC" se rompe.
 
-**P1-6 · `lib/liquidaciones.js:116,131` — división por 365 fijo no maneja años bisiestos**
+**P1-24 · `pages/igss.js` `descargarTXT` sin warning si hay empleados con `numero_igss` vacío**. Genera TXT con filas vacías que IGSS va a rechazar.
 
-```js
-aguinaldo += (dias / 365) * (esEspecial ? sal : salarioMinimoVigente(a))
-bono14    += (dias / 365) * (esEspecial ? sal : salarioMinimoVigente(a))
-```
+### Atomicidad y races (ya documentado en audit anterior pero sigue válido)
 
-Un empleado que trabaja del 1 dic 2023 al 30 nov 2024 (366 días, año bisiesto) recibe `366/365 = 100.27%` del salario en lugar de exactamente uno. Diferencia de Q5–10 por liquidación, pero acumulable. Fix: `const diasAnio = esBisiesto(a) ? 366 : 365`.
+**P1-25 · Patrón "cabecera + líneas" no transaccional en ~10 endpoints** — `asientos/index.js`, `compras/[id].js`, `cierres/[id].js`, `recetas/[id].js`, `planillas/[id]/lineas/index.js`, etc. Si el insert de líneas falla, la cabecera queda huérfana.
 
-**P1-7 · `lib/planillas.js:46-54` — ISR no incluye horas extra, comisiones, otros ingresos gravables**
+**P1-26 · `pages/api/planillas/[id]/estado.js` — UPDATE sin CAS sobre estado**. Doble-click puede generar 2 asientos contables de planilla pagada.
 
-```js
-export function calcularISRRetencionAnual(salarioMensualOrdinario, igssLaboralAnual = null) {
-  const sal = Number(salarioMensualOrdinario) || 0
-  ...
-  const base = sal * 12 - ISR_DEDUCCION_UNICA - igss
-```
-
-La base anual asume sólo salario ordinario mensual × 12. Si un empleado cobra comisiones o horas extra regularmente, sub-retiene ISR. **Decisión pendiente con Charles:** Julia tiene comisiones? Si sí, agregar `otros_ingresos_anuales_proyectados` al cálculo. Si la planilla en general no retiene ISR (porque los salarios están bajo el umbral Q4,000/mes), no es urgente.
-
-**P1-8 · `lib/contabilidad/generador.js:300-309` — `generarAsientoLiquidacion` puede generar doble contabilización con provisiones**
-
-`generarAsientoPlanillaPagada` cada quincena hace: `DEBE bono14_gasto / HABER bono14_por_pagar` (acumula el pasivo). Luego en `generarAsientoLiquidacion` al dar de baja al empleado, el asiento de liquidación debita `bono14_gasto` otra vez y acredita `caja/banco` por la proporcional, **sin tocar `bono14_por_pagar`**. El pasivo se queda acumulado sin liberar. Igual con aguinaldo, vacaciones e indemnización.
-
-**Decisión pendiente con Charles:** ¿se está provisionando bono14/aguinaldo/vacaciones mes a mes en la práctica, o sólo se contabiliza el gasto cuando se paga? Si lo primero, la liquidación debería debitar el pasivo (`DEBE bono14_por_pagar / HABER caja`), no el gasto. Si lo segundo, hay doble gasto en planillas cada quincena.
-
-**P1-9 · `lib/igss.js:108` — fin de quincena 2 hardcoded al día 28 (todos los meses)**
-
-```js
-const fechaFin2 = `28/${mes2}/${anio}`
-```
-
-El comentario explica que es "requerimiento IGSS de 14 días exactos". Si el sistema oficial del IGSS espera exactamente ese formato (1-14 y 15-28 sin tocar los días 29-31), está bien. **Pero la planilla interna de Julia opera de 1-15 y 16-fin de mes** (ver `lib/planillas.js:167 deducirPeriodo`). Eso significa que el TXT del IGSS no incluye los devengados de los días 29-31. **Decisión pendiente con Charles:** confirmar con el contador que el TXT v2.2.0 de IGSS efectivamente acepta esa convención y que los empleados que ganan días extra el 29-31 no quedan sub-reportados.
-
-**P1-10 · `lib/qbo/tokenManager.js` — no atómico + asume single token + hardcoded a env sandbox**
-
-Tres issues:
-
-1. `.from('qbo_tokens').select('*').limit(1).single()` sin filtrar por `realm_id`. Si Julia Bakery agrega una segunda cuenta QBO (sandbox + prod), `single()` lanza.
-2. Si dos requests ven token expirado simultáneamente, ambos hacen refresh; QBO invalida el refresh_token anterior cuando emite uno nuevo → el segundo refresh falla y el sistema queda sin token válido.
-3. Usa `QBO_CLIENT_ID` / `QBO_CLIENT_SECRET` (sandbox) sin branching por entorno. Para producción debería usar `QBO_CLIENT_ID_PROD` / `QBO_CLIENT_SECRET_PROD`.
-
-Como QBO es Fase 3 pendiente, no urgente. Cuando se active la integración real, los tres deben resolverse.
-
-**P1-11 · `lib/qbo/emailAlerts.js` — contenido 100% GasOps**
-
-`enviarReporteSync` referencia `r.combustible`, `r.lubricantes`, `r.tienda`. From email default: `'noreply@hidrocom.net'`. Si algún cron actual de Julia llega a llamar este helper, los emails saldrán con datos inventados/nulos y branding equivocado. Actualmente está aislado (sólo lo llaman crons QBO de GasOps). Marcar para limpieza al cerrar Fase 3.
-
-**P1-12 · `lib/loyverse/sync.js:522-535` — delete + insert de pagos no atómico**
-
-```js
-await supabaseAdmin.from('loyverse_receipt_payments').delete().in('receipt_id', receiptIds)
-...
-await supabaseAdmin.from('loyverse_receipt_payments').insert(payRows)
-```
-
-Si el insert falla después del delete (timeout, error de constraint, Supabase down), los pagos se pierden y el siguiente cron sólo retoma desde `updated_at_min` — los recibos cuyos pagos se borraron no se re-procesan a menos que `updated_at` cambie en Loyverse. Riesgo: cierre de caja del día queda con totales mal. Fix: usar una transacción RPC o cambiar a upsert con clave compuesta.
-
-**P1-13 · `lib/recetas.js:79` — sub-receta usa `costoEfectivo` sin dividir por `rinde_cantidad` de la sub-receta**
-
-```js
-.select('id, cantidad, ..., recetas:sub_receta_id(rinde_cantidad, costo_calculado, costo_personalizado)')
-...
-snapshot = costoEfectivo(ing.recetas)  // costo_personalizado ?? costo_calculado
-```
-
-La convención documentada (`lib/recetas.js:5-7`) dice que `costo_calculado` es "POR UNIDAD". Si la convención se respeta, está bien y `rinde_cantidad` traído es innecesario. **Decisión pendiente con Charles:** confirmar que `costo_calculado` siempre representa "por unidad de `rinde_unidad`" y no "total de la receta". Si hay alguna receta donde representa el total, el costeo de la receta padre estaría inflado por un factor `rinde_cantidad`.
+**P1-27 · `pages/api/cierres/[id]/reabrir.js` — no anula asiento previo**. Re-cerrar con cambios deja datos viejos en contabilidad (idempotencia por origen_id sí evita doble asiento, pero el primero queda con datos antiguos).
 
 ---
 
-### Atomicidad / race conditions
+## P2 — Polish
 
-**P1-14 · Patrón "cabecera + líneas" no transaccional en ~10 endpoints**
+**P2-1 · Acentos en dashboard ("Ultimos 7 dias", "Mié", "Sáb", etc.)** — **YA ARREGLADO** (commit `540d3e1`).
 
-Endpoints afectados:
-- `pages/api/asientos/index.js` (POST)
-- `pages/api/compras/index.js` y `compras/[id].js` (POST/PATCH)
-- `pages/api/cierres/[id].js` (PATCH al reemplazar egresos)
-- `pages/api/recetas/[id].js` (DELETE + INSERT ingredientes)
-- `pages/api/planillas/[id]/lineas/index.js` (DELETE + INSERT al regenerar)
-- `pages/api/produccion/planes/[id]/lineas.js` (DELETE + INSERT)
-- `pages/api/produccion/planes/[id]/ejecutar.js` (INSERT N movimientos)
-- `pages/api/compras/[id]/anular.js` (INSERT N ajustes reversa)
-- `pages/api/bancos/movimientos/[id]/generar-asiento.js`
-- `pages/api/bancos/movimientos/clasificar-bulk.js`
+**P2-2 · Acentos en ventas ("7 dias", "30 dias")** — **YA ARREGLADO** (commit `80a080e`).
 
-Patrón: inserta cabecera + N filas hijas en queries separadas. Compensa con `delete` manual si la segunda falla. **Si el compensador también falla** (red, RLS, timeout), queda un estado inconsistente. Para una panadería con un solo operador es raro; para producción real conviene mover a RPCs PL/pgSQL transaccionales con `crear_asiento_con_partidas(payload jsonb)` y similares.
+**P2-3 · Acentos en otros lugares**: `pages/produccion.js:170` `"Borrar este plan? (solo borradores)"` (falta `¿`).
 
-**P1-15 · `pages/api/planillas/[id]/estado.js` — UPDATE sin CAS**
+**P2-4 · Dashboard saluda "Hola" sin nombre** — necesita traer perfil completo.
 
-```js
-const { data: actual } = await auth.admin.from('planillas').select('estado')...
-...
-const { data, error } = await auth.admin.from('planillas').update(patch).eq('id', id)...
-```
+**P2-5 · `pages/dashboard.js:271` — "[devol]" abreviado** — en demo más profesional sería "devolución".
 
-No tiene `.eq('estado', actual.estado)` en el update. Dos requests concurrentes al transition `aprobada → pagada` pueden ambos pasar el check de transición y ambos ejecutar el update → **dos asientos de planilla pagada por la misma planilla**. Mismo patrón en `pages/api/produccion/planes/[id]/ejecutar.js` (el update final sin CAS, aunque el flujo previo lo mitiga).
+**P2-6 · `pages/dashboard.js:273` — `toLocaleString('es-GT')` usa zona del navegador** no de GT explícita.
 
-**Fix:** agregar `.eq('estado', actual.estado)` y reportar conflicto si no afecta filas.
+**P2-7 · Helpers de fecha duplicados en ~8 archivos** (`dashboard.js`, `caja.js`, `inventario.js`, `produccion.js`, `compras.js`, `reportes.js`, `liquidaciones.js`, `igss.js`, `contabilidad.js`). Ya existe `lib/fecha-gt.js`. Riesgo de divergencia silenciosa.
 
-**P1-16 · `pages/api/cierres/[id]/reabrir.js` — no anula el asiento generado al cerrar**
+**P2-8 · `pages/inventario.js:814` — `categorias` no normaliza minúsculas/mayúsculas**. "Harinas" y "harinas" son dos categorías distintas.
 
-Cuando se cierra un cierre, `generarAsientoCierreCaja` postea un asiento contable. Al reabrir, el asiento sigue posteado. Si se vuelve a cerrar (con o sin cambios), `generarAsientoCierreCaja` chequea idempotencia por `(origen_tipo='cierre_caja', origen_id)` y devuelve `ya_existe: true` — entonces NO duplica.
+**P2-9 · `pages/inventario.js:921` — `i.categoria || '—'`** sin estado vacío explicativo. Si Ximena no categoriza, todo dice "—".
 
-**Pero:** si entre el reabrir y el re-cerrar se cambian `egresos` o `conteo_efectivo`, el asiento previo no refleja los datos nuevos. **Decisión pendiente con Charles:** ¿el comportamiento esperado es "el asiento es inmutable y el nuevo cierre simplemente no genera asiento adicional" o "el asiento debe regenerarse con los datos del nuevo cierre"? Si lo segundo, hay que anular el asiento previo antes de cerrar de nuevo.
+**P2-10 · `confirm()` nativo** usado en muchas páginas (caja, compras, contabilidad, planillas, recetas, liquidaciones, inventario, bancos, producción). Estilo browser default, feo en mobile.
 
-**P1-17 · `pages/api/cierres/[id].js` DELETE — no chequea estado**
+**P2-11 · Modales se cierran con click en overlay sin confirmación**. En modales con muchos campos, un tap accidental pierde datos.
 
-```js
-async function borrar(req, res, id) { ...
-  const { error } = await auth.admin.from('cierres_caja').delete().eq('id', id) ...
-}
-```
+**P2-12 · `pages/caja.js:481` — botón "Cerrar definitivamente"** habilitado solo con conteo, pero sin tooltip que explique por qué está deshabilitado.
 
-No tiene guard `if (estado === 'cerrado') return res.status(400)`. Un admin puede borrar un cierre cerrado, su asiento contable queda huérfano (`origen_id` apunta a un cierre que ya no existe). El FK no cascadea.
+**P2-13 · `pages/caja.js KPI "Diferencia acumulada"** suma positivas y negativas que se cancelan. Mejor `abs()` o split.
+
+**P2-14 · `pages/produccion.js:351-376` — "Sugerir cantidades" reemplaza el draft sin avisar**. Pierde edits previos.
+
+**P2-15 · `pages/produccion.js:794-797` — `copiar()` sin feedback de éxito** — click silencioso al portapapeles.
+
+**P2-16 · Reportes — botón "↓ PDF" en `reportes.js:635 y :1069` sin `disabled` durante print**. Doble-click puede abrir 2 ventanas de impresión.
+
+**P2-17 · `pages/planillas.js:369`, `pages/reportes.js:631` — botones "Exportar Excel" sin `disabled`** durante la generación. Doble-click baja dos archivos.
+
+**P2-18 · `components/Layout.js` — bottom nav móvil sólo muestra 6 ítems alfabéticos**. Queda: Inicio, Bancos, Caja, Compras, Contabilidad, Empleados. **Faltan Ventas/Inventario/Producción** (los más usados día a día). Considerar curado en vez de alfabético.
+
+**P2-19 · `pages/inventario.js:924` — columna "Costo Q" en header, valores sin "Q"** (solo `formatNum`). Decisión de diseño (Q en header, números limpios abajo) — funciona, pero inconsistente con otros lugares que muestran "Q" en cada celda.
 
 ---
 
-### Inventario, producción, recetas
+## DDL propuesto (NO aplicado — requiere aprobación)
 
-**P1-18 · `pages/inventario.js:186-209` — debounce de save puede perder cambios concurrentes en `inicial` y `final`**
-
-El debounce de 600ms se hace por `variant_id`. Si el usuario edita `inicial` y luego `final` antes de los 600ms, sólo se envía el último cambio. El estado local en React lo actualiza con `upsertLocal`, así que el body al backend incluye el valor `inicial` recién tipeado — **pero** depende del orden de re-renders y del closure de `fecha`. Si el usuario cambia de fecha rápido también, el timer dispara con la fecha vieja en closure → POST 400 silencioso.
-
-**Decisión pendiente:** verificar con repro real en mobile que el debounce no pierde el primer cambio. Una solución más conservadora es disparar save en `onBlur` en vez de debounced.
-
-**P1-19 · `pages/produccion.js:322` — borrar input de cantidad elimina la línea entera del plan**
-
-```js
-function actualizarCantidad(receta_id, valor) {
-  const v = Number(valor)
-  if (!(v > 0)) {
-    return persistir(draft.filter(d => d.receta_id !== receta_id))  // ← elimina línea
-  }
-  ...
-}
-```
-
-Si el usuario borra el input (deja vacío) o pone 0, la línea desaparece. Comportamiento sorpresivo: el usuario quería poner 0 para "anular temporalmente", pero perdió la línea. Fix: mantener la línea con `0` en el draft y sólo eliminar al hacer click explícito en "Quitar".
-
-**P1-20 · `pages/api/produccion/planes/[id]/ejecutar.js:142` — código muerto + parcial deja plan en 'ejecutado'**
-
-```js
-estado: errores.length === 0 ? 'ejecutado' : 'ejecutado',  // ambas ramas iguales
-```
-
-El ternario es bug visible (probable copy-paste). Más importante: si fallan algunos movimientos de salida, el plan se marca `'ejecutado'` igualmente y los movimientos exitosos quedan registrados, pero los fallidos no tienen retry path. El usuario ve `status: 207` + `errores_parciales` y debe re-ejecutar manualmente los faltantes con ajustes.
-
-**Decisión pendiente:** agregar un estado intermedio `'ejecutado_parcial'` o forzar retry idempotente del endpoint cuando ya existen movimientos para algunos insumos.
-
-**P1-21 · `pages/api/compras/[id]/recibir.js:108-110` — `costo_unitario` y `costo_compra` del insumo se sobrescriben con el último recibo**
-
-```js
-const updPayload = { costo_unitario: costoUnitarioBase, updated_at: now }
-if (fracciona) updPayload.costo_compra = Number(l.costo_unitario)
-await auth.admin.from('insumos').update(updPayload).eq('id', l.insumo_id)
-```
-
-Si una compra puntual tiene precio anómalo (oferta, error de digitación), contamina el costeo de **todas** las recetas que usan ese insumo. El recálculo de recetas dispara con el costo nuevo. **Decisión pendiente:** ¿queremos "promedio ponderado" o "último costo"? El comentario del código dice "último", pero conviene confirmarlo y, si se mantiene, agregar una validación de "salto >50% del costo previo, pedir confirmación".
-
-**P1-22 · `lib/produccion-inventario.js:61` — asume `variants[0]` siempre**
-
-`poblarInventarioInicialDesdeProduccion` itera líneas del plan, busca el item Loyverse de la receta y usa `variants[0]` para el `variant_id`. Si un item Loyverse tiene 2+ variantes (ej. tamaños: chico/grande), todas las cantidades van a la primera variante; las demás quedan en 0. **Decisión pendiente:** chequear cuántas recetas/items tienen multi-variante en Loyverse hoy. Si todos son single-variant, OK; si hay multi, agregar campo `loyverse_variant_id` a `recetas`.
-
-**P1-23 · `lib/produccion-inventario.js:91-93` — idempotencia frágil del conteo diario**
-
-El upsert usa `.eq('store_id', '')` literal (string vacío). Si la base tiene store_id null o un ID real, no matchea y se inserta otro registro → posibles duplicados.
-
----
-
-### UX y errores silenciosos
-
-**P1-24 · Pattern transversal: `setErr(json.error)` sin fallback en ~15 páginas**
-
-Si la API responde 500 con body vacío o sin `.error`, `setErr(undefined)` y el componente `Error` renderiza vacío → el usuario ve la pantalla limpia sin saber que hubo error. Estandarizar a `json?.error || 'Error inesperado'`.
-
-**P1-25 · Pattern transversal: race conditions en filtros sin AbortController**
-
-`pages/ventas.js`, `caja.js`, `compras.js`, `inventario.js`, `reportes.js`, `bancos.js`, `igss.js`, `contabilidad.js` — cambiar filtros rápidos puede hacer que la respuesta vieja gane sobre la nueva. Para una panadería sin tráfico simultáneo es raro, pero confunde en mobile lento.
-
-**P1-26 · `pages/dashboard.js:155-167` — porcentaje vs ayer mal cuando hay refunds netos**
-
-`(hoyTotal - ayerTotal) / ayerTotal` se calcula con guard `ayerTotal > 0`, pero `ayerTotal` puede ser negativo si el día anterior tuvo más devoluciones que ventas. Resultado: cálculo válido matemáticamente pero confuso al usuario.
-
-**P1-27 · `pages/dashboard.js:74-162` — 5 fetches secuenciales sin try/catch global**
-
-Si cualquiera lanza, la pantalla queda en `loading: true` para siempre. Adicionalmente, paralelizables con `Promise.all` para mejorar tiempo de carga ~5×.
-
-**P1-28 · `pages/bancos.js:826-893` — `parseCSV` con regex `[̀-ͯ]` posiblemente roto**
-
-```js
-const norm = (s) => (s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim()
-```
-
-Los caracteres entre corchetes son combining marks unicode literales, no escapes `̀-ͯ`. Pueden romperse al pegar/editar el archivo en editores que normalizan. Fix: usar `replace(/[̀-ͯ]/g, '')`.
-
-**P1-29 · `pages/bancos.js:858-863` — `parseNum` aplica `Math.abs()`**
-
-Si el extracto del banco reporta débitos como negativos (común), el `abs` los pierde y el sistema asume todo como positivo, dejando la clasificación débito/crédito al heading de columna. Si el CSV no es claro, la conciliación queda inconsistente.
-
-**P1-30 · `pages/planillas.js:64` — crash si `planillaSel === null` y `vista === 'detalle'`**
-
-```jsx
-{vista === 'detalle' && <VistaDetalle planillaId={planillaSel.id} ... />}
-```
-
-Si `planillaSel` queda en null por alguna razón (fetch falla mid-render, navegación rara), accede a `.id` y crashea. Fix: `vista === 'detalle' && planillaSel && <VistaDetalle planillaId={planillaSel.id} ... />`.
-
-**P1-31 · `pages/api/qbo/sync/daily-prod.js` y `retry-failed.js` no registrados en `vercel.json`**
-
-Estos archivos no aparecen en `vercel.json:functions`, así que corren con `maxDuration: 10s` default. Llaman QBO real, que tarda fácil 20-30s. **Si se intenta usarlos, fallarán por timeout en producción.** Como QBO es Fase 3 pendiente, esto es preventivo. Tablas `loyverse_sync_state` (en `lib/loyverse/sync.js`) ya tiene una columna `high_water_mark` que el código lee/escribe pero **no existe en ninguna migración**. Charles aplicó el DDL a mano vía MCP. Conviene agregarle el archivo de migración para sincronizar entornos.
-
----
-
-## P2 — Menor
-
-Cosmético, mejora, decisión de UX.
-
-**P2-1 · `components/Layout.js:31` — bottom nav móvil sólo muestra 6 ítems alfabéticos**
-
-Tras ordenar los items alfabéticamente, `bottomNavItems = navItems.slice(0, 6)` queda en: **Inicio, Bancos, Caja, Compras, Contabilidad, Empleados**. Los items operativos diarios (Ventas, Inventario, Producción, Recetas) quedan ocultos en el menú hamburguesa. Para Ximena (que vive en mobile) probablemente sea un downgrade vs el orden previo. Considerar `bottomNavItems = [Inicio, Ventas, Caja, Producción, Inventario, Compras]` curated.
-
-**P2-2 · `components/Layout.js` — Layout NO recibe `estacion` prop pero CLAUDE.md lo documenta como `<Layout perfil={perfil} estacion={estacion}>`**
-
-El prop `estacion` viene de GasOps (multi-estación). Julia es tienda única — el prop no se usa. Actualizar CLAUDE.md §6.2 para no mencionarlo.
-
-**P2-3 · `pages/api/cierres/[id]/reabrir.js` — comentario dice "loguea quien reabrió en notas" pero NO lo hace**
-
-```js
-// Util para correcciones puntuales. Loguea quien lo reabrio en notas.
-```
-
-Sólo limpia `cerrado_at/cerrado_by`. Si Charles realmente quiere log, hay que poblarlo o sacar el comentario.
-
-**P2-4 · `lib/cierres.js:48` — `cantidad_recibos++` incluye REFUNDs**
-
-Eso infla el conteo en días con muchas devoluciones. Considerar contar sólo `receipt_type !== 'REFUND'`.
-
-**P2-5 · Helpers de fecha duplicados en 8+ páginas**
-
-`hoyGT()`, `fechaGT()`, `gtDayRange()`, `gtDateString()` reimplementados en `pages/dashboard.js`, `caja.js`, `inventario.js`, `compras.js`, `produccion.js`, `reportes.js`, `liquidaciones.js`, `igss.js`, `contabilidad.js`. Ya existe `lib/fecha-gt.js`. Migración mecánica.
-
-**P2-6 · `lib/reportes.js:667-671` vs `lib/cierres.js:22-26` — normalización de pagos discrepante**
-
-`reportes` reporta pagos como `'CASH'` mientras `cierres` los reporta como `'EFECTIVO'`. Si los dos se cruzan visualmente en UI, hay inconsistencia. Centralizar `normalizarPago`.
-
-**P2-7 · Inputs `type="number"` sin `min="0"` en ~10 lugares**
-
-`pages/compras.js`, `planillas.js` (CeldaEdit), `empleados.js`, `recetas.js`, `inventario.js`, `liquidaciones.js`. Permiten negativos en cantidades, costos, salarios. Distorsionan reportes silenciosamente.
-
-**P2-8 · `confirm()` nativo en muchas páginas**
-
-`pages/caja.js`, `compras.js`, `planillas.js`, `recetas.js`, `liquidaciones.js`, `inventario.js`, `bancos.js`, `contabilidad.js`, `produccion.js`. Bloquea thread, se ve feo en mobile. Reemplazar gradualmente con modal custom.
-
-**P2-9 · Modales se cierran al click en overlay sin confirmación**
-
-`pages/compras.js:795`, `bancos.js:1081`, `contabilidad.js:942`, `caja.js:504`, `recetas.js:573`, etc. En modales con muchos campos, un tap accidental pierde el trabajo. Considerar `if (form.dirty) confirm` o desactivar click-outside en modales largos.
-
-**P2-10 · `pages/produccion.js:618` y `pages/inventario.js:1082` — ModalShell sin `max-h-[90vh] overflow-y-auto`**
-
-`inventario.js` recibió el fix (commit `0500d68`) pero el `ModalShell` en `produccion.js:616` SÍ tiene el patrón correcto. Verifiqué: ambos están actualmente OK. **Nota:** otros modales (`compras.js`, `bancos.js`, `contabilidad.js`, etc.) usan `overflow-y-auto` en el wrapper externo, no en el inner — funciona pero la altura no respeta `max-h-90vh`. Sería bueno estandarizar el patrón de `produccion.js`.
-
-**P2-11 · `lib/contabilidad/generador.js:21-22` — validación estricta de balance puede fallar por centavos**
-
-`if (totalDebe !== totalHaber) return ...` sin tolerancia. Si la suma de partidas individuales acumula error de redondeo, aborta. En la práctica funciona porque todas las partidas se redondean antes de sumar, pero un dato sin redondear (ej. `Number(e.monto)` en egresos chicos) puede meter centavos. Recomendado `Math.abs(d - h) < 0.01`.
-
-**P2-12 · `lib/contabilidad/generador.js:312` — heurística `total_neto >= 5000 ? banco : caja` para liquidación**
-
-Decisión basada en monto, frágil. Liquidaciones de Q4,999.99 salen de caja, Q5,000.01 de banco. Mejor agregar campo explícito al form de liquidación.
-
-**P2-13 · `pages/api/cron/resumen-ventas-diario.js:19` y `alerta-cierre-faltante.js:19` — `expectedSecret = CRON_SECRET || INTERNAL_API_SECRET`**
-
-Si NINGUNA está definida, `expectedSecret = undefined` y `req.headers.authorization === 'Bearer undefined'` puede aceptar exactamente esa cadena. Caso extremo (env mal configurado), pero es bueno fail-fast: `if (!expectedSecret) return 500`.
-
-**P2-14 · `lib/contabilidad/mappings.js` — no se cachea entre requests**
-
-Cada generación de asiento hace round-trip a DB. Para volumen normal de Julia es fine.
-
-**P2-15 · `pages/api/qbo/conciliar/mensual.js`, `qbo/sync/*` operan sobre tablas legacy de GasOps**
-
-Eliminar al cerrar Fase 3.
-
-**P2-16 · `legacy/` (carpeta del fork)**
-
-`legacy/test-ia.js:86` tiene `dangerouslySetInnerHTML`. Como `legacy/` no está bajo `pages/`, no se enruta — no es vulnerable hoy. Pero si alguien lo mueve sin notar, queda XSS. Considerar borrar la carpeta entera (revisar primero qué hay útil ahí).
-
-**P2-17 · `pages/index.js:21` — mensaje de error genérico de login**
-
-Cualquier error de Supabase muestra "Correo o contraseña incorrectos." Si la red está caída o hay rate-limit, el usuario se confunde. Loggear `error.message` en consola al menos.
-
-**P2-18 · `lib/qbo/apiClient.js:46` — `JSON.parse(responseText)` sin try/catch**
-
-Si QBO responde 200 con body vacío o no-JSON, crash. Como QBO es Fase 3 pendiente, anotar.
-
-**P2-19 · `lib/qbo/apiClient.js:17` — `process.env.QBO_API_BASE` sin default**
-
-Si falta la env var, URL queda `undefined/v3/...` → 404 confuso.
-
-**P2-20 · `pages/api/contabilidad/mappings.js` PUT — reporta 500 con éxitos parciales no informados**
-
-Si actualizan 5 mappings y 1 falla, devuelve `{ ok: false, errores: [...] }` pero los 4 exitosos ya quedaron aplicados. El cliente no sabe cuáles. Mejor `{ ok: true, actualizados: [...], errores: [...] }`.
-
-**P2-21 · `pages/api/qbo/conciliar/mensual.js:67` — código muerto**
-
-```js
-await supabaseAdmin.rpc('exec_sql_count', {}).select()
-```
-
-El comentario admite que no funciona. Limpiar.
-
-**P2-22 · `pages/api/qbo/auth/connect.js`, `connect-prod.js` sin auth**
-
-Inician el flow OAuth contra QBO. **No es P0** (el agent de seguridad lo flageó como tal): el CSRF state en cookie protege el callback — un atacante no puede completar el flow sin acceso al navegador del admin. Pero por higiene, requerir `requireAdmin` para iniciar.
-
-**P2-23 · Branding GasOps en archivos vivos**
-
-`lib/qbo/emailAlerts.js:32-33` (`noreply@hidrocom.net`, `'GasOps'`), `pages/api/bac/ingest.js:98`, `pages/api/neonet/ingest.js:376`, varios qbo/sync/* y qbo/test/* mencionan GasOps/Hidrocom. Confunde durante incidentes pero no afecta a usuarios de Julia hoy.
-
----
-
-## DDL propuesto (NO aplicado — requiere aprobación de Charles)
-
-**DDL-1 · Habilitar RLS en tablas QBO heredadas**
+### DDL-1 · Habilitar RLS en tablas QBO
 
 ```sql
 -- Migration: rls_qbo_tables.sql
--- Fecha: 2026-05-28
--- Proposito:
---   Las tablas heredadas de la migracion 2026_05_08_qbo_setup.sql NO tienen
---   RLS habilitado. Por defecto en Supabase, una tabla en schema public sin
---   RLS es accesible vía PostgREST con las claves anon/authenticated (la anon
---   esta embebida en el bundle JS). qbo_tokens contiene access_token y
---   refresh_token en texto plano — leak potencial completo de la cuenta QBO.
---
---   Esta migracion habilita RLS sin definir politicas → solo service_role
---   accede (que es el patron correcto para tablas de tokens internos).
---
--- NOTA: verificar primero en Supabase Dashboard si RLS ya esta habilitado
---       manualmente (sin migration tracking). Si si, marcar como aplicado
---       sin re-correr el ALTER.
+-- Verificar primero en Supabase Dashboard si RLS ya está habilitada
+-- manualmente. Si no, aplicar.
 
 ALTER TABLE qbo_tokens             ENABLE ROW LEVEL SECURITY;
 ALTER TABLE qbo_sync_audit         ENABLE ROW LEVEL SECURITY;
 ALTER TABLE qbo_mapping_estaciones ENABLE ROW LEVEL SECURITY;
 ALTER TABLE qbo_mapping_skus       ENABLE ROW LEVEL SECURITY;
 ALTER TABLE qbo_mapping_customers  ENABLE ROW LEVEL SECURITY;
-
--- No se definen policies para authenticated/anon: bloqueo por defecto.
--- service_role siempre puede (bypassea RLS automaticamente).
+-- Sin policies → solo service_role accede.
 ```
 
-**Acción adicional recomendada:** rotar el refresh_token de QBO producción tras aplicar.
+### DDL-2 · Formalizar columna `high_water_mark` en `loyverse_sync_state`
 
----
-
-**DDL-2 · Agregar `high_water_mark` a `loyverse_sync_state` con migration formal**
-
-`lib/loyverse/sync.js:22` y :51 leen/escriben la columna `high_water_mark`, pero **no aparece en ninguna migration**. Charles aplicó el DDL a mano vía MCP. Para sincronizar entornos:
+`lib/loyverse/sync.js` lee/escribe esa columna pero no aparece en ninguna migration; Charles aplicó el DDL a mano vía MCP.
 
 ```sql
 -- Migration: loyverse_high_water_mark.sql
--- Fecha: 2026-05-28
--- Proposito:
---   El cron de sync de Loyverse usa una columna `high_water_mark` que NO
---   esta en la migracion original 2026_05_20_loyverse_schema.sql. El DDL
---   se aplico a mano via Supabase MCP. Este archivo lo formaliza para que
---   un environment nuevo o el script scripts/migrate.js queden sincronizados.
-
 ALTER TABLE loyverse_sync_state
   ADD COLUMN IF NOT EXISTS high_water_mark timestamptz;
-
 COMMENT ON COLUMN loyverse_sync_state.high_water_mark IS
-  'Max updated_at visto en el ultimo drain completo. Se usa para filtrar incrementalmente con buffer de 5 min y evitar reprocesar todo el historico.';
-
+  'Max updated_at visto en el último drain completo. Para filtrado incremental con buffer de 5 min.';
 INSERT INTO _schema_migrations (filename, applied_by) VALUES
   ('loyverse_high_water_mark.sql', 'manual') ON CONFLICT DO NOTHING;
 ```
 
----
-
-**DDL-3 · Constraint para bloquear borrado de cierres cerrados (opcional)**
+### DDL-3 · Si Charles decide aplicar ISR en planilla (P0-2):
 
 ```sql
--- Si Charles confirma que NO se debe permitir borrar cierres cerrados:
--- (alternativa: hacerlo en la API; ver P1-17)
+-- Migration: planilla_isr_retencion.sql
+ALTER TABLE planilla_lineas
+  ADD COLUMN IF NOT EXISTS isr_retenido numeric(12,2) NOT NULL DEFAULT 0;
+COMMENT ON COLUMN planilla_lineas.isr_retenido IS
+  'Retención ISR mensual (Decreto 10-2012) aplicada a esta línea quincenal. = calcularISRRetencionQuincenal(salario_mensual_ordinario).';
 
-CREATE OR REPLACE FUNCTION prevent_delete_closed_cierre()
-RETURNS trigger LANGUAGE plpgsql AS $$
-BEGIN
-  IF OLD.estado = 'cerrado' THEN
-    RAISE EXCEPTION 'No se puede borrar un cierre cerrado. Reabrir primero.';
-  END IF;
-  RETURN OLD;
-END $$;
-
-DROP TRIGGER IF EXISTS trg_prevent_delete_closed_cierre ON cierres_caja;
-CREATE TRIGGER trg_prevent_delete_closed_cierre
-  BEFORE DELETE ON cierres_caja
-  FOR EACH ROW EXECUTE FUNCTION prevent_delete_closed_cierre();
+-- Y una cuenta contable + mapping:
+INSERT INTO cuentas_contables (codigo, nombre, tipo, naturaleza, nivel, es_movimiento) VALUES
+  ('2-01-03-011', 'ISR por pagar (retenciones empleados)', 'pasivo', 'acreedora', 4, true)
+ON CONFLICT (codigo) DO NOTHING;
+INSERT INTO contabilidad_mappings (clave, descripcion, cuenta_id) VALUES
+  ('isr_por_pagar', 'Pasivo: ISR retenido a empleados, pendiente de pagar a SAT',
+   (SELECT id FROM cuentas_contables WHERE codigo = '2-01-03-011'))
+ON CONFLICT (clave) DO NOTHING;
 ```
 
----
-
-## Fixes seguros ya aplicados en esta rama
-
-Tres commits sobre `claude/audit-fixes-20260527`:
-
-1. **`d02f81a` — `fix(legal): privacy.js y terms.js reescritos para Julia Bakery`**
-   - `pages/privacy.js`: reescrita en español, sin datos Hidrocom.
-   - `pages/terms.js`: idem.
-   - Sin email/NIT específicos hasta que Charles defina los oficiales.
-
-2. **`ccade05` — `fix(login): placeholder de email — quitar 'gerente@estacion.com' heredado de GasOps`**
-   - `pages/index.js`: placeholder ahora `tu-correo@juliabakery.com`.
-
-Estos son cambios cosméticos sin impacto funcional. Ningún cambio de lógica de negocio, ningún DDL, ningún cron, ningún endpoint API. Listos para deploy si Charles los aprueba.
+Más cambios de código en `pages/api/planillas/[id]/lineas/index.js`, `pages/api/planillas/[id]/lineas/[lineaId].js`, `lib/planillas.js` (recalcular en cada change), `lib/contabilidad/generador.js` (acreditar la cuenta), `pages/planillas.js` (mostrar columna).
 
 ---
 
-## Decisiones pendientes para Charles
+## Fixes seguros aplicados en esta rama
 
-Listo aquí todo lo que el audit no pudo decidir solo:
+10 commits sobre `claude/audit-fixes-20260527` (en orden cronológico inverso):
 
-1. **RLS de qbo_tokens y tablas QBO** — verificar estado real en Supabase Dashboard antes de aplicar DDL-1. Si confirmás leak, rotar refresh_token.
-2. **Bypass de User-Agent en crons** — confirmar que `CRON_SECRET` está seteada en Vercel; si sí, aplicar el fix de quitar la rama `isVercelCron`.
-3. **Reportes accesibles a empleados (P1-1)** — ¿es por diseño o debe ser admin-only?
-4. **Liquidaciones (P1-5)** — ¿la lógica de `(años % 1) * 15` matchea la práctica contable?
-5. **Generador de asientos de liquidación (P1-8)** — ¿se está provisionando bono14/aguinaldo/vacaciones mes a mes? Si sí, la liquidación debería debitar el pasivo, no el gasto.
-6. **TXT del IGSS (P1-9)** — confirmar con el contador que el formato 1-14 / 15-28 es lo que IGSS realmente exige.
-7. **ISR de planilla (P1-7)** — ¿hay empleados con comisiones/horas extra suficientes para superar el umbral de Q48,000 anual?
-8. **Costo de insumos al recibir compra (P1-21)** — ¿"último costo" o "promedio ponderado"? Si "último", agregar validación de saltos grandes.
-9. **Multi-variant de Loyverse (P1-22)** — ¿hay items con 2+ variantes hoy? Si sí, prioridad alta.
-10. **Convención de `costo_calculado` en sub-recetas (P1-13)** — confirmar que SIEMPRE representa "costo por unidad de `rinde_unidad`".
-11. **Reabrir cierre con cambios (P1-16)** — ¿el asiento debe regenerarse o queda inmutable?
-12. **Bottom nav móvil (P2-1)** — ¿el orden alfabético es lo que Ximena prefiere o un curated `[Inicio, Ventas, Caja, Producción, Inventario, Compras]` sería mejor?
-13. **Limpieza de legacy GasOps** — ¿borrar `pages/api/admin/carga-retroactiva.js`, `pages/api/qbo/test/*`, `pages/api/bac/*`, `pages/api/neonet/*`, `pages/api/myposoft/*`, `pages/api/wsm/*`, `legacy/`, helpers en `pages/api/qbo/sync/*` y `qbo/conciliar/*`?
+```
+dbad430  fix(mobile): overflow-x-auto en 6 tablas principales + fix off-by-one fecha IGSS
+222a22f  fix(empleados): preview de costo patronal quincenal usaba formula mensual sin /2
+80a080e  fix(ventas): acentos en filtros '7 dias' y '30 dias' -> '7 días' / '30 días'
+540d3e1  fix(dashboard): formato Q consistente con resto + acentos en titulares
+6cfc181  fix(inventario): ModalShell responsive en movil (max-h + overflow-y-auto)
+98e5de2  docs(audit): reporte priorizado de auditoria nocturna  (commit del primer audit)
+ccade05  fix(login): placeholder de email — quitar 'gerente@estacion.com' heredado de GasOps
+d02f81a  fix(legal): privacy.js y terms.js reescritos para Julia Bakery
+```
+
+Plus 1 commit por venir con esta versión actualizada del reporte.
+
+**Tipo de cambios:**
+- CSS / clases Tailwind (modal responsive, overflow-x-auto en 6 tablas).
+- Copy / acentos (dashboard, ventas, login).
+- Formato de número (`fmtQ` con 2 decimales en dashboard).
+- Formato de fecha (interpretar `YYYY-MM-DD` como mediodia GT en IGSS).
+- Contenido legal completo (privacy + terms reescritos).
+- Reemplazo de fórmula inline por llamada a función pura ya existente (empleados → `calcularProvisiones`).
+
+**Ninguno toca:** lógica de negocio en `pages/api/*`, schema/migraciones, crons, endpoints QBO/Loyverse/FEL, RLS, plan de cuentas.
 
 ---
 
-## Notas sobre la metodología
+## Decisiones pendientes para Charles antes de la demo
 
-- Audit corrido con 4 agentes paralelos (UI pages, API endpoints, lib, security) más auditoría manual del schema/migraciones, flujos críticos (cierres, compras, planillas, producción, bancos), y mobile.
-- Cada hallazgo P0 lo verifiqué leyendo el código directamente, no solo confiando en el reporte del agente. Algunas falsas alarmas de los agentes fueron descartadas (ver "Verificados como NO bugs" abajo).
-- Sin tests automatizados (no hay framework configurado), no pude correr regresiones. Recomendado considerar Vitest para los módulos de `lib/` que tienen lógica pura (planillas, liquidaciones, recetas, contabilidad/generador, cierres).
+En orden de urgencia:
 
-### Verificados como NO bugs (descartados de reportes de agentes)
+1. **Mergear o no la rama `condescending-ramanujan`** (P0-1). Si la mergeás, mucho de este audit ya queda resuelto: PDFs (compras + producción), dropdown unidad, costo sugerido, separación comida/bebida, sub-recetas, soft/hard-delete. Si no la mergeás, dejar claro a Ximena que esas features vienen en una próxima entrega.
+2. **Separación comida/bebidas en recetas (P0 — feature inexistente en main)**: confirmar si Ximena espera verla. Si la rama `condescending-ramanujan` se mergea, queda resuelto.
+3. **PDF imprimible de compras y producción (P0 — feature inexistente en main)**: idem.
+4. **Bug compras 50×**: trampa en `elegirInsumo` que autocompleta unidad base en lugar de unidad de compra (P0-11). Mergear `condescending-ramanujan` o aplicar fix puntual en `main`.
+5. **Recetas: cálculo sin conversión de unidades** (P0-10). Decidir si convertir el input "Unidad" en read-only o agregar tabla de conversión.
+6. **ISR de planilla** (P0-2): ¿se aplica esta noche con DDL-3 + cambios de código, o se documenta como "función disponible, integración pendiente"?
+7. **Vacaciones — convención hábil vs calendario** (P0-3): confirmar con contador.
+8. **QBO RLS** (P0-7): verificar en Supabase Dashboard si ya está habilitada manualmente. Si no, DDL-1.
+9. **Crons User-Agent bypass** (P0-8): confirmar `CRON_SECRET` en Vercel envs, luego aplicar fix de 1 línea.
+10. **Bottom nav móvil** (P2-18): ¿qué 6 ítems quieren para Ximena? El orden alfabético actual deja Ventas/Inventario/Producción fuera del acceso rápido.
+11. **Reportes/contabilidad** (P1 audit anterior): ¿accesibles a cualquier empleado o solo admin?
+12. **Liquidación: gasto vs pasivo en bono14/aguinaldo/vacaciones** (P1 audit anterior): doble contabilización potencial.
+13. **Limpieza legacy GasOps** (pages/api/qbo/test/*, admin/carga-retroactiva, bac/*, neonet/*, myposoft/*, wsm/*).
 
-- `lib/recetas.js:34` y `lib/produccion.js:50` `Math.max(Number(x) || 1, 0.0001)`: `Number(0) || 1 = 1`, no `0.0001`. El segundo argumento del max nunca aplica para rinde=0; aplica sólo si alguien explícitamente pasa `0.0001`. No es bug.
-- `lib/cierres.js:31` y `lib/reportes.js:40` "receipt_date podría ser DATE": **confirmado `timestamptz`** en `migrations/2026_05_20_loyverse_schema.sql:173`. No hay pérdida de recibos.
-- `lib/produccion.js:67` "false positivo en detección de ciclos para sub-recetas hermanas": el agente se autocorrigió leyendo el `usadasPath.delete()` al final de `visitar`. No es bug.
-- `pages/api/qbo/auth/connect.js` "sin auth = P0": el flow OAuth no requiere auth del usuario por diseño; el CSRF cookie state protege el callback. Lo bajé a P2.
-- `pages/api/admin/carga-retroactiva.js` "permite a admins GasOps escribir": el endpoint opera sobre tablas GasOps que probablemente no se usan en Julia, pero igualmente es código legacy que debe eliminarse (P0-4 por la lista hardcoded y la mantención de tablas no usadas).
+---
+
+## Notas sobre metodología y agentes paralelos
+
+- Audit corrido en 3 fases:
+  1. Audit inicial (pre-aclaración de Charles): foco en operación general + seguridad. 4 agentes paralelos + revisión personal.
+  2. Re-audit demo-readiness (post-aclaración): foco en "vergüenza en demo". 3 agentes paralelos + revisión personal de PDFs, ISR, vacaciones, 8 tabs de reportes, separación comida/bebidas. Hallazgo top: la rama `condescending-ramanujan` no mergeada.
+  3. Verificación cruzada: cada P0 fue confirmado leyendo el código directamente. Algunas falsas alarmas de los agentes fueron descartadas (notadas abajo).
+
+- **Falsos positivos descartados** (mantengo por transparencia):
+  - `lib/recetas.js:34` y `lib/produccion.js:50` `Math.max(Number(x) || 1, 0.0001)`: `Number(0) || 1 = 1`, no `0.0001`.
+  - `lib/cierres.js:31` "receipt_date podría ser DATE": confirmado `timestamptz` en migration.
+  - `pages/api/qbo/auth/connect.js` "sin auth = P0": OAuth init es público por diseño; CSRF state protege el callback.
+  - `pages/api/qbo/test/prod-salesreceipt.js`: tiene auth con `INTERNAL_API_SECRET`. Sigue siendo P1 limpiar, no P0.
+
+- Sin tests automatizados — no pude verificar regresiones programáticamente. Conviene considerar Vitest para `lib/planillas.js`, `lib/liquidaciones.js`, `lib/recetas.js`, `lib/contabilidad/generador.js`, `lib/cierres.js` que tienen lógica pura.
