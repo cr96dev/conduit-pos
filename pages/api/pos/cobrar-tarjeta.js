@@ -18,7 +18,7 @@
 // inserta la tarjeta, ingresa PIN, espera autorizacion del emisor.
 
 import { authorizationPaymentCommerce, NeonetClientError, NeonetAuthError } from '../../../lib/neonet/client'
-import { requireAdmin } from '../../../lib/auth'
+import { requireAdminOCajero } from '../../../lib/auth'
 
 // Mapea la respuesta cruda de Neonet al shape `respuesta_lector` que el
 // frontend ya consume (igual que /api/neonet/mock-sale).
@@ -48,7 +48,7 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' })
   }
 
-  const auth = await requireAdmin(req)
+  const auth = await requireAdminOCajero(req)
   if (auth.error) return res.status(auth.status).json({ error: auth.error })
 
   const { idsale, amount_cents } = req.body || {}

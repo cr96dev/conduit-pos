@@ -17,8 +17,18 @@ export default function Login({ session }) {
     return esKiosko() ? '/pos' : '/dashboard'
   }
 
+  // Redireccion inicial:
+  //   - si hay sesion -> destino
+  //   - si no hay sesion y es kiosko -> /cajero-login (PIN)
+  //   - si no hay sesion y NO es kiosko -> mostramos form email/password
   useEffect(() => {
-    if (session) router.push(destinoPostLogin())
+    if (session) {
+      router.push(destinoPostLogin())
+      return
+    }
+    if (esKiosko()) {
+      router.push('/cajero-login')
+    }
   }, [session])
 
   async function handleLogin(e) {
@@ -72,6 +82,12 @@ export default function Login({ session }) {
             {loading ? 'Iniciando sesión...' : 'Iniciar sesión'}
           </button>
         </form>
+
+        <button
+          onClick={() => router.push('/cajero-login')}
+          className="mt-5 w-full text-xs text-gray-400 hover:text-julia-red transition-colors">
+          Soy cajero · ingresar con PIN
+        </button>
 
         <p className="text-center text-xs text-gray-300 mt-6">Julia Bakery · Guatemala</p>
       </div>

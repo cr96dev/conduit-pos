@@ -15,23 +15,46 @@ import { useEsKiosko } from '../lib/kiosko'
 // Wrapper de layout: en modo kiosko (wrapper Android Sunmi) renderiza un
 // header minimo con logo + cajero + logout. En desktop usa el Layout
 // completo con sidebar y navegacion a otros modulos.
-function POSChrome({ perfil, kiosko, children }) {
-  if (!kiosko) return <Layout perfil={perfil}>{children}</Layout>
+function POSChrome({ perfil, kiosko, turno, children }) {
+  // Admin desktop -> Layout completo con sidebar. (Si admin es cajero, no
+  // queremos perder el sidebar.) Solo en kiosko o si rol=cajero mostramos
+  // el chrome minimo con cajero/turno + Cerrar caja + Mis turnos.
+  const esCajero = perfil?.rol === 'cajero'
+  if (!kiosko && !esCajero) return <Layout perfil={perfil}>{children}</Layout>
+
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
-      <header className="bg-white border-b border-gray-100 px-3 py-2 flex items-center justify-between flex-shrink-0">
-        <div className="flex items-center gap-2">
-          <img src="/logo.png" alt="" className="h-8 w-auto" />
-          <div className="text-sm font-semibold text-gray-900">Cajero</div>
-        </div>
-        <div className="flex items-center gap-2">
-          <div className="text-[11px] text-gray-500 truncate max-w-[140px]">
-            {perfil?.nombre_completo || perfil?.email || ''}
+      <header className="bg-white border-b border-gray-100 px-3 py-2 flex items-center justify-between flex-shrink-0 gap-2">
+        <div className="flex items-center gap-2 min-w-0">
+          <img src="/logo.png" alt="" className="h-8 w-auto flex-shrink-0" />
+          <div className="text-sm font-semibold text-gray-900 truncate">
+            {perfil?.nombre_completo || 'Cajero'}
           </div>
+          {turno && (
+            <span className="text-[10px] bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded uppercase tracking-wide hidden sm:inline">
+              Caja abierta
+            </span>
+          )}
+        </div>
+        <div className="flex items-center gap-1 flex-shrink-0">
+          {esCajero && (
+            <>
+              <button onClick={() => window.location.href = '/mis-turnos'}
+                className="text-[11px] text-gray-500 hover:text-julia-red px-2 py-1">
+                Mis turnos
+              </button>
+              {turno && (
+                <button onClick={() => window.location.href = '/cerrar-caja'}
+                  className="text-[11px] bg-amber-100 text-amber-800 hover:bg-amber-200 px-3 py-1.5 rounded-lg font-medium">
+                  Cerrar caja
+                </button>
+              )}
+            </>
+          )}
           <button
             onClick={async () => {
               await supabase.auth.signOut()
-              window.location.href = '/'
+              window.location.href = esCajero ? '/cajero-login' : '/'
             }}
             className="text-[11px] text-gray-400 hover:text-julia-red px-2 py-1">
             Salir
@@ -169,12 +192,30 @@ export default function POS({ session }) {
   // usuario sale del input y vuelve sin cambiar.
   const ultimoNitConsultado = useRef('')
   const debounceTimer = useRef(null)
+  const [turno, setTurno] = useState(null)
+  const [turnoCargado, setTurnoCargado] = useState(false)
 
-  // Cargar perfil + catálogo
+  // Cargar perfil + catálogo + turno (si cajero)
   useEffect(() => {
     if (!session) { router.push('/'); return }
-    supabase.from('perfiles').select('id, email, rol').eq('id', session.user.id).single()
-      .then(({ data }) => setPerfil(data || { id: session.user.id, email: session.user.email, rol: 'empleado' }))
+    supabase.from('perfiles').select('id, email, nombre_completo, rol').eq('id', session.user.id).single()
+      .then(({ data }) => {
+        const p = data || { id: session.user.id, email: session.user.email, rol: 'empleado' }
+        setPerfil(p)
+        // Si es cajero, chequear turno abierto. Si no hay, mandar a abrir caja.
+        if (p.rol === 'cajero') {
+          apiFetch('/api/turnos/actual').then(r => r.json()).then(j => {
+            if (!j.turno) {
+              router.replace('/abrir-caja')
+            } else {
+              setTurno(j.turno)
+              setTurnoCargado(true)
+            }
+          })
+        } else {
+          setTurnoCargado(true)
+        }
+      })
     Promise.all([
       supabase.from('loyverse_categories').select('loyverse_id, name'),
       supabase.from('loyverse_items').select('loyverse_id, item_name, category_id, variants, image_url').is('deleted_at', null),
@@ -188,6 +229,7 @@ export default function POS({ session }) {
   }, [session])
 
   const esAdmin = perfil?.rol === 'admin'
+  const esCajero = perfil?.rol === 'cajero'
 
   const productosFiltrados = useMemo(() => {
     const q = busqueda.trim().toLowerCase()
@@ -377,19 +419,28 @@ export default function POS({ session }) {
     setMostrarCarritoMobile(false)
   }
 
-  if (!esAdmin && perfil) {
+  if (perfil && !esAdmin && !esCajero) {
     return (
-      <POSChrome perfil={perfil} kiosko={kiosko}>
+      <POSChrome perfil={perfil} kiosko={kiosko} turno={turno}>
         <Head><title>POS · Julia Bakery</title></Head>
         <div className="p-8 text-center text-sm text-gray-500">
-          Solo administradores pueden emitir facturas desde el POS.
+          Solo administradores o cajeros pueden emitir facturas desde el POS.
         </div>
       </POSChrome>
     )
   }
 
+  // Cajero sin turno cargado todavia (esperando redirect a /abrir-caja)
+  if (esCajero && !turnoCargado) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 text-sm text-gray-400">
+        Verificando turno...
+      </div>
+    )
+  }
+
   return (
-    <POSChrome perfil={perfil} kiosko={kiosko}>
+    <POSChrome perfil={perfil} kiosko={kiosko} turno={turno}>
       <Head><title>Punto de Venta · Julia Bakery</title></Head>
 
       {/* Overlay mientras se esta autorizando la tarjeta con NeoPOS */}

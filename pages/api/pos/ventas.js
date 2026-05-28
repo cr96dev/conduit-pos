@@ -40,19 +40,30 @@
 //       Esto entra al indice pendiente_idx para manejo manual (anular en
 //       Neonet o esperar reversal).
 
-import { requireAdmin } from '../../../lib/auth'
+import { requireAdminOCajero } from '../../../lib/auth'
 import { crearCliente, InfileError, frasesDesdeConfig } from '../../../lib/infile/client'
 import { construirDteFactura } from '../../../lib/infile/construirDte'
 import { generarAsientoVentaPos } from '../../../lib/contabilidad/generador'
 import { explotarPlan } from '../../../lib/produccion'
+import { turnoAbiertoDeCajero } from '../../../lib/turnos/helpers'
 
 const round2 = (n) => Math.round((Number(n) + Number.EPSILON) * 100) / 100
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' })
 
-  const auth = await requireAdmin(req)
+  const auth = await requireAdminOCajero(req)
   if (auth.error) return res.status(auth.status).json({ error: auth.error })
+
+  // Si es cajero, exige turno abierto. La factura quedara ligada al turno.
+  let turnoId = null
+  if (auth.perfil.rol === 'cajero') {
+    const turno = await turnoAbiertoDeCajero(auth.admin, auth.user.id)
+    if (!turno) {
+      return res.status(403).json({ error: 'Necesitás abrir caja antes de vender' })
+    }
+    turnoId = turno.id
+  }
 
   const body = req.body || {}
   const { items, receptor = {}, metodo_pago, notas, frases, neonet_resultado } = body
@@ -217,6 +228,7 @@ export default async function handler(req, res) {
       metodo_pago,
       estado: 'borrador',
       origen_tipo: 'pos_propio',
+      turno_id: turnoId,
       notas: notas || null,
       creado_por: auth.user.id,
     })

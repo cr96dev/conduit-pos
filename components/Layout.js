@@ -23,6 +23,7 @@ const _restoItems = [
   { href: '/facturacion',   label: 'Facturación',   icon: 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z' },
   { href: '/bancos',        label: 'Bancos',        icon: 'M4 10h16M5 6l7-3 7 3M4 10v10h16V10M9 14h6m-6 4h6' },
   { href: '/pos',           label: 'Punto de Venta', icon: 'M3 3h18v4H3zM3 11h18M3 7v14h18V7M8 11v10m8-10v10' },
+  { href: '/cajeros',       label: 'Cajeros',       icon: 'M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z' },
 ].sort((a, b) => a.label.localeCompare(b.label, 'es', { sensitivity: 'base' }))
 
 const navItems = [_itemInicio, ..._restoItems]
