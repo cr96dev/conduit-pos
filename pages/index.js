@@ -42,7 +42,7 @@ export default function Login({ session }) {
             <label className="block text-xs text-gray-500 mb-1">Correo electrónico</label>
             <input type="email" value={email} onChange={e => setEmail(e.target.value)} required
               className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-blue-400 transition-colors"
-              placeholder="gerente@estacion.com" />
+              placeholder="tu-correo@juliabakery.com" />
           </div>
           <div>
             <label className="block text-xs text-gray-500 mb-1">Contraseña</label>
