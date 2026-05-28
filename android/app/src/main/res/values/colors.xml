@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Paleta basica. Para alinearse con el Manual de Marca del repo
+         habria que mapear los hex oficiales del querubin. Por ahora neutro. -->
+    <color name="brand_primary">#1F2937</color>
+    <color name="brand_accent">#2563EB</color>
+    <color name="bg">#FFFFFF</color>
+    <color name="on_bg">#0F172A</color>
+</resources>

@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Placeholder: simple "J" central. Reemplazar por el querubin oficial
+         del Manual de Marca cuando se exporten los assets correctos. -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M48,30 L48,68 Q48,76 42,76 Q36,76 36,70 L36,68 L30,68 L30,70 Q30,82 42,82 Q54,82 54,70 L54,30 Z" />
+</vector>

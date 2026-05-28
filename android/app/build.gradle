@@ -1,0 +1,62 @@
+plugins {
+    id 'com.android.application'
+    id 'org.jetbrains.kotlin.android'
+    id 'org.jetbrains.kotlin.plugin.serialization' version '1.9.24'
+}
+
+android {
+    namespace 'com.juliabakery.pos'
+    compileSdk 34
+
+    defaultConfig {
+        applicationId "com.juliabakery.pos"
+        minSdk 24                 // Android 7.0 — Sunmi D3 Mini ship con 7.1+
+        targetSdk 34
+        versionCode 1
+        versionName "0.1.0"
+
+        // URLs configurables por build type. Override en linea de comandos:
+        //   ./gradlew assembleDebug -PJULIA_BASE_URL="https://preview-foo.vercel.app"
+        def baseUrl = project.findProperty("JULIA_BASE_URL") ?: "https://julia-bakery.vercel.app"
+        buildConfigField "String", "JULIA_BASE_URL", "\"${baseUrl}\""
+        buildConfigField "String", "JULIA_POS_PATH", "\"/pos\""
+    }
+
+    buildTypes {
+        debug {
+            // Permite ver console.log() en logcat para debug.
+            buildConfigField "boolean", "WEBVIEW_DEBUG", "true"
+        }
+        release {
+            buildConfigField "boolean", "WEBVIEW_DEBUG", "false"
+            minifyEnabled false       // sin obfuscacion por ahora (debug-friendly)
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+    }
+
+    buildFeatures {
+        buildConfig true
+        viewBinding true
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+    kotlinOptions {
+        jvmTarget = '17'
+    }
+}
+
+dependencies {
+    implementation 'androidx.core:core-ktx:1.13.1'
+    implementation 'androidx.appcompat:appcompat:1.7.0'
+    implementation 'com.google.android.material:material:1.12.0'
+    implementation 'androidx.activity:activity-ktx:1.9.0'
+    implementation 'androidx.lifecycle:lifecycle-runtime-ktx:2.8.2'
+
+    // Webview no necesita dependencia explicita en moderno Android.
+
+    // JSON parsing — KMM Kotlin serialization. Liviano.
+    implementation 'org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.3'
+}
