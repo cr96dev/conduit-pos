@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase'
 import Layout from '../components/Layout'
 import { SkeletonRow } from '../components/Skeleton'
 import ImportarCSV from '../components/ImportarCSV'
+import { calcularProvisiones } from '../lib/planillas'
 
 // ============================================================================
 // Helpers
@@ -129,6 +130,7 @@ function TabPersonal({ esAdmin }) {
       {err && <div className="bg-red-50 border border-red-100 rounded-lg px-3 py-2 text-xs text-red-700 mb-3">{err}</div>}
 
       <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
+        <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead className="bg-gray-50">
             <tr>
@@ -169,6 +171,7 @@ function TabPersonal({ esAdmin }) {
             ))}
           </tbody>
         </table>
+        </div>
       </div>
 
       {modal?.tipo !== 'importar' && modal && (
@@ -245,8 +248,12 @@ function ModalEmpleado({ empleado, onClose, onSaved }) {
   function set(k, v) { setF(p => ({ ...p, [k]: v })) }
 
   const sal = Number(f.salario_mensual) || 0
-  const previewQuincenal = sal / 2
-  const previewIgss = (sal * 0.0483) / 2
+  // Las provisiones (sal/2, bono14, aguinaldo, vacaciones, igss, IRTRA, INTECAP,
+  // indemnización) usan la misma función pura que la API al guardar — asegura
+  // que el preview matchea el costo_patronal_quincenal que se persiste.
+  const previewProv = useMemo(() => calcularProvisiones(sal), [sal])
+  const previewQuincenal = previewProv.salario_quincenal
+  const previewIgss = previewProv.igss_empleado_quincenal
   const previewLiquido = previewQuincenal - previewIgss + (Number(f.bonificacion_quincenal) || 0)
 
   async function guardar(e) {
@@ -328,7 +335,7 @@ function ModalEmpleado({ empleado, onClose, onSaved }) {
             <div className="flex justify-between"><span className="text-gray-500">Salario quincenal:</span><span className="tabular-nums font-medium">{formatMoney(previewQuincenal)}</span></div>
             <div className="flex justify-between"><span className="text-gray-500">IGSS empleado (4.83%):</span><span className="tabular-nums text-red-600">- {formatMoney(previewIgss)}</span></div>
             <div className="flex justify-between text-gray-700 border-t border-gray-200 pt-1 mt-1"><span>Líquido aproximado:</span><span className="tabular-nums font-semibold">{formatMoney(previewLiquido)}</span></div>
-            <div className="flex justify-between text-gray-400"><span>Costo patronal quincenal:</span><span className="tabular-nums">{formatMoney(sal / 2 + (sal / 24) * 3 + sal * 0.1067 + sal * 0.01 * 2 + sal * 0.0972)}</span></div>
+            <div className="flex justify-between text-gray-400"><span>Costo patronal quincenal:</span><span className="tabular-nums">{formatMoney(previewProv.costo_patronal_quincenal)}</span></div>
           </div>
         )}
 

@@ -20,7 +20,11 @@ const MESES = ['', 'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio
 
 function formatFechaCorta(s) {
   if (!s) return '—'
-  return new Date(s).toLocaleDateString('es-GT', { day: 'numeric', month: 'short', year: 'numeric' })
+  // Si llega como 'YYYY-MM-DD' (date sin hora), interpretarlo como mediodia GT
+  // para evitar el off-by-one que daria new Date('2026-05-21') = 00:00 UTC =
+  // 18:00 GT del dia anterior, lo cual hace que toLocaleDateString muestre "20 may".
+  const safe = typeof s === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(s) ? s + 'T12:00:00' : s
+  return new Date(safe).toLocaleDateString('es-GT', { day: 'numeric', month: 'short', year: 'numeric' })
 }
 
 // ============================================================================

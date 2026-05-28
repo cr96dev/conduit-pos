@@ -1,50 +1,49 @@
 // pages/terms.js
-// Terms of Service / EULA para Hidrocom QBO Integrator
+// Terminos de Uso de la plataforma interna de operaciones de Julia Bakery.
 
 export default function Terms() {
   return (
     <div style={{ maxWidth: 800, margin: '40px auto', padding: 24, fontFamily: 'system-ui, sans-serif', lineHeight: 1.6, color: '#1f2937' }}>
-      <h1>Terms of Service / End User License Agreement</h1>
-      <p><strong>Last updated:</strong> May 12, 2026</p>
+      <h1>Términos de Uso</h1>
+      <p><strong>Última actualización:</strong> 27 de mayo de 2026</p>
 
-      <h2>1. Acceptance</h2>
-      <p>By using the Hidrocom QBO Integrator (the &quot;Application&quot;), you agree to these Terms of Service. This Application is owned and operated by Hidrocom S.A. (NIT 103183841), Guatemala.</p>
+      <h2>1. Aceptación</h2>
+      <p>Al utilizar la plataforma interna de operaciones de Julia Bakery (la &quot;Aplicación&quot;), el usuario acepta estos Términos de Uso. La Aplicación es operada por Julia Bakery, Ciudad de Guatemala.</p>
 
-      <h2>2. Purpose</h2>
-      <p>The Application is an internal integration tool designed to synchronize sales data between Hidrocom&apos;s internal operations platform (GasOps) and QuickBooks Online. The Application is intended for exclusive use by Hidrocom S.A. employees and authorized personnel.</p>
+      <h2>2. Propósito</h2>
+      <p>La Aplicación es una herramienta interna para administrar las operaciones diarias del negocio: ventas, inventario, recetas, producción, compras, planillas, contabilidad y facturación electrónica. Está destinada al uso exclusivo del personal autorizado de Julia Bakery.</p>
 
-      <h2>3. License</h2>
-      <p>Hidrocom S.A. grants authorized personnel a non-transferable, non-exclusive license to use the Application solely for the purpose of internal accounting operations.</p>
+      <h2>3. Licencia de uso</h2>
+      <p>Julia Bakery concede al personal autorizado una licencia no transferible y no exclusiva para utilizar la Aplicación con el único fin de realizar las tareas operativas y administrativas del negocio.</p>
 
-      <h2>4. Restrictions</h2>
-      <p>Users may not:</p>
+      <h2>4. Restricciones</h2>
+      <p>El usuario no puede:</p>
       <ul>
-        <li>Use the Application for any purpose other than its intended internal use</li>
-        <li>Share access credentials with unauthorized parties</li>
-        <li>Modify, reverse engineer, or distribute the Application</li>
-        <li>Use the Application in any manner that could damage or impair its functionality</li>
+        <li>Usar la Aplicación para fines distintos al uso interno previsto.</li>
+        <li>Compartir las credenciales de acceso con personas no autorizadas.</li>
+        <li>Modificar, hacer ingeniería inversa o distribuir la Aplicación.</li>
+        <li>Usar la Aplicación de forma que pueda dañar o afectar su funcionamiento.</li>
       </ul>
 
-      <h2>5. Data Handling</h2>
-      <p>All data accessed through the Application is governed by our Privacy Policy. The Application accesses QuickBooks Online data through official Intuit APIs using OAuth 2.0 authentication.</p>
+      <h2>5. Manejo de datos</h2>
+      <p>El manejo de los datos accedidos por la Aplicación se rige por la Política de Privacidad. Las integraciones con servicios externos (Loyverse POS, QuickBooks Online, certificador FEL) operan exclusivamente con las cuentas propias de Julia Bakery, autenticadas vía OAuth 2.0 o credenciales de API equivalentes.</p>
 
-      <h2>6. Disclaimer of Warranties</h2>
-      <p>The Application is provided &quot;as is&quot; without warranty of any kind. While we strive for accuracy, users are responsible for verifying all synchronized data.</p>
+      <h2>6. Renuncia de garantías</h2>
+      <p>La Aplicación se entrega &quot;tal cual&quot;, sin garantía de ningún tipo. Los usuarios son responsables de verificar la información generada (totales contables, declaraciones fiscales, planillas) antes de presentarla o utilizarla con efectos legales.</p>
 
-      <h2>7. Limitation of Liability</h2>
-      <p>Hidrocom S.A. shall not be liable for any indirect, incidental, or consequential damages arising from the use of the Application.</p>
+      <h2>7. Limitación de responsabilidad</h2>
+      <p>Julia Bakery no será responsable por daños indirectos, incidentales o consecuentes derivados del uso de la Aplicación.</p>
 
-      <h2>8. Termination</h2>
-      <p>Hidrocom S.A. reserves the right to terminate access to the Application at any time, with or without cause.</p>
+      <h2>8. Terminación</h2>
+      <p>Julia Bakery se reserva el derecho de terminar el acceso a la Aplicación en cualquier momento, con o sin causa.</p>
 
-      <h2>9. Governing Law</h2>
-      <p>These Terms are governed by the laws of the Republic of Guatemala. Any disputes shall be resolved in the courts of Guatemala City.</p>
+      <h2>9. Ley aplicable</h2>
+      <p>Estos Términos se rigen por las leyes de la República de Guatemala. Cualquier disputa será resuelta en los tribunales de la Ciudad de Guatemala.</p>
 
-      <h2>10. Contact</h2>
-      <p>For questions about these Terms:<br/>
-      Hidrocom S.A.<br/>
-      NIT: 103183841<br/>
-      Email: shelloakland@hidrocom.net</p>
+      <h2>10. Contacto</h2>
+      <p>Para preguntas sobre estos Términos:<br/>
+      Julia Bakery<br/>
+      Ciudad de Guatemala, Guatemala</p>
     </div>
   )
 }
