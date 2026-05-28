@@ -12,15 +12,33 @@
 //     metodo_pago: 'efectivo'|'tarjeta'|'transferencia'|'pedidos_ya'|'otro',
 //     notas?,
 //     frases?: [{ escenario, tipo }, ...]              // override para emisores agente retencion
+//     // Si metodo_pago === 'tarjeta', REQUERIDO el resultado de la
+//     // autorizacion Neonet ya capturado por el bridge NeoPOS / mock:
+//     neonet_resultado?: {
+//       idsale,                        // generado por el front antes del Intent
+//       amount_cents,                  // monto autorizado en centavos
+//       respuesta_lector: { ... },     // shape identico al manual NeoPos
+//       origen: 'mock'|'sandbox'|'prod'
+//     }
 //   }
 //
 // Flujo:
 //   1. Validar entrada.
-//   2. Crear facturas_fel (estado='borrador') + facturas_fel_items.
-//   3. Cargar config_fel; construir XML; firmar+certificar con Infile.
-//   4a. Si certifica OK: marcar factura certificada, llamar RPC
-//       pos_descontar_inventario, descontar insumos opt-in, asiento.
-//   4b. Si certificación falla: borrar borrador, devolver error claro.
+//   2. Si tarjeta: validar neonet_resultado.respuesta_lector.approved === 'true'.
+//      Si no aprobado, 400 con detalle.
+//   3. Si tarjeta: INSERT en neonet_transacciones (factura_id=NULL) ANTES
+//      de tocar facturas_fel. Esto captura el cobro real aunque despues
+//      todo el resto falle (caso pendiente_idx).
+//   4. Crear facturas_fel (estado='borrador') + facturas_fel_items.
+//   5. Cargar config_fel; construir XML; firmar+certificar con Infile.
+//   6a. Si certifica OK: marcar factura certificada. Si tarjeta: UPDATE
+//       neonet_transacciones.factura_id = factura.id (vinculo final).
+//       Llamar RPC pos_descontar_inventario, descontar insumos opt-in,
+//       asiento.
+//   6b. Si certificación falla: borrar borrador FEL.
+//       Si tarjeta: dejar neonet_transacciones tal cual (factura_id=NULL).
+//       Esto entra al indice pendiente_idx para manejo manual (anular en
+//       Neonet o esperar reversal).
 
 import { requireAdmin } from '../../../lib/auth'
 import { crearCliente, InfileError, frasesDesdeConfig } from '../../../lib/infile/client'
@@ -37,7 +55,7 @@ export default async function handler(req, res) {
   if (auth.error) return res.status(auth.status).json({ error: auth.error })
 
   const body = req.body || {}
-  const { items, receptor = {}, metodo_pago, notas, frases } = body
+  const { items, receptor = {}, metodo_pago, notas, frases, neonet_resultado } = body
 
   // ===== Validación =====
   if (!Array.isArray(items) || items.length === 0) {
@@ -46,6 +64,45 @@ export default async function handler(req, res) {
   const METODOS = new Set(['efectivo', 'tarjeta', 'transferencia', 'pedidos_ya', 'otro'])
   if (!METODOS.has(metodo_pago)) {
     return res.status(400).json({ error: 'metodo_pago invalido (efectivo|tarjeta|transferencia|pedidos_ya|otro)' })
+  }
+
+  // ===== Validación Neonet si metodo_pago = tarjeta =====
+  // El frontend del POS DEBE haber capturado la autorización via Intent
+  // (Sunmi prod) o mock (desarrollo) antes de llamarnos. Acá solo validamos
+  // y persistimos.
+  let neonetParsed = null
+  if (metodo_pago === 'tarjeta') {
+    if (!neonet_resultado || typeof neonet_resultado !== 'object') {
+      return res.status(400).json({ error: 'tarjeta requiere neonet_resultado del bridge NeoPOS' })
+    }
+    const { idsale, amount_cents, respuesta_lector, origen } = neonet_resultado
+    if (!idsale || typeof idsale !== 'string') {
+      return res.status(400).json({ error: 'neonet_resultado.idsale requerido' })
+    }
+    if (!Number.isFinite(Number(amount_cents)) || Number(amount_cents) <= 0) {
+      return res.status(400).json({ error: 'neonet_resultado.amount_cents debe ser entero > 0' })
+    }
+    if (!respuesta_lector || typeof respuesta_lector !== 'object') {
+      return res.status(400).json({ error: 'neonet_resultado.respuesta_lector requerido' })
+    }
+    // El manual NeoPOS usa strings 'true'/'false' en `approved` (no booleano).
+    // Aceptamos ambas formas por defensa.
+    const approvedRaw = respuesta_lector.approved
+    const approved = approvedRaw === true || approvedRaw === 'true' || approvedRaw === '1'
+    if (!approved) {
+      return res.status(400).json({
+        error: 'Neonet rechazó la autorización — no se crea factura',
+        response_code: respuesta_lector.response_code,
+        response_message: respuesta_lector.response_message,
+      })
+    }
+    const validOrigen = ['mock', 'sandbox', 'prod'].includes(origen) ? origen : 'mock'
+    neonetParsed = {
+      idsale,
+      amount_cents: Math.round(Number(amount_cents)),
+      respuesta_lector,
+      origen: validOrigen,
+    }
   }
   for (const [i, it] of items.entries()) {
     if (!it.descripcion?.trim()) return res.status(400).json({ error: `item ${i + 1}: descripcion requerida` })
@@ -66,6 +123,51 @@ export default async function handler(req, res) {
   if (!config) return res.status(400).json({ error: 'No hay config_fel. Configurá emisor en /configuracion-fel.' })
   for (const k of ['nit_emisor', 'nombre_comercial', 'infile_alias_firma', 'infile_llave_firma', 'infile_llave_cert']) {
     if (!config[k]) return res.status(400).json({ error: `Falta ${k} en config_fel` })
+  }
+
+  // ===== 0. Si tarjeta: persistir neonet_transacciones ANTES de la factura =====
+  // Captura el cobro real aunque la certificacion FEL falle despues.
+  // Si la certificacion falla, factura_id queda NULL y entra al indice
+  // pendiente_idx para manejo manual (anular en Neonet o esperar reversal).
+  let neonetTransaccionId = null
+  if (neonetParsed) {
+    const rl = neonetParsed.respuesta_lector || {}
+    const { data: insRow, error: nErr } = await auth.admin
+      .from('neonet_transacciones')
+      .insert({
+        idsale:             neonetParsed.idsale,
+        tipo:               'sale',
+        terminal_id:        rl.terminalId || null,
+        card_acq_id:        rl.cardAcqId || null,
+        amount_cents:       neonetParsed.amount_cents,
+        approved:           true,
+        response_code:      rl.response_code || null,
+        response_message:   rl.response_message || null,
+        authorization_code: rl.authorization_code || null,
+        retrieval_no:       rl.retrieval_no || null,
+        voucher_code:       rl.voucher_code || null,
+        suggested_nit:      rl.suggested_nit || null,
+        pan_masked:         rl.panPci || null,
+        card_holder_name:   rl.cardHolderName || null,
+        pos_entry_mode:     rl.posEntryMode || null,
+        origen:             neonetParsed.origen,
+        factura_id:         null,
+        raw_response:       rl,
+        created_by:         auth.user.id,
+      })
+      .select('id').single()
+    if (nErr) {
+      // 23505 = unique_violation sobre idsale -> doble click.
+      if (nErr.code === '23505') {
+        return res.status(409).json({
+          ok: false, etapa: 'neonet_duplicate_idsale',
+          error: 'Ya existe una transacción Neonet con ese idsale. ¿Doble click?',
+          idsale: neonetParsed.idsale,
+        })
+      }
+      return res.status(500).json({ ok: false, etapa: 'neonet_persist', error: nErr.message })
+    }
+    neonetTransaccionId = insRow.id
   }
 
   // ===== Calcular totales =====
@@ -192,7 +294,18 @@ export default async function handler(req, res) {
     return res.status(207).json({
       ok: true, certificada: true, warning: 'Certifico Infile pero fallo UPDATE local: ' + updErr.message,
       uuid: cert.uuid, serie: cert.serie, numero: cert.numero,
+      neonet_transaccion_id: neonetTransaccionId,  // sigue sin factura_id (pendiente)
     })
+  }
+
+  // ===== 3b. Si tarjeta: vincular neonet_transaccion con la factura =====
+  // Cierra el caso "feliz" — sale del indice pendiente_idx.
+  // Si este UPDATE falla, no abortamos: la conciliacion via idsale sigue
+  // funcionando; solo queda como pendiente en el indice (manejo manual).
+  if (neonetTransaccionId) {
+    await auth.admin.from('neonet_transacciones')
+      .update({ factura_id: facturaCert.id })
+      .eq('id', neonetTransaccionId)
   }
 
   // ===== 4. Descuento PT (atomico via RPC) =====
@@ -273,6 +386,14 @@ export default async function handler(req, res) {
     },
     descuento,
     asiento,
+    // Solo si la venta fue con tarjeta:
+    neonet: neonetParsed ? {
+      transaccion_id: neonetTransaccionId,
+      authorization_code: neonetParsed.respuesta_lector.authorization_code,
+      voucher_code: neonetParsed.respuesta_lector.voucher_code,
+      pan_masked: neonetParsed.respuesta_lector.panPci,
+      origen: neonetParsed.origen,
+    } : null,
   })
 }
 

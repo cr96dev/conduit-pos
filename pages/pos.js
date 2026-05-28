@@ -20,6 +20,51 @@ async function apiFetch(path, opts = {}) {
 
 const fmtQ = (n) => 'Q ' + Number(n || 0).toLocaleString('es-GT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 
+// Genera un idsale corto (8 hex chars) — sirve para correlacionar la venta
+// con la respuesta del Intent NeoPOS, y como UNIQUE en neonet_transacciones
+// (previene duplicados por doble-click).
+function generarIdsale() {
+  const u = (typeof crypto !== 'undefined' && crypto.randomUUID) ? crypto.randomUUID() : Math.random().toString(36)
+  return u.replace(/-/g, '').slice(0, 12)
+}
+
+// Cobra una tarjeta a traves de:
+//  - window.JuliaPOS.startSale(...)        cuando la app corre dentro del
+//                                          wrapper Android en el Sunmi
+//  - /api/neonet/mock-sale                 en desktop / desarrollo sin Sunmi
+//
+// Devuelve { ok, respuesta_lector, error_message?, origen }.
+async function cobrarTarjetaNeonet({ idsale, amountCents }) {
+  // Path A: bridge nativo (Sunmi)
+  if (typeof window !== 'undefined' && window.JuliaPOS && typeof window.JuliaPOS.startSale === 'function') {
+    try {
+      // El bridge devuelve directamente el JSON de la NeoPOS App.
+      // Esperamos que retorne una Promise resolve con { respuesta_lector } o reject.
+      const out = await window.JuliaPOS.startSale({ idsale, amount_cents: amountCents })
+      if (!out || !out.respuesta_lector) {
+        return { ok: false, error_message: 'Bridge devolvio respuesta vacia', origen: 'prod' }
+      }
+      return { ok: true, respuesta_lector: out.respuesta_lector, origen: 'prod' }
+    } catch (e) {
+      return { ok: false, error_message: e?.message || 'Error en bridge NeoPOS', origen: 'prod' }
+    }
+  }
+  // Path B: fallback al mock (desarrollo desktop)
+  try {
+    const r = await apiFetch('/api/neonet/mock-sale', {
+      method: 'POST',
+      body: JSON.stringify({ idsale, amount_cents: amountCents }),
+    })
+    const json = await r.json()
+    if (!r.ok || !json.ok) {
+      return { ok: false, error_message: json.error_message || json.error || 'Mock rechazo', origen: 'mock' }
+    }
+    return { ok: true, respuesta_lector: json.respuesta_lector, origen: 'mock' }
+  } catch (e) {
+    return { ok: false, error_message: e?.message || 'Error llamando al mock', origen: 'mock' }
+  }
+}
+
 const METODOS_PAGO = [
   { id: 'efectivo',      label: 'Efectivo' },
   { id: 'tarjeta',       label: 'Tarjeta' },
@@ -70,6 +115,9 @@ export default function POS({ session }) {
   const [nitMsg, setNitMsg] = useState(null)        // 'NIT no encontrado en RTU' o null
   const [err, setErr] = useState(null)
   const [mostrarCarritoMobile, setMostrarCarritoMobile] = useState(false)
+  // Fase de autorización Neonet (cuando metodoPago='tarjeta' y estamos
+  // esperando respuesta del bridge / mock). { idsale, monto } o null.
+  const [neonetFase, setNeonetFase] = useState(null)
   // Memoria del ultimo NIT consultado para no repetir el call al RTU si el
   // usuario sale del input y vuelve sin cambiar.
   const ultimoNitConsultado = useRef('')
@@ -202,6 +250,52 @@ export default function POS({ session }) {
     if (carrito.length === 0) { setErr('Carrito vacío'); return }
     if (receptor.nit !== 'CF' && !receptor.nombre.trim()) { setErr('Nombre del receptor requerido (o usá CF)'); return }
     setEnviando(true)
+
+    // Si es tarjeta, primero autorizar con Neonet (bridge Sunmi en prod, mock en desktop).
+    // Si rechaza, abortar antes de tocar el FEL.
+    let neonet_resultado = null
+    if (metodoPago === 'tarjeta') {
+      const amountCents = Math.round(totales.total * 100)
+      if (amountCents <= 0) {
+        setEnviando(false); setErr('Monto inválido para tarjeta')
+        return
+      }
+      const idsale = generarIdsale()
+      setNeonetFase({ idsale, monto: totales.total })
+      try {
+        const r = await cobrarTarjetaNeonet({ idsale, amountCents })
+        setNeonetFase(null)
+        if (!r.ok) {
+          setEnviando(false)
+          setErr(`Cobro con tarjeta no autorizado: ${r.error_message || 'sin detalle'}`)
+          return
+        }
+        // Si el tarjetahabiente tiene NIT en RTU y el receptor sigue siendo CF,
+        // ofrecer usarlo (el usuario confirma — no auto-cambia para evitar fraude).
+        const sugerido = r.respuesta_lector.suggested_nit
+        if (sugerido && receptor.nit === 'CF') {
+          if (confirm(`La tarjeta tiene NIT ${sugerido} registrado. ¿Facturar a ese NIT en vez de Consumidor Final?`)) {
+            setReceptor(rec => ({ ...rec, nit: sugerido, nombre: '' }))
+            // Disparamos consulta de RTU para autocompletar nombre. Como es
+            // sincrono no podemos esperar acá; el usuario verá la sugerencia
+            // de nombre cuando el endpoint responda. Igual avanzamos con el flow.
+            consultarNit(sugerido)
+          }
+        }
+        neonet_resultado = {
+          idsale,
+          amount_cents: amountCents,
+          respuesta_lector: r.respuesta_lector,
+          origen: r.origen,
+        }
+      } catch (e) {
+        setNeonetFase(null)
+        setEnviando(false)
+        setErr(`Error al autorizar tarjeta: ${e?.message || e}`)
+        return
+      }
+    }
+
     const body = {
       items: carrito.map(l => ({
         variant_id: l.variant_id,
@@ -214,6 +308,7 @@ export default function POS({ session }) {
       })),
       receptor,
       metodo_pago: metodoPago,
+      ...(neonet_resultado ? { neonet_resultado } : {}),
     }
     const res = await apiFetch('/api/pos/ventas', { method: 'POST', body: JSON.stringify(body) })
     const json = await res.json()
@@ -249,6 +344,23 @@ export default function POS({ session }) {
   return (
     <Layout perfil={perfil}>
       <Head><title>Punto de Venta · Julia Bakery</title></Head>
+
+      {/* Overlay mientras se esta autorizando la tarjeta con NeoPOS */}
+      {neonetFase && (
+        <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-sm w-full p-6 text-center">
+            <div className="w-12 h-12 mx-auto mb-4 border-4 border-julia-cream border-t-julia-red rounded-full animate-spin"></div>
+            <h2 className="text-base font-semibold text-gray-900 mb-1">Procesando tarjeta</h2>
+            <p className="text-2xl font-bold text-julia-red tabular-nums my-3">{fmtQ(neonetFase.monto)}</p>
+            <p className="text-xs text-gray-500">
+              {typeof window !== 'undefined' && window.JuliaPOS
+                ? 'Insertá / acercá la tarjeta al lector y seguí las instrucciones del PIN pad.'
+                : '⚙ Modo desarrollo (mock) — no hay dispositivo real conectado.'}
+            </p>
+            <p className="text-[10px] text-gray-300 mt-3 font-mono">idsale {neonetFase.idsale}</p>
+          </div>
+        </div>
+      )}
 
       {/* Resultado de venta exitosa: pantalla completa con detalle */}
       {resultado && resultado.ok && (
@@ -446,6 +558,17 @@ function PantallaExito({ resultado, onNueva }) {
         <Row k="Receptor" v={`${f.receptor_nit} — ${f.receptor_nombre}`} />
         <Row k="Total" v={'Q ' + Number(f.total).toLocaleString('es-GT', { minimumFractionDigits: 2 })} bold />
         <Row k="Método pago" v={f.metodo_pago} />
+        {resultado.neonet && (
+          <>
+            <hr className="border-gray-200" />
+            <Row k="Tarjeta" v={<span className="font-mono">{resultado.neonet.pan_masked || '—'}</span>} />
+            <Row k="Autorización" v={<span className="font-mono">{resultado.neonet.authorization_code || '—'}</span>} />
+            <Row k="Voucher" v={<span className="font-mono">{resultado.neonet.voucher_code || '—'}</span>} />
+            {resultado.neonet.origen !== 'prod' && (
+              <Row k="" v={<span className="text-[10px] uppercase tracking-wide bg-amber-100 text-amber-700 px-2 py-0.5 rounded">{resultado.neonet.origen}</span>} />
+            )}
+          </>
+        )}
         <hr className="border-gray-200" />
         <Row k="UUID SAT" v={<span className="font-mono text-xs">{f.uuid_sat}</span>} />
         <Row k="Serie" v={<span className="font-mono">{f.serie_sat || '—'}</span>} />
