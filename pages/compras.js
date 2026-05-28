@@ -3,6 +3,7 @@ import { useRouter } from 'next/router'
 import { supabase } from '../lib/supabase'
 import Layout from '../components/Layout'
 import { SkeletonRow } from '../components/Skeleton'
+import SelectUnidad from '../components/SelectUnidad'
 import { factorEntre, parseUnidad, mismaUnidad } from '../lib/unidades'
 
 // ============================================================================
@@ -546,9 +547,14 @@ function ModalCompra({ proveedores, insumos, compra, onClose, onSaved }) {
                         )}
                       </td>
                       <td className="px-2 py-1">
-                        <input type="text" value={l.unidad} onChange={e => setLin(i, 'unidad', e.target.value)}
-                          className="w-full border border-gray-200 rounded px-2 py-1 text-xs"
-                          placeholder={insumoSel ? (insumoSel.unidad_compra || insumoSel.unidad) : ''} />
+                        <SelectUnidad
+                          value={l.unidad}
+                          onChange={v => setLin(i, 'unidad', v)}
+                          permitirVacio
+                          placeholder={insumoSel ? (insumoSel.unidad_compra || insumoSel.unidad) : 'unidad'}
+                          className="w-full border border-gray-200 rounded px-1 py-1 text-xs"
+                          title="Unidad en que se está recibiendo este insumo. Si difiere de la unidad base, el sistema convierte al recibir."
+                        />
                       </td>
                       <td className="px-2 py-1">
                         <input type="number" step="any" value={l.costo_unitario} onChange={e => setLin(i, 'costo_unitario', e.target.value)}

@@ -4,7 +4,8 @@ import { supabase } from '../lib/supabase'
 import Layout from '../components/Layout'
 import { SkeletonRow } from '../components/Skeleton'
 import ImportarCSV from '../components/ImportarCSV'
-import { PRESETS_UI, factorEntre, unidadesBasePorCompra } from '../lib/unidades'
+import SelectUnidad from '../components/SelectUnidad'
+import { factorEntre, unidadesBasePorCompra } from '../lib/unidades'
 
 // ============================================================================
 // Helpers
@@ -1727,49 +1728,3 @@ function formatFechaCorta(fecha) {
   return dt.toLocaleDateString('es-GT', { day: 'numeric', month: 'short' })
 }
 
-// Select de unidad con presets agrupados por categoria (peso/volumen/conteo)
-// + opcion "otra" que abre un input de texto libre (para casos como saco,
-// quintal con tamaño no estandar, caja, etc.). Cuando el value es una clave
-// conocida usa el dropdown; cuando es texto libre, usa el input.
-function SelectUnidad({ value, onChange, permitirVacio = false, placeholder = '', title }) {
-  const todasClaves = new Set([
-    ...PRESETS_UI.peso.map(p => p.value),
-    ...PRESETS_UI.volumen.map(p => p.value),
-    ...PRESETS_UI.conteo.map(p => p.value),
-  ])
-  const esEstandar = !value || todasClaves.has(value)
-  const [modoOtra, setModoOtra] = useState(!esEstandar)
-
-  function setEstandar(v) {
-    if (v === '__otra__') { setModoOtra(true); onChange(''); return }
-    setModoOtra(false)
-    onChange(v)
-  }
-
-  if (modoOtra) {
-    return (
-      <div className="flex gap-1">
-        <input type="text" value={value || ''} onChange={e => onChange(e.target.value)}
-          className="input flex-1" placeholder={placeholder || 'saco, quintal, caja…'} title={title} autoFocus />
-        <button type="button" onClick={() => { setModoOtra(false); onChange('') }}
-          className="text-xs text-gray-400 hover:text-gray-700 px-2" title="Volver a unidades estándar">↺</button>
-      </div>
-    )
-  }
-
-  return (
-    <select value={value || ''} onChange={e => setEstandar(e.target.value)} className="input" title={title}>
-      {permitirVacio && <option value="">— {placeholder || 'sin elegir'} —</option>}
-      <optgroup label="Peso">
-        {PRESETS_UI.peso.map(p => <option key={p.value} value={p.value}>{p.label}</option>)}
-      </optgroup>
-      <optgroup label="Volumen">
-        {PRESETS_UI.volumen.map(p => <option key={p.value} value={p.value}>{p.label}</option>)}
-      </optgroup>
-      <optgroup label="Conteo">
-        {PRESETS_UI.conteo.map(p => <option key={p.value} value={p.value}>{p.label}</option>)}
-      </optgroup>
-      <option value="__otra__">— otra (escribir) —</option>
-    </select>
-  )
-}
