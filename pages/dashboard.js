@@ -24,8 +24,8 @@ function gtDayRange(daysAgo = 0) {
 }
 
 function fmtQ(n) {
-  if (n == null) return 'Q 0'
-  return 'Q ' + Number(n).toLocaleString('es-GT', { minimumFractionDigits: 0, maximumFractionDigits: 0 })
+  if (n == null) return 'Q 0.00'
+  return 'Q ' + Number(n).toLocaleString('es-GT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 }
 
 function BarChart({ data }) {
@@ -111,7 +111,7 @@ export default function Dashboard({ session }) {
       .gte('receipt_date', inicio)
       .lt('receipt_date', fin)
 
-    const labelDia = ['Dom','Lun','Mar','Mie','Jue','Vie','Sab']
+    const labelDia = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb']
     const graficaData = dias.map(d => {
       const total = (semanaRows || [])
         .filter(r => r.receipt_date >= d.fromUtc && r.receipt_date < d.toUtc)
@@ -220,7 +220,7 @@ export default function Dashboard({ session }) {
         {/* Grafica 7 dias */}
         <div className="bg-white rounded-xl border border-gray-100 p-5 mb-6">
           <div className="flex items-baseline justify-between mb-4">
-            <h2 className="text-sm font-medium text-gray-700">Ultimos 7 dias</h2>
+            <h2 className="text-sm font-medium text-gray-700">Últimos 7 días</h2>
             <span className="text-xs text-gray-400">total {fmtQ(grafica.reduce((s,d) => s + d.total, 0))}</span>
           </div>
           {loading ? <div className="h-24 bg-gray-100 rounded animate-pulse"></div> : <BarChart data={grafica} />}
@@ -235,7 +235,7 @@ export default function Dashboard({ session }) {
                 {[1,2,3].map(i => <div key={i} className="h-8 bg-gray-100 rounded animate-pulse"></div>)}
               </div>
             ) : topItems.length === 0 ? (
-              <p className="text-xs text-gray-400">Sin ventas hoy todavia.</p>
+              <p className="text-xs text-gray-400">Sin ventas hoy todavía.</p>
             ) : (
               <div className="space-y-2">
                 {topItems.map((it, i) => (
@@ -253,15 +253,15 @@ export default function Dashboard({ session }) {
             )}
           </div>
 
-          {/* Ultimos recibos */}
+          {/* Últimos recibos */}
           <div className="bg-white rounded-xl border border-gray-100 p-5">
-            <h2 className="text-sm font-medium text-gray-700 mb-3">Ultimos recibos</h2>
+            <h2 className="text-sm font-medium text-gray-700 mb-3">Últimos recibos</h2>
             {loading ? (
               <div className="space-y-2">
                 {[1,2,3].map(i => <div key={i} className="h-8 bg-gray-100 rounded animate-pulse"></div>)}
               </div>
             ) : ultimos.length === 0 ? (
-              <p className="text-xs text-gray-400">Sin recibos aun.</p>
+              <p className="text-xs text-gray-400">Sin recibos aún.</p>
             ) : (
               <div className="space-y-2">
                 {ultimos.map(r => (
