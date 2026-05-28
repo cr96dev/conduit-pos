@@ -40,6 +40,29 @@ android/
 
 ## Build
 
+### Debug (iteración rápida) vs Release (instalable estable)
+
+| | Debug | Release |
+|---|---|---|
+| Firma | debug-signed (autogenerada Android) | release-signed (keystore propio) |
+| Script | `./build-apk.sh` | `./build-release.sh` |
+| Salida | `app/build/outputs/apk/debug/app-debug.apk` | `app/build/outputs/apk/release/app-release.apk` |
+| Updates limpios | ❌ pierde sesión al re-instalar | ✅ updates preservan cookies |
+| Warning Android | Sí (fuente desconocida) | Solo primera vez |
+| Para qué | Dev local rápido | Distribuir al Sunmi / Play Store |
+
+**Keystore release** (no se commitea, vive en `~/.juliabakery/julia-release.jks`):
+
+- Generado con `keytool -genkeypair -keyalg RSA -keysize 2048 -validity 9125 -alias julia-pos`
+- Password guardada en 1Password/Bitwarden bajo "Julia Bakery — Android Release Keystore"
+- DN: `CN=Julia Bakery POS, OU=POS, O=Julia Bakery, L=Guatemala City, ST=Guatemala, C=GT`
+- Cert SHA-256: `b3b6af73996b522d1fc94bf688cea55559c74ab65ecd4e47e7e594a52f96f9a2`
+- Validez: 25 años (recomendado para Play Store)
+
+⚠️ **Si perdés el keystore, la app no se puede actualizar.** Para nuevas
+instalaciones siempre podrías recrearla, pero Play Store la trataría como
+una app distinta. Backup obligatorio.
+
 ### Requisitos
 
 - JDK 17
