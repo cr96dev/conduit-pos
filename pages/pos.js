@@ -142,11 +142,12 @@ const METODOS_PAGO = [
   { id: 'otro',          label: 'Otro' },
 ]
 
-// Extrae { variant_id, item_name, variant_name, sku, price } de loyverse_items.
-function expandirVariantes(items, categorias) {
+// Extrae variants de loyverse_items + resuelve imagen con fallback a categoria.
+// categoriasInfo: { [loyverse_id]: { name, image_url } }
+function expandirVariantes(items, categoriasInfo) {
   const out = []
   for (const it of items) {
-    const cat = categorias[it.category_id] || ''
+    const catInfo = categoriasInfo[it.category_id] || { name: '', image_url: null }
     for (const v of (Array.isArray(it.variants) ? it.variants : [])) {
       if (!v?.variant_id) continue
       const stores = Array.isArray(v.stores) ? v.stores : []
@@ -158,8 +159,9 @@ function expandirVariantes(items, categorias) {
         variant_name: v.option1_value || v.option2_value || '',
         sku: v.sku || '',
         precio: price != null ? Number(price) : null,
-        image_url: it.image_url || null,
-        categoria: cat,
+        // Imagen del producto -> imagen de categoria -> null (fallback iniciales en UI)
+        image_url: it.image_url || catInfo.image_url || null,
+        categoria: catInfo.name,
       })
     }
   }
@@ -217,13 +219,18 @@ export default function POS({ session }) {
         }
       })
     Promise.all([
-      supabase.from('loyverse_categories').select('loyverse_id, name'),
+      supabase.from('loyverse_categories').select('loyverse_id, name, image_url'),
       supabase.from('loyverse_items').select('loyverse_id, item_name, category_id, variants, image_url').is('deleted_at', null),
     ]).then(([{ data: cats }, { data: its }]) => {
-      const mapCat = {}
-      for (const c of cats || []) mapCat[c.loyverse_id] = c.name
-      setCategorias(mapCat)
-      setProductos(expandirVariantes(its || [], mapCat))
+      // categoriasInfo: id -> { name, image_url } para resolver fallback de imagen
+      const categoriasInfo = {}
+      const nombresPorId = {}
+      for (const c of cats || []) {
+        categoriasInfo[c.loyverse_id] = { name: c.name, image_url: c.image_url || null }
+        nombresPorId[c.loyverse_id] = c.name
+      }
+      setCategorias(nombresPorId)  // mantiene compat con el filtro de categorías
+      setProductos(expandirVariantes(its || [], categoriasInfo))
       setCargandoCat(false)
     })
   }, [session])
