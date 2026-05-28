@@ -20,7 +20,7 @@
 // La WebAPI v1.2.0 no documenta filtros por fecha en transactiondetail, asi
 // que devolvemos el lote actual + comparamos con el dia GT en curso.
 
-import { transactionDetail, NeonetClientError, NeonetAuthError } from '../../../lib/neonet/client'
+import { transactionDetail, esRespuestaVacia, NeonetClientError, NeonetAuthError } from '../../../lib/neonet/client'
 import { requireAdmin } from '../../../lib/auth'
 import { supabaseAdmin } from '../../../lib/qbo/supabaseAdmin'
 
@@ -82,6 +82,19 @@ export default async function handler(req, res) {
   const aprobadas = (locales || []).filter(l => l.approved).length
   const pendientes_fel = (locales || []).filter(l => l.approved && !l.factura_id).length
   const sin_settlement = (locales || []).filter(l => l.approved && !l.settlement_batch).length
+
+  // Neonet respondio 200 vacio = sin movimientos en el lote.
+  if (esRespuestaVacia(payload)) {
+    return res.status(200).json({
+      ok: true,
+      sin_movimientos_en_neonet: true,
+      mensaje: 'Neonet respondio 200 sin body. Lote sin transacciones.',
+      local: { total, aprobadas, pendientes_fel, sin_settlement },
+      discrepancias: (locales || [])
+        .filter(l => l.approved && l.retrieval_no)
+        .map(l => ({ retrieval_no: l.retrieval_no, idsale: l.idsale, en_neonet: false, en_local: true })),
+    })
+  }
 
   // Cross-check: por retrieval_no si Neonet nos lo devuelve.
   const retrievalsNeonet = new Set(

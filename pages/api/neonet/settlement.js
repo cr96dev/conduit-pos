@@ -21,7 +21,7 @@
 //     settlement_date: '2026-05-28',
 //   }
 
-import { settlement, NeonetClientError, NeonetAuthError } from '../../../lib/neonet/client'
+import { settlement, esRespuestaVacia, NeonetClientError, NeonetAuthError } from '../../../lib/neonet/client'
 import { requireAdmin } from '../../../lib/auth'
 import { supabaseAdmin } from '../../../lib/qbo/supabaseAdmin'
 
@@ -71,8 +71,21 @@ export default async function handler(req, res) {
     return res.status(500).json({ ok: false, error: e.message })
   }
 
-  const batch = payload?.privateUse60 || payload?.batchNumber || ''
   const fecha = fechaGT()
+
+  // Neonet respondio 200 pero con body vacio = "no hay lote abierto".
+  // No marcamos nada como settled — solo reportamos.
+  if (esRespuestaVacia(payload)) {
+    return res.status(200).json({
+      ok: true,
+      sin_lote: true,
+      mensaje: 'Neonet respondio 200 sin body. No hay lote abierto para cerrar.',
+      settlement_date: fecha,
+      dry,
+    })
+  }
+
+  const batch = payload?.privateUse60 || payload?.batchNumber || ''
 
   if (dry) {
     return res.status(200).json({
@@ -81,6 +94,15 @@ export default async function handler(req, res) {
       settlement: payload,
       settlement_batch: batch,
       settlement_date: fecha,
+    })
+  }
+
+  if (!batch) {
+    return res.status(502).json({
+      ok: false,
+      etapa: 'sin_batch',
+      error: 'Neonet respondio con responseCode=00 pero sin privateUse60/batchNumber',
+      settlement: payload,
     })
   }
 
