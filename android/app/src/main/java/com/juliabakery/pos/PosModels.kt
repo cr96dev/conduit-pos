@@ -25,16 +25,21 @@ data class Terminal(val id: String, @SerialName("cardAcqId") val cardAcqId: Stri
 
 /**
  * Payload que la WebView pasa al bridge en startSale().
- *   { idsale: "abc123", amount_cents: 1500 }
+ *   { idsale: "abc123", amount_cents: 1500, creds: { token, merchant, terminal } }
  *
  * `amount_cents` lo recibimos en centavos (entero). El Intent del NeoPOS App
  * acepta el monto en formato string con 2 decimales (segun manual v1.1.0).
  * La conversion la hace JuliaPOSBridge.
+ *
+ * `creds` viene del fetch que pos.js hace a /api/neonet/pos-credentials con
+ * su session token de admin. El bridge nativo NO tiene contexto de auth y
+ * por eso delega el fetch al JS.
  */
 @Serializable
 data class StartSalePayload(
     val idsale: String,
     @SerialName("amount_cents") val amountCents: Long,
+    val creds: PosCredentialsResponse,
     /** Para autocompletar receptor si la tarjeta tiene NIT asociado. Opcional. */
     @SerialName("client_name") val clientName: String? = null,
 )

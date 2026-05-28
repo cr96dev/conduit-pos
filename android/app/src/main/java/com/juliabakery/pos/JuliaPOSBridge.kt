@@ -1,20 +1,13 @@
 package com.juliabakery.pos
 
-import android.content.Context
 import android.content.Intent
 import android.util.Log
 import android.webkit.JavascriptInterface
 import android.webkit.WebView
-import androidx.core.net.toUri
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
-import java.net.HttpURLConnection
-import java.net.URL
-import java.util.UUID
 
 /**
  * Puente entre la WebView (Julia Bakery POS) y el Intent del NeoPOS App.
@@ -41,7 +34,6 @@ import java.util.UUID
  * en MainActivity.
  */
 class JuliaPOSBridge(
-    private val context: Context,
     private val webView: WebView,
     private val scope: CoroutineScope,
     private val onLaunchIntent: (Intent, String) -> Unit,
@@ -51,19 +43,18 @@ class JuliaPOSBridge(
 
     /**
      * Llamado desde JS: window.__JuliaPOSNative.startSale(payloadJson, callbackId).
-     * Sincronico desde el punto de vista de JS — pero internamente lanza una
-     * coroutine que (1) pide credenciales al backend, (2) arma Intent,
-     * (3) delega a MainActivity para hacer startActivityForResult.
+     * El payload incluye `creds` (token + merchant + terminal) que el JS ya
+     * fetcho contra /api/neonet/pos-credentials con su access_token de admin.
+     * Aqui solo armamos el Intent y lo lanzamos.
      */
     @JavascriptInterface
     fun startSale(payloadJson: String, callbackId: String) {
-        Log.d(TAG, "startSale($callbackId) payload=$payloadJson")
+        Log.d(TAG, "startSale($callbackId)")
         pendingCallbacks[callbackId] = System.currentTimeMillis()
         scope.launch {
             try {
                 val payload = json.decodeFromString<StartSalePayload>(payloadJson)
-                val creds = fetchCredentials()
-                val intent = buildNeoPosIntent(payload, creds)
+                val intent = buildNeoPosIntent(payload, payload.creds)
                 onLaunchIntent(intent, callbackId)
             } catch (e: Exception) {
                 Log.e(TAG, "startSale failed", e)
@@ -92,34 +83,6 @@ class JuliaPOSBridge(
     }
 
     // ---------- privados ----------
-
-    /** Fetch sync (en IO dispatcher) de /api/neonet/pos-credentials.
-     *  Usa cookies de la WebView para autenticarse (sesion Supabase). */
-    private suspend fun fetchCredentials(): PosCredentialsResponse = withContext(Dispatchers.IO) {
-        val baseUrl = BuildConfig.JULIA_BASE_URL
-        val url = URL("$baseUrl/api/neonet/pos-credentials")
-        val conn = (url.openConnection() as HttpURLConnection).apply {
-            requestMethod = "POST"
-            setRequestProperty("Accept", "application/json")
-            connectTimeout = 8_000
-            readTimeout = 8_000
-        }
-        // Reusa las cookies de la WebView (Supabase auth).
-        val cookies = android.webkit.CookieManager.getInstance().getCookie(baseUrl)
-        if (!cookies.isNullOrBlank()) conn.setRequestProperty("Cookie", cookies)
-
-        try {
-            val code = conn.responseCode
-            val body = (if (code in 200..299) conn.inputStream else conn.errorStream)
-                ?.bufferedReader()?.use { it.readText() } ?: ""
-            if (code !in 200..299) {
-                throw RuntimeException("pos-credentials HTTP $code: ${body.take(300)}")
-            }
-            json.decodeFromString<PosCredentialsResponse>(body)
-        } finally {
-            conn.disconnect()
-        }
-    }
 
     /**
      * Arma el Intent del NeoPOS App segun manual v1.1.0.

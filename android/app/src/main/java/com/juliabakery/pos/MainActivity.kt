@@ -125,7 +125,6 @@ class MainActivity : AppCompatActivity() {
 
         // Crear bridge (lo necesitamos antes de cargar la pagina).
         bridge = JuliaPOSBridge(
-            context = this,
             webView = binding.webview,
             scope = lifecycleScope,
             onLaunchIntent = ::launchNeoPosIntent,

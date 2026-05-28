@@ -70,11 +70,22 @@ async function cobrarTarjetaNeonet({ idsale, amountCents }) {
   // Path A: bridge nativo (Sunmi)
   if (typeof window !== 'undefined' && window.JuliaPOS && typeof window.JuliaPOS.startSale === 'function') {
     try {
+      // Fetch las credenciales del backend con el access_token del admin
+      // logueado (el bridge nativo no tiene contexto Supabase). Aca se
+      // hace en JS donde apiFetch ya pone Authorization: Bearer.
+      const cr = await apiFetch('/api/neonet/pos-credentials', { method: 'POST' })
+      const creds = await cr.json()
+      if (!cr.ok || !creds.ok) {
+        return { ok: false, error_message: creds.error || `pos-credentials HTTP ${cr.status}`, origen: 'prod' }
+      }
       // El bridge devuelve directamente el JSON de la NeoPOS App.
-      // Esperamos que retorne una Promise resolve con { respuesta_lector } o reject.
-      const out = await window.JuliaPOS.startSale({ idsale, amount_cents: amountCents })
+      const out = await window.JuliaPOS.startSale({
+        idsale,
+        amount_cents: amountCents,
+        creds,                       // { token, merchant, terminal }
+      })
       if (!out || !out.respuesta_lector) {
-        return { ok: false, error_message: 'Bridge devolvio respuesta vacia', origen: 'prod' }
+        return { ok: false, error_message: out?.error_message || 'Bridge devolvio respuesta vacia', origen: 'prod' }
       }
       return { ok: true, respuesta_lector: out.respuesta_lector, origen: 'prod' }
     } catch (e) {
