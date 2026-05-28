@@ -13,7 +13,7 @@
 
 import { requireAdmin } from '../../../../lib/auth'
 import { generarAsientoCompraRecibida } from '../../../../lib/contabilidad/generador'
-import { factorEntre, parseUnidad } from '../../../../lib/unidades'
+import { factorEntre, mismaUnidad } from '../../../../lib/unidades'
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' })
@@ -86,16 +86,9 @@ export default async function handler(req, res) {
     if (fCanonico != null) {
       factor = fCanonico
       convDesc = `${l.cantidad} ${unidadLinea} = ${(Number(l.cantidad) * factor).toFixed(2)} ${insumo.unidad}`
-    } else if (insumo.unidad_compra && cpc > 0) {
-      const uLinea  = parseUnidad(unidadLinea)
-      const uCompra = parseUnidad(insumo.unidad_compra)
-      const sameClave = (uLinea && uCompra && uLinea.clave === uCompra.clave)
-                     || (!uLinea && !uCompra
-                         && unidadLinea.toLowerCase().trim() === insumo.unidad_compra.toLowerCase().trim())
-      if (sameClave) {
-        factor = cpc
-        convDesc = `${l.cantidad} ${unidadLinea} × ${cpc} = ${(Number(l.cantidad) * factor).toFixed(2)} ${insumo.unidad}`
-      }
+    } else if (insumo.unidad_compra && cpc > 0 && mismaUnidad(unidadLinea, insumo.unidad_compra)) {
+      factor = cpc
+      convDesc = `${l.cantidad} ${unidadLinea} × ${cpc} = ${(Number(l.cantidad) * factor).toFixed(2)} ${insumo.unidad}`
     }
     const fracciona = factor !== 1
 

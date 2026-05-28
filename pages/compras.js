@@ -3,7 +3,7 @@ import { useRouter } from 'next/router'
 import { supabase } from '../lib/supabase'
 import Layout from '../components/Layout'
 import { SkeletonRow } from '../components/Skeleton'
-import { factorEntre, parseUnidad } from '../lib/unidades'
+import { factorEntre, parseUnidad, mismaUnidad } from '../lib/unidades'
 
 // ============================================================================
 // Helpers compartidos
@@ -294,6 +294,10 @@ function ModalCompra({ proveedores, insumos, compra, onClose, onSaved }) {
             cantidad: l.cantidad,
             costo_unitario: l.costo_unitario,
             unidad: l.unidad || '',
+            // Al editar una compra existente, los costos ya fueron confirmados
+            // por el usuario en su momento; tratarlos como manuales para no
+            // pisarlos si decide cambiar la unidad.
+            costoManual: true,
           })))
         })
     } else {
@@ -302,11 +306,51 @@ function ModalCompra({ proveedores, insumos, compra, onClose, onSaved }) {
   }, [edicion])
 
   function nuevaLinea() {
-    return { descripcion: '', insumo_id: '', cantidad: '', costo_unitario: '', unidad: '' }
+    return { descripcion: '', insumo_id: '', cantidad: '', costo_unitario: '', unidad: '', costoManual: false }
+  }
+
+  // Calcula el costo sugerido EN LA UNIDAD DE LA LINEA, considerando conversion.
+  // Reglas:
+  //  1. Si la unidad de la linea = unidad_compra del insumo y hay costo_compra → costo_compra.
+  //  2. Si la unidad de la linea es la unidad base del insumo → costo_unitario.
+  //  3. Si la unidad de la linea es convertible a la unidad base (mismo tipo de medida)
+  //     → costo_unitario * factor(unidadLinea → unidadBase). Ej: 1 quintal × 0.1543 Q/g × 45,359 g/quintal = Q7000.
+  //  4. Si la unidad de la linea coincide (vía parseUnidad) con unidad_compra → idem (1).
+  //  5. Si no hay forma de calcular → devuelve null para que el usuario tipee.
+  function calcularCostoSugerido(insumo, unidadLinea) {
+    if (!insumo) return null
+    const u = (unidadLinea || '').trim()
+    // (1) y (4): match con unidad_compra (vía mismaUnidad: tolera plurales,
+    // case y sinonimos lb/libra).
+    if (insumo.unidad_compra && insumo.costo_compra != null) {
+      if (mismaUnidad(u, insumo.unidad_compra)) return Number(insumo.costo_compra)
+    }
+    // (2) y (3): conversion contra unidad base
+    if (insumo.costo_unitario != null) {
+      if (!u || u === insumo.unidad) return Number(insumo.costo_unitario)
+      const f = factorEntre(u, insumo.unidad)
+      if (f != null) return Number(insumo.costo_unitario) * f
+    }
+    return null
   }
 
   function setLin(i, k, v) {
-    setLineas(ls => ls.map((l, idx) => idx === i ? { ...l, [k]: v } : l))
+    setLineas(ls => ls.map((l, idx) => {
+      if (idx !== i) return l
+      const next = { ...l, [k]: v }
+      // Si el usuario edita el costo a mano, marcamos manual para no pisarle el valor
+      // cuando cambie la unidad despues.
+      if (k === 'costo_unitario') next.costoManual = true
+      // Si cambia la unidad y el costo NO fue editado manualmente, recalcular
+      // el costo sugerido para esa nueva unidad. Esto resuelve: elijo "café" (base g),
+      // cambio unidad a "quintal" → costo se ajusta de Q0.15/g a Q7000/quintal.
+      if (k === 'unidad' && !l.costoManual && l.insumo_id) {
+        const insumo = insumos.find(x => x.id === l.insumo_id)
+        const sug = calcularCostoSugerido(insumo, v)
+        if (sug != null) next.costo_unitario = round4(sug)
+      }
+      return next
+    }))
   }
 
   function elegirInsumo(i, insumo_id) {
@@ -314,22 +358,15 @@ function ModalCompra({ proveedores, insumos, compra, onClose, onSaved }) {
     setLineas(ls => ls.map((l, idx) => {
       if (idx !== i) return l
       if (!insumo) return { ...l, insumo_id: '' }
-      // Sugerencia de unidad y costo:
-      // - Si el insumo tiene 'unidad_compra' cargada (ej. 'lb', 'saco'), la
-      //   compra normalmente viene en esa unidad => sugerirla.
-      // - Si tiene 'costo_compra' (Q por presentacion de compra), usar ese
-      //   como costo_unitario de la linea. Sino el costo_unitario por unidad
-      //   base del insumo.
+      // Unidad sugerida: respetar lo que el usuario haya tipeado; sino
+      // preferir unidad_compra del insumo; sino su unidad base.
       const unidadSugerida = l.unidad || insumo.unidad_compra || insumo.unidad
+      // Costo sugerido: SIEMPRE en la unidad de la linea (con conversion).
+      // Si el usuario habia editado el costo a mano, respetar ese valor.
       let costoSugerido = l.costo_unitario
       if (!costoSugerido) {
-        if (insumo.unidad_compra && insumo.costo_compra != null) {
-          costoSugerido = insumo.costo_compra
-        } else if (insumo.costo_unitario != null) {
-          costoSugerido = insumo.costo_unitario
-        } else {
-          costoSugerido = ''
-        }
+        const sug = calcularCostoSugerido(insumo, unidadSugerida)
+        costoSugerido = sug != null ? round4(sug) : ''
       }
       return {
         ...l,
@@ -337,9 +374,12 @@ function ModalCompra({ proveedores, insumos, compra, onClose, onSaved }) {
         descripcion: l.descripcion || insumo.nombre,
         unidad: unidadSugerida,
         costo_unitario: costoSugerido,
+        costoManual: false,
       }
     }))
   }
+
+  function round4(n) { return Math.round(Number(n) * 10000) / 10000 }
 
   const subtotal = useMemo(() => {
     return lineas.reduce((s, l) => s + (Number(l.cantidad) || 0) * (Number(l.costo_unitario) || 0), 0)
@@ -444,11 +484,7 @@ function ModalCompra({ proveedores, insumos, compra, onClose, onSaved }) {
                     if (fCan != null && fCan !== 1) {
                       entradaStock = `${(cant * fCan).toLocaleString('es-GT', { maximumFractionDigits: 2 })} ${insumoSel.unidad}`
                     } else if (fCan == null && insumoSel.unidad_compra && insumoSel.cantidad_por_unidad_compra) {
-                      const uLinea  = parseUnidad(l.unidad)
-                      const uCompra = parseUnidad(insumoSel.unidad_compra)
-                      const sameClave = (uLinea && uCompra && uLinea.clave === uCompra.clave)
-                                     || (!uLinea && !uCompra && l.unidad.toLowerCase().trim() === insumoSel.unidad_compra.toLowerCase().trim())
-                      if (sameClave) {
+                      if (mismaUnidad(l.unidad, insumoSel.unidad_compra)) {
                         const total = cant * Number(insumoSel.cantidad_por_unidad_compra)
                         entradaStock = `${total.toLocaleString('es-GT', { maximumFractionDigits: 2 })} ${insumoSel.unidad}`
                       } else {
@@ -456,6 +492,30 @@ function ModalCompra({ proveedores, insumos, compra, onClose, onSaved }) {
                       }
                     } else if (fCan == null && l.unidad !== insumoSel.unidad) {
                       entradaWarn = `unidad "${l.unidad}" no estándar → entrará como ${cant} ${insumoSel.unidad}`
+                    }
+                  }
+                  // Hint del costo sugerido para esta linea/unidad. Util cuando el
+                  // insumo solo tiene costo_unitario (Q por unidad base) y la linea
+                  // se compra en otra unidad (ej. cafe en g, compra en quintal).
+                  let costoHint = null
+                  let costoWarn = null
+                  if (insumoSel && l.unidad) {
+                    const sug = calcularCostoSugerido(insumoSel, l.unidad)
+                    const cu  = Number(l.costo_unitario)
+                    if (sug != null) {
+                      const diff = Math.abs(cu - sug) / Math.max(sug, 1e-9)
+                      // Mostrar hint solo si el costo cargado difiere >5% del sugerido
+                      // (o esta vacio) — asi no es ruido cuando ya esta correcto.
+                      if (!l.costo_unitario || diff > 0.05) {
+                        const fCan2 = factorEntre(l.unidad, insumoSel.unidad)
+                        if (fCan2 != null && fCan2 !== 1) {
+                          costoHint = `💡 Q${Number(insumoSel.costo_unitario).toFixed(4)}/${insumoSel.unidad} × ${fCan2.toLocaleString('es-GT',{maximumFractionDigits:2})} ${insumoSel.unidad}/${l.unidad} ≈ Q${sug.toFixed(2)}`
+                        } else {
+                          costoHint = `💡 sugerido ≈ Q${sug.toFixed(4)}`
+                        }
+                      }
+                    } else if (insumoSel.costo_unitario != null && l.unidad !== insumoSel.unidad) {
+                      costoWarn = `elegí la unidad correcta (${insumoSel.unidad_compra || insumoSel.unidad}) o tipeá el costo`
                     }
                   }
                   return (
@@ -493,6 +553,16 @@ function ModalCompra({ proveedores, insumos, compra, onClose, onSaved }) {
                       <td className="px-2 py-1">
                         <input type="number" step="any" value={l.costo_unitario} onChange={e => setLin(i, 'costo_unitario', e.target.value)}
                           className="w-full border border-gray-200 rounded px-2 py-1 text-xs text-right" />
+                        {costoHint && (
+                          <div className="text-[10px] text-blue-700 text-right mt-0.5 leading-tight" title="Costo estimado a partir del costo por unidad base del insumo">
+                            {costoHint}
+                          </div>
+                        )}
+                        {costoWarn && (
+                          <div className="text-[10px] text-amber-700 text-right mt-0.5 leading-tight">
+                            ⚠ {costoWarn}
+                          </div>
+                        )}
                       </td>
                       <td className="px-2 py-1 text-right tabular-nums text-gray-700">{formatMoney(sub).replace('Q ', '')}</td>
                       <td className="px-1 py-1 text-center">
