@@ -408,6 +408,43 @@ export default function POS({ session }) {
       return
     }
     setResultado(json)
+
+    // Imprimir ticket cliente en la termica del Sunmi (si esta el bridge nativo).
+    // Best-effort: si falla, la venta sigue OK; el cajero puede re-imprimir
+    // manual mas tarde.
+    try {
+      if (typeof window !== 'undefined' && window.JuliaPOS && window.JuliaPOS.printTicket) {
+        const f = json.factura
+        const payload = {
+          merchantName: 'Julia Bakery',
+          merchantSubtitle: 'Panaderia',
+          merchantAddress: 'Guatemala City',
+          merchantNit: null,  // TODO: traer de /api/fel/config en v0.3
+          receptorNit: f.receptor_nit,
+          receptorNombre: f.receptor_nombre,
+          fecha: new Date(f.fecha_certificacion || Date.now()).toLocaleString('es-GT'),
+          cajeroNombre: perfil?.nombre_completo || null,
+          metodoPago: f.metodo_pago || null,
+          items: carrito.map(l => ({
+            descripcion: l.descripcion,
+            cantidad: String(l.cantidad),
+            precioUnitario: Number(l.precio_unitario),
+            subtotal: Math.round(Number(l.cantidad) * Number(l.precio_unitario) * 100) / 100,
+          })),
+          totalGravado: Number(f.total) / 1.12,
+          iva: Number(f.iva),
+          total: Number(f.total),
+          uuidSat: f.uuid_sat,
+          serieSat: f.serie_sat,
+          numeroSat: f.numero_sat,
+          certificador: 'Infile',
+        }
+        const r = await window.JuliaPOS.printTicket(payload)
+        console.log('[POS] printTicket result:', r)
+      }
+    } catch (e) {
+      console.warn('[POS] printTicket fallo (no crashea venta):', e?.message || e)
+    }
   }
 
   function nuevaVenta() {

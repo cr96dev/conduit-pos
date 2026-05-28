@@ -37,6 +37,7 @@ class JuliaPOSBridge(
     private val webView: WebView,
     private val scope: CoroutineScope,
     private val onLaunchIntent: (Intent, String) -> Unit,
+    private val sunmiPrinter: SunmiPrinter? = null,
 ) {
     /** Map callbackId -> nada; usamos solo para distinguir "viva" de "huerfana". */
     private val pendingCallbacks = mutableMapOf<String, Long>()
@@ -80,6 +81,47 @@ class JuliaPOSBridge(
     /** Cancela un callback (ej: NeoPOS App no instalada) y notifica al JS. */
     fun rejectCallback(callbackId: String, message: String) {
         resolveJs(callbackId, StartSaleResult(ok = false, errorMessage = message))
+    }
+
+    /**
+     * Llamado desde JS: window.__JuliaPOSNative.printTicket(payloadJson, callbackId)
+     *
+     * Imprime un ticket de venta en la impresora termica integrada del Sunmi
+     * via el InnerPrinter service (woyou.aidlservice.jiuiv5).
+     *
+     * Si el device no es Sunmi (servicio no bindeado), devuelve { ok: false,
+     * errorMessage: "no_sunmi_printer" } pero no crashea la app.
+     */
+    @JavascriptInterface
+    fun printTicket(payloadJson: String, callbackId: String) {
+        Log.d(TAG, "printTicket($callbackId) len=${payloadJson.length}")
+        scope.launch {
+            val printer = sunmiPrinter
+            if (printer == null) {
+                resolveJsPrint(callbackId, PrintTicketResult(ok = false, errorMessage = "wrapper_sin_printer"))
+                return@launch
+            }
+            if (!printer.isConnected()) {
+                resolveJsPrint(callbackId, PrintTicketResult(ok = false, errorMessage = "no_sunmi_printer"))
+                return@launch
+            }
+            try {
+                val payload = json.decodeFromString<TicketPayload>(payloadJson)
+                val ok = printer.printTicket(payload)
+                resolveJsPrint(callbackId, PrintTicketResult(ok = ok,
+                    errorMessage = if (ok) null else "print_failed"))
+            } catch (e: Exception) {
+                Log.e(TAG, "printTicket parse/print failed", e)
+                resolveJsPrint(callbackId, PrintTicketResult(ok = false, errorMessage = e.message ?: "unknown"))
+            }
+        }
+    }
+
+    private fun resolveJsPrint(callbackId: String, result: PrintTicketResult) {
+        val resultJson = json.encodeToString(result)
+        val safeId = callbackId.replace("'", "")
+        val expr = "window.__JuliaPOSResolve && window.__JuliaPOSResolve('$safeId', $resultJson);"
+        webView.post { webView.evaluateJavascript(expr, null) }
     }
 
     // ---------- privados ----------

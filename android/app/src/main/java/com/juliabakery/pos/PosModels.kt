@@ -72,3 +72,16 @@ data class StartSaleResult(
     @SerialName("respuesta_lector") val respuestaLector: RespuestaLector? = null,
     @SerialName("error_message") val errorMessage: String? = null,
 )
+
+/**
+ * Resultado de printTicket(). Si ok=false:
+ *   - errorMessage="wrapper_sin_printer" -> no se instancio SunmiPrinter (no pasó por MainActivity)
+ *   - errorMessage="no_sunmi_printer"    -> bind al servicio fallo (no es Sunmi)
+ *   - errorMessage="print_failed"        -> remote exception al imprimir
+ *   - errorMessage=<otro>                -> exception JS-side (json invalido)
+ */
+@Serializable
+data class PrintTicketResult(
+    val ok: Boolean,
+    @SerialName("error_message") val errorMessage: String? = null,
+)

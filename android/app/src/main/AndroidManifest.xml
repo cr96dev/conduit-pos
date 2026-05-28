@@ -17,6 +17,11 @@
         <!-- Fallback: si Neonet cambia el package, agregar aqui tambien. -->
         <package android:name="com.visanet.pos" />
         <package android:name="com.visanet.neopos" />
+        <!-- Sunmi InnerPrinter Service (impresora termica integrada). -->
+        <intent>
+            <action android:name="woyou.aidlservice.jiuiv5.IWoyouService" />
+        </intent>
+        <package android:name="woyou.aidlservice.jiuiv5" />
     </queries>
 
     <application

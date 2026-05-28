@@ -31,6 +31,7 @@ class MainActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityMainBinding
     private lateinit var bridge: JuliaPOSBridge
+    private val sunmiPrinter = SunmiPrinter()
 
     /** Mantenemos el ultimo callbackId al lanzar el Intent. ActivityResult
      *  no nos deja pasar metadata custom; al volver, la asociamos. */
@@ -55,6 +56,18 @@ class MainActivity : AppCompatActivity() {
 
         setupWebView()
         setupNeoPosLauncher()
+
+        // Bind al InnerPrinter Sunmi (best-effort). Si falla (device no Sunmi),
+        // SunmiPrinter queda con isConnected()=false y JuliaPOS.printTicket
+        // devuelve { ok: false, errorMessage: "no_sunmi_printer" } sin crashear.
+        sunmiPrinter.bind(this) { ok ->
+            Log.i("MainActivity", "Sunmi printer bind: $ok")
+        }
+    }
+
+    override fun onDestroy() {
+        try { sunmiPrinter.unbind(this) } catch (_: Exception) {}
+        super.onDestroy()
     }
 
     private fun setupWebView() {
@@ -128,6 +141,7 @@ class MainActivity : AppCompatActivity() {
             webView = binding.webview,
             scope = lifecycleScope,
             onLaunchIntent = ::launchNeoPosIntent,
+            sunmiPrinter = sunmiPrinter,
         )
         binding.webview.addJavascriptInterface(bridge, "__JuliaPOSNative")
 
@@ -213,7 +227,7 @@ class MainActivity : AppCompatActivity() {
               }
               window.JuliaPOS = {
                 __installed: true,
-                __version: '0.1.0',
+                __version: '0.2.0',
                 startSale: function(payload){
                   return new Promise(function(resolve, reject){
                     var id = uid();
@@ -232,9 +246,38 @@ class MainActivity : AppCompatActivity() {
                       }
                     }, 90000);
                   });
+                },
+                /**
+                 * Imprime un ticket de venta en la termica del Sunmi.
+                 * payload: {
+                 *   merchantName, merchantSubtitle?, merchantAddress?, merchantNit?,
+                 *   receptorNit, receptorNombre, fecha, cajeroNombre?, metodoPago?,
+                 *   items: [{ descripcion, cantidad, precioUnitario, subtotal }, ...],
+                 *   totalGravado, iva, total,
+                 *   uuidSat?, serieSat?, numeroSat?, certificador?
+                 * }
+                 * Returns: Promise<{ ok: boolean, error_message?: string }>
+                 */
+                printTicket: function(payload){
+                  return new Promise(function(resolve, reject){
+                    var id = uid();
+                    pending[id] = { resolve: resolve, reject: reject };
+                    try {
+                      window.__JuliaPOSNative.printTicket(JSON.stringify(payload), id);
+                    } catch(e){
+                      delete pending[id];
+                      reject(e);
+                    }
+                    setTimeout(function(){
+                      if (pending[id]) {
+                        delete pending[id];
+                        reject(new Error('Timeout esperando impresion (15s)'));
+                      }
+                    }, 15000);
+                  });
                 }
               };
-              console.log('[JuliaPOS] bridge instalado v0.1.0');
+              console.log('[JuliaPOS] bridge instalado v0.2.0');
             })();
         """.trimIndent()
     }
