@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Crema calida del logo Julia Bakery (combina con #D4A574 del disco). -->
-    <color name="ic_launcher_background">#FAF1E5</color>
+    <!-- Crema oficial del Manual de Marca Julia Bakery (pagina 16: Guia de Color). -->
+    <color name="ic_launcher_background">#EFDEB3</color>
 </resources>
