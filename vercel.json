@@ -41,6 +41,9 @@
     },
     "pages/api/neonet/voucher-reprint.js": {
       "maxDuration": 60
+    },
+    "pages/api/pos/cobrar-tarjeta.js": {
+      "maxDuration": 120
     }
   }
 }

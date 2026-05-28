@@ -60,51 +60,54 @@ function generarIdsale() {
   return u.replace(/-/g, '').slice(0, 12)
 }
 
-// Cobra una tarjeta a traves de:
-//  - window.JuliaPOS.startSale(...)        cuando la app corre dentro del
-//                                          wrapper Android en el Sunmi
-//  - /api/neonet/mock-sale                 en desktop / desarrollo sin Sunmi
+// Cobra una tarjeta. Default: backend-mediado (Neonet enruta a la P5L).
+// Para testing sin P5L: agregar ?mock=1 en la URL del POS.
 //
 // Devuelve { ok, respuesta_lector, error_message?, origen }.
 async function cobrarTarjetaNeonet({ idsale, amountCents }) {
-  // Path A: bridge nativo (Sunmi)
-  if (typeof window !== 'undefined' && window.JuliaPOS && typeof window.JuliaPOS.startSale === 'function') {
+  const usarMock = typeof window !== 'undefined'
+    && new URLSearchParams(window.location.search).get('mock') === '1'
+
+  if (usarMock) {
     try {
-      // Fetch las credenciales del backend con el access_token del admin
-      // logueado (el bridge nativo no tiene contexto Supabase). Aca se
-      // hace en JS donde apiFetch ya pone Authorization: Bearer.
-      const cr = await apiFetch('/api/neonet/pos-credentials', { method: 'POST' })
-      const creds = await cr.json()
-      if (!cr.ok || !creds.ok) {
-        return { ok: false, error_message: creds.error || `pos-credentials HTTP ${cr.status}`, origen: 'prod' }
-      }
-      // El bridge devuelve directamente el JSON de la NeoPOS App.
-      const out = await window.JuliaPOS.startSale({
-        idsale,
-        amount_cents: amountCents,
-        creds,                       // { token, merchant, terminal }
+      const r = await apiFetch('/api/neonet/mock-sale', {
+        method: 'POST',
+        body: JSON.stringify({ idsale, amount_cents: amountCents }),
       })
-      if (!out || !out.respuesta_lector) {
-        return { ok: false, error_message: out?.error_message || 'Bridge devolvio respuesta vacia', origen: 'prod' }
+      const json = await r.json()
+      if (!r.ok || !json.ok) {
+        return { ok: false, error_message: json.error_message || json.error || 'Mock rechazo', origen: 'mock' }
       }
-      return { ok: true, respuesta_lector: out.respuesta_lector, origen: 'prod' }
+      return { ok: true, respuesta_lector: json.respuesta_lector, origen: 'mock' }
     } catch (e) {
-      return { ok: false, error_message: e?.message || 'Error en bridge NeoPOS', origen: 'prod' }
+      return { ok: false, error_message: e?.message || 'Error llamando al mock', origen: 'mock' }
     }
   }
-  // Path B: fallback al mock (desarrollo desktop)
+
+  // Path real: backend llama authorizationpaymentcommerce -> P5L.
+  // Esto puede tardar 30-90s mientras el cajero pasa la tarjeta.
   try {
-    const r = await apiFetch('/api/neonet/mock-sale', {
+    const r = await apiFetch('/api/pos/cobrar-tarjeta', {
       method: 'POST',
       body: JSON.stringify({ idsale, amount_cents: amountCents }),
     })
     const json = await r.json()
-    if (!r.ok || !json.ok) {
-      return { ok: false, error_message: json.error_message || json.error || 'Mock rechazo', origen: 'mock' }
+    if (!r.ok) {
+      return { ok: false, error_message: json.error_message || json.error || `Backend HTTP ${r.status}`, origen: 'prod' }
     }
-    return { ok: true, respuesta_lector: json.respuesta_lector, origen: 'mock' }
+    if (!json.ok) {
+      // Cobro rechazado por la red Visanet o por el cajero. El backend ya
+      // mapeo a respuesta_lector con response_code != '00'.
+      return {
+        ok: false,
+        error_message: json.error_message || json.respuesta_lector?.response_message || 'Tarjeta rechazada',
+        respuesta_lector: json.respuesta_lector,
+        origen: 'prod',
+      }
+    }
+    return { ok: true, respuesta_lector: json.respuesta_lector, origen: 'prod' }
   } catch (e) {
-    return { ok: false, error_message: e?.message || 'Error llamando al mock', origen: 'mock' }
+    return { ok: false, error_message: e?.message || 'Error de red llamando al backend', origen: 'prod' }
   }
 }
 
