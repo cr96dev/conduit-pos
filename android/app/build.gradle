@@ -28,6 +28,27 @@ android {
         buildConfigField "String", "JULIA_BYPASS_TOKEN", "\"${bypassToken}\""
     }
 
+    signingConfigs {
+        release {
+            // Lee credenciales del keystore desde env vars — nunca hardcoded.
+            // Las setea el script build-release.sh antes de invocar gradle.
+            //   JULIA_KEYSTORE_FILE      ruta al .jks (default: ~/.juliabakery/julia-release.jks)
+            //   JULIA_KEYSTORE_PASSWORD  contraseña del store
+            //   JULIA_KEY_ALIAS          alias del key (default: julia-pos)
+            //   JULIA_KEY_PASSWORD       contraseña del key (usualmente igual al store)
+            def ksFile = System.getenv("JULIA_KEYSTORE_FILE") ?: "${System.getenv('HOME')}/.juliabakery/julia-release.jks"
+            def ksPass = System.getenv("JULIA_KEYSTORE_PASSWORD") ?: ""
+            def kAlias = System.getenv("JULIA_KEY_ALIAS") ?: "julia-pos"
+            def kPass  = System.getenv("JULIA_KEY_PASSWORD") ?: ksPass
+            if (file(ksFile).exists() && !ksPass.isEmpty()) {
+                storeFile file(ksFile)
+                storePassword ksPass
+                keyAlias kAlias
+                keyPassword kPass
+            }
+        }
+    }
+
     buildTypes {
         debug {
             // Permite ver console.log() en logcat para debug.
@@ -37,6 +58,9 @@ android {
             buildConfigField "boolean", "WEBVIEW_DEBUG", "false"
             minifyEnabled false       // sin obfuscacion por ahora (debug-friendly)
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            // Aplica firma release si las env vars estan presentes; si no, gradle falla
+            // con mensaje claro (mejor que silenciosamente caer a debug signing).
+            signingConfig signingConfigs.release
         }
     }
 

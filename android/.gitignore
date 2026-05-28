@@ -9,3 +9,8 @@ captures/
 *.apk
 *.aab
 gradle-wrapper.jar
+# NUNCA commitear keystores ni passwords. El keystore release vive en
+# ~/.juliabakery/julia-release.jks y la password en 1Password/Bitwarden.
+*.jks
+*.keystore
+keystore.properties
