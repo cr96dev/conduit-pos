@@ -1,18 +1,82 @@
 # Auditoría de delivery-readiness — Julia Bakery
-**Fecha:** 27 may 2026 (noche · re-audit post-aclaración de Charles)
-**Rama de fixes:** `claude/audit-fixes-20260527` (creada desde `main` @ `d734ccb`).
-**Lente:** mañana se entrega la plataforma a Ximena como deliverable de consultoría (NO arranca el POS). Audit re-priorizado para evitar "vergüenza en demo en vivo".
+**Fecha:** 27-28 may 2026 (audit nocturno + ejecución de Fases A/B/C a la mañana siguiente)
+**Lente:** entregar la plataforma a Ximena como deliverable de consultoría. Audit re-priorizado para evitar "vergüenza en demo en vivo".
 
 ---
 
 ## TL;DR
 
-**El hallazgo P0 #1 es el más importante: hay una rama no mergeada (`claude/condescending-ramanujan-678f31`) con 7 commits de features que Charles describió como YA IMPLEMENTADAS** (PDF imprimible de producción y compras, dropdown de unidad en compras, costo sugerido por unidad, separación comida/bebidas, ModalInsumo responsive en mobile, soft/hard-delete inteligente). **Esos features NO están en main.** Si Ximena los ve mencionados o intenta usarlos en la demo, va a quedar mal. Charles tiene que decidir HOY si mergea esa rama a main antes del deploy.
+Audit nocturno + 3 fases de ejecución matutina **completas**. Producción está al día con `main`, alias `julia-bakery.vercel.app` apunta al último deploy (ID `dpl_4NpriTGv9JVwYGqp74j9XCGgcuXq`).
 
-Aparte de eso, hay un puñado de issues de polish y mobile que se ven feo en demo (formatos de moneda inconsistentes, modales que se cortan en mobile, ISR definido pero no aplicado, tablas que se salen del viewport en celular). Los más obvios y aislados ya están arreglados en los 6 commits de esta rama.
+**De los 11 P0 detectados, 9 quedaron resueltos:**
+- 1 vía merge de la rama `condescending-ramanujan` (PDF, SelectUnidad, costo sugerido, separación comida/bebida, soft-delete, ModalInsumo responsive)
+- 4 vía fixes seguros pre-merge (legal pages, login placeholder, dashboard format, empleados preview)
+- 1 vía mobile + fecha IGSS (tablas con `overflow-x-auto`, modal de inventario responsive)
+- 1 vía implementación de conversión de unidades en recetas (Fase B)
+- 1 vía cierre del bypass de auth en crons (Fase C)
+- 1 que resultó **no aplicable** (RLS en tablas QBO: las tablas no existen en la BD de Julia)
 
-**Conteo total:** **P0: 11 · P1: 30 · P2: 19**
-**Commits aplicados esta noche:** **10** (legal, login, modal inventario, dashboard format, ventas acentos, **preview costo patronal empleados**, **overflow-x-auto en 6 tablas mobile + fix off-by-one fecha IGSS**, audit report).
+**Quedan 2 P0 que requieren decisión humana antes de aplicar** — ambos contables/de producto, no técnicos:
+- ISR en planilla (función pura ya existe, falta integración + migration)
+- Vacaciones 15 días "hábiles" vs "calendario" (la fórmula actual da `sal/24` mensual, que es la práctica contable común GT pero el comentario del código habla de "hábiles" — confirmar con contador)
+
+**Total de commits a producción:** **11**
+- 8 fixes de la rama `audit-fixes` (legal, login, modal, format, acentos, empleados, mobile+IGSS, reporte)
+- 7 commits cherry-picked al mergear `condescending-ramanujan`
+- 1 commit nuevo Fase B (`feat(recetas): conversión automática de unidades`)
+- 1 commit nuevo Fase C (`fix(crons): cerrar bypass de auth por user-agent`)
+- 1 merge commit (`Merge branch 'claude/audit-fixes-20260527'`)
+- 2 actualizaciones del propio reporte
+
+---
+
+## ✅ Estado final de los P0
+
+| # | Hallazgo | Estado | Resuelto vía |
+|---|---|---|---|
+| **P0-1** | Rama `condescending-ramanujan` con PDFs / SelectUnidad / separación comida-bebida / etc. no mergeada | ✅ | Fase A — merge limpio (auto-resolved con `ort` strategy) |
+| **P0-2** | ISR de planilla definido en `lib/planillas.js` pero NUNCA invocado | ⏸ Pendiente decisión | Requiere DDL (nueva columna `isr_retenido`) + cuenta contable + cambios en API |
+| **P0-3** | Vacaciones "15 días hábiles" pero fórmula los trata como calendario | ⏸ Pendiente decisión | Requiere confirmación con contador (la fórmula `sal/24` es la práctica contable GT estándar) |
+| **P0-4** | `privacy.js` y `terms.js` con contenido de Hidrocom | ✅ | commit `d02f81a` |
+| **P0-5** | Dashboard formato Q sin decimales mientras resto usa 2 | ✅ | commit `540d3e1` |
+| **P0-7** | QBO tokens sin RLS (potencial leak vía `anon_key`) | ✅ N/A | Verificado vía SQL: las 5 tablas `qbo_*` **no existen en la BD de Julia** (`ztxsjycrvyagrjnuzmwd`). La migración legacy se aplicó al proyecto de Hidrocom/GasOps, no a este. Tampoco existen `ventas`, `ventas_lubricantes`, `bac_*`, `neonet_*`. La BD está limpia. |
+| **P0-8** | Bypass de auth en crons vía `User-Agent: vercel-cron` (spoofeable) | ✅ | commit `a765d55` (Fase C). Verificado: `loyverse-sync`, `resumen-ventas-diario`, `alerta-cierre-faltante` ahora rechazan 401 ante user-agent spoofed sin Bearer. CRON_SECRET confirmada en Vercel envs. |
+| **P0-9** | Preview "Costo patronal quincenal" en empleados con fórmula mensual sin /2 | ✅ | commit `222a22f` |
+| **P0-10** | Recetas: cantidad × costo_unitario sin conversión de unidades (bug 453× para "1.5 lb" de un insumo en "g") | ✅ | commit `6fc7a74` (Fase B). 2 recetas con cambio real (`PASTEL DE FRESAS CON CREMA` +45%, `SCONE DE BERRIES` +34%); 16 recetas con ingredientes "dudosos" (categorías incompatibles g↔unidad) marcadas en UI sin alterar cálculo |
+| **P0-11** | Compras autocompleta unidad base → bug 50× al recibir | ✅ | Resuelto al mergear `condescending-ramanujan` (commits `abc1154` SelectUnidad + `67f102a` costo sugerido) |
+
+### P0 pendientes — detalle
+
+**P0-2 · ISR de planilla — DDL propuesto:**
+
+```sql
+-- migrations/2026_05_28_planilla_isr_retencion.sql
+ALTER TABLE planilla_lineas
+  ADD COLUMN IF NOT EXISTS isr_retenido numeric(12,2) NOT NULL DEFAULT 0;
+COMMENT ON COLUMN planilla_lineas.isr_retenido IS
+  'Retención ISR mensual (Decreto 10-2012) aplicada a esta línea quincenal.';
+
+INSERT INTO cuentas_contables (codigo, nombre, tipo, naturaleza, nivel, es_movimiento) VALUES
+  ('2-01-03-011', 'ISR por pagar (retenciones empleados)', 'pasivo', 'acreedora', 4, true)
+ON CONFLICT (codigo) DO NOTHING;
+
+INSERT INTO contabilidad_mappings (clave, descripcion, cuenta_id) VALUES
+  ('isr_por_pagar', 'Pasivo: ISR retenido a empleados, pendiente de pagar a SAT',
+   (SELECT id FROM cuentas_contables WHERE codigo = '2-01-03-011'))
+ON CONFLICT (clave) DO NOTHING;
+```
+
+Más código: invocar `calcularISRRetencionQuincenal(empleado.salario_mensual)` al generar líneas, restar del líquido, acreditar `isr_por_pagar` en `generarAsientoPlanillaPagada`.
+
+**Pasarte el DDL via MCP cuando me digas. No lo aplico unilateralmente.**
+
+**P0-3 · Vacaciones — pregunta para el contador de Julia:**
+
+La fórmula actual da provisión mensual = `sal / 24` (equivalente a 15 días calendario × salario_diario_30 / 12 meses). Esa es la práctica contable estándar GT. El comentario en `lib/planillas.js:24` dice "15 días hábiles" — ambigüedad. Si la convención esperada es realmente "15 hábiles ≈ 21 calendario", la provisión subestima ~40%. Verificar con contador.
+
+Liquidaciones (`lib/liquidaciones.js:101`): mismo issue. La fórmula `(años % 1) × 15` da días pendientes del año en curso, multiplicado por `sal/30` (salario diario calendario). Si el contador quiere otra cosa, hay que cambiar.
+
+**Decisión 100% del contador, no aplico nada hasta saber.**
 
 ---
 
