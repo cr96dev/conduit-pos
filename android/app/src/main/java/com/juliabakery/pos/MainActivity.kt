@@ -83,10 +83,27 @@ class MainActivity : AppCompatActivity() {
             webViewClient = object : WebViewClient() {
                 override fun shouldOverrideUrlLoading(view: WebView, req: WebResourceRequest): Boolean {
                     val host = req.url.host ?: return false
-                    // Permitir navegacion solo dentro de los dominios de Julia.
+                    // 1. Restringir a dominios de Julia.
                     val allowed = host.endsWith("vercel.app") || host == "julia-bakery.vercel.app"
                     if (!allowed) {
                         Toast.makeText(this@MainActivity, "Dominio bloqueado: $host", Toast.LENGTH_SHORT).show()
+                        return true
+                    }
+                    // 2. Modo kiosko: solo permitimos rutas del scope cajero.
+                    //    El login (/) y POS (/pos) son OK; cualquier otro
+                    //    modulo (inventario, planillas, dashboard, admin, etc)
+                    //    queda bloqueado para que el cajero no se distraiga.
+                    //    /_next y /api van OK porque son assets/API.
+                    val path = req.url.path ?: "/"
+                    if (path != "/" && path != "/pos"
+                        && !path.startsWith("/_next/")
+                        && !path.startsWith("/api/")
+                        && !path.startsWith("/auth/")
+                        && !path.startsWith("/static/")) {
+                        Log.w("MainActivity", "Ruta bloqueada en kiosko: $path")
+                        Toast.makeText(this@MainActivity, "Esta seccion no esta disponible en el cajero", Toast.LENGTH_SHORT).show()
+                        // Forzar vuelta al POS.
+                        view.loadUrl(BuildConfig.JULIA_BASE_URL + BuildConfig.JULIA_POS_PATH)
                         return true
                     }
                     return false
@@ -115,9 +132,23 @@ class MainActivity : AppCompatActivity() {
         )
         binding.webview.addJavascriptInterface(bridge, "__JuliaPOSNative")
 
-        val url = BuildConfig.JULIA_BASE_URL + BuildConfig.JULIA_POS_PATH
+        val url = initialUrl()
         Log.i("MainActivity", "Loading URL: $url")
         binding.webview.loadUrl(url)
+    }
+
+    /**
+     * Construye la URL inicial. Si el build incluye JULIA_BYPASS_TOKEN
+     * (preview de Vercel con Deployment Protection), agrega los query
+     * params para setear el cookie de bypass y persistirlo. Despues de la
+     * primera navegacion, las requests subsecuentes (incluyendo el fetch
+     * de /api/neonet/pos-credentials) van con el cookie automaticamente.
+     */
+    private fun initialUrl(): String {
+        val base = BuildConfig.JULIA_BASE_URL + BuildConfig.JULIA_POS_PATH
+        val token = BuildConfig.JULIA_BYPASS_TOKEN
+        return if (token.isBlank()) base
+        else "$base?x-vercel-protection-bypass=$token&x-vercel-set-bypass-cookie=true"
     }
 
     private fun setupNeoPosLauncher() {

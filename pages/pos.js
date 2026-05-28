@@ -10,6 +10,38 @@ import Head from 'next/head'
 import { supabase } from '../lib/supabase'
 import Layout from '../components/Layout'
 import { SkeletonRow } from '../components/Skeleton'
+import { useEsKiosko } from '../lib/kiosko'
+
+// Wrapper de layout: en modo kiosko (wrapper Android Sunmi) renderiza un
+// header minimo con logo + cajero + logout. En desktop usa el Layout
+// completo con sidebar y navegacion a otros modulos.
+function POSChrome({ perfil, kiosko, children }) {
+  if (!kiosko) return <Layout perfil={perfil}>{children}</Layout>
+  return (
+    <div className="min-h-screen bg-gray-50 flex flex-col">
+      <header className="bg-white border-b border-gray-100 px-3 py-2 flex items-center justify-between flex-shrink-0">
+        <div className="flex items-center gap-2">
+          <img src="/logo.png" alt="" className="h-8 w-auto" />
+          <div className="text-sm font-semibold text-gray-900">Cajero</div>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="text-[11px] text-gray-500 truncate max-w-[140px]">
+            {perfil?.nombre_completo || perfil?.email || ''}
+          </div>
+          <button
+            onClick={async () => {
+              await supabase.auth.signOut()
+              window.location.href = '/'
+            }}
+            className="text-[11px] text-gray-400 hover:text-julia-red px-2 py-1">
+            Salir
+          </button>
+        </div>
+      </header>
+      <main className="flex-1 min-h-0">{children}</main>
+    </div>
+  )
+}
 
 async function apiFetch(path, opts = {}) {
   const { data: { session } } = await supabase.auth.getSession()
@@ -100,6 +132,7 @@ function expandirVariantes(items, categorias) {
 
 export default function POS({ session }) {
   const router = useRouter()
+  const kiosko = useEsKiosko()
   const [perfil, setPerfil] = useState(null)
   const [productos, setProductos] = useState([])
   const [categorias, setCategorias] = useState([])
@@ -332,17 +365,17 @@ export default function POS({ session }) {
 
   if (!esAdmin && perfil) {
     return (
-      <Layout perfil={perfil}>
+      <POSChrome perfil={perfil} kiosko={kiosko}>
         <Head><title>POS · Julia Bakery</title></Head>
         <div className="p-8 text-center text-sm text-gray-500">
           Solo administradores pueden emitir facturas desde el POS.
         </div>
-      </Layout>
+      </POSChrome>
     )
   }
 
   return (
-    <Layout perfil={perfil}>
+    <POSChrome perfil={perfil} kiosko={kiosko}>
       <Head><title>Punto de Venta · Julia Bakery</title></Head>
 
       {/* Overlay mientras se esta autorizando la tarjeta con NeoPOS */}
@@ -542,7 +575,7 @@ export default function POS({ session }) {
         <span>{carrito.length}</span>
         <span className="tabular-nums">{fmtQ(totales.total)}</span>
       </button>
-    </Layout>
+    </POSChrome>
   )
 }
 

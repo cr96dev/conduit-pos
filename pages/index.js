@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import { useRouter } from 'next/router'
+import { esKiosko } from '../lib/kiosko'
 
 export default function Login({ session }) {
   const router = useRouter()
@@ -9,8 +10,15 @@ export default function Login({ session }) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
+  // En el wrapper Android (cajero on-site) saltamos directo a /pos en vez
+  // de /dashboard. /dashboard requiere navegacion por sidebar a otros modulos
+  // que no aplican para el cajero.
+  function destinoPostLogin() {
+    return esKiosko() ? '/pos' : '/dashboard'
+  }
+
   useEffect(() => {
-    if (session) router.push('/dashboard')
+    if (session) router.push(destinoPostLogin())
   }, [session])
 
   async function handleLogin(e) {
@@ -19,7 +27,7 @@ export default function Login({ session }) {
     setError('')
     const { error } = await supabase.auth.signInWithPassword({ email, password })
     if (error) setError('Correo o contraseña incorrectos.')
-    else router.push('/dashboard')
+    else router.push(destinoPostLogin())
     setLoading(false)
   }
 

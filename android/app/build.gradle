@@ -17,9 +17,15 @@ android {
 
         // URLs configurables por build type. Override en linea de comandos:
         //   ./gradlew assembleDebug -PJULIA_BASE_URL="https://preview-foo.vercel.app"
+        // Si el preview tiene Deployment Protection, agregar tambien:
+        //   -PJULIA_BYPASS_TOKEN="xxxxxxxx"
+        // El WebView arma el primer load con ?x-vercel-protection-bypass=... &
+        // x-vercel-set-bypass-cookie=true para persistir el cookie de bypass.
         def baseUrl = project.findProperty("JULIA_BASE_URL") ?: "https://julia-bakery.vercel.app"
+        def bypassToken = project.findProperty("JULIA_BYPASS_TOKEN") ?: ""
         buildConfigField "String", "JULIA_BASE_URL", "\"${baseUrl}\""
         buildConfigField "String", "JULIA_POS_PATH", "\"/pos\""
+        buildConfigField "String", "JULIA_BYPASS_TOKEN", "\"${bypassToken}\""
     }
 
     buildTypes {

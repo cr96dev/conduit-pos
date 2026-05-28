@@ -3,8 +3,9 @@
 # Usa el JDK 17 embebido en Android Studio y el SDK en ~/Library/Android/sdk.
 #
 # Uso:
-#   ./build-apk.sh                              # build apuntando a prod
-#   ./build-apk.sh "https://julia-bakery-XXX.vercel.app"   # build apuntando a preview
+#   ./build-apk.sh                                           # build prod
+#   ./build-apk.sh "https://julia-bakery-XXX.vercel.app"    # build preview (sin protection)
+#   ./build-apk.sh "https://julia-bakery-XXX.vercel.app" "BYPASS_TOKEN"  # preview con Deployment Protection
 set -euo pipefail
 
 cd "$(dirname "$0")"
@@ -40,11 +41,15 @@ if [[ ! -f gradle/wrapper/gradle-wrapper.jar ]]; then
   gradle wrapper --gradle-version 8.7 --distribution-type bin
 fi
 
-# 4. Override de URL backend si pasaron uno.
+# 4. Override de URL backend + bypass token si los pasaron.
 EXTRA_ARGS=()
-if [[ $# -gt 0 ]]; then
+if [[ $# -ge 1 && -n "$1" ]]; then
   EXTRA_ARGS+=("-PJULIA_BASE_URL=$1")
   echo "Apuntando a backend: $1"
+fi
+if [[ $# -ge 2 && -n "$2" ]]; then
+  EXTRA_ARGS+=("-PJULIA_BYPASS_TOKEN=$2")
+  echo "Bypass token configurado (longitud ${#2})"
 fi
 
 # 5. Build.
