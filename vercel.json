@@ -21,9 +21,6 @@
     "pages/api/cron/loyverse-sync.js": {
       "maxDuration": 60
     },
-    "pages/api/qbo/sync/daily.js": {
-      "maxDuration": 60
-    },
     "pages/api/cron/resumen-ventas-diario.js": {
       "maxDuration": 60
     },

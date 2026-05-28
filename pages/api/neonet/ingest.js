@@ -373,7 +373,7 @@ async function notificarAfiliacionDesconocida(afiliacion, msgId, pdfName, total)
       method: 'POST',
       headers: { 'api-key': BREVO_KEY, 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        sender: { name: 'GasOps Neonet', email: 'noreply@hidrocom.net' },
+        sender: { name: 'Julia Bakery Neonet', email: 'noreply@juliabakery.gt' },
         to: [{ email: NOTIFY_EMAIL }],
         subject: `Afiliación Neonet desconocida: ${afiliacion}`,
         htmlContent: `
