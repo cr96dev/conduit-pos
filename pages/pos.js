@@ -670,10 +670,12 @@ export default function POS({ session }) {
 
         {/* ============================================================
             COLUMNA DERECHA — Carrito + checkout
+            Altura fija (viewport) en mobile y desktop → flex-col con
+            scrollable interno y boton Cobrar sticky abajo.
            ============================================================ */}
-        <div className={`bg-white border-t-2 lg:border-t-0 lg:border-l border-gray-100 flex flex-col ${mostrarCarritoMobile ? 'fixed inset-0 z-40 lg:static' : 'hidden lg:flex'}`}>
+        <div className={`bg-white border-t-2 lg:border-t-0 lg:border-l border-gray-100 flex flex-col h-screen lg:h-[calc(100vh-3.5rem)] lg:sticky lg:top-[3.5rem] ${mostrarCarritoMobile ? 'fixed inset-0 z-40 lg:static lg:inset-auto' : 'hidden lg:flex'}`}>
           {/* Header */}
-          <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between bg-white sticky top-0 z-10">
+          <div className="flex-shrink-0 px-5 py-3 border-b border-gray-100 flex items-center justify-between bg-white">
             <div>
               <h2 className="text-base font-bold text-gray-900">Venta actual</h2>
               <p className="text-xs text-gray-400">
@@ -689,8 +691,9 @@ export default function POS({ session }) {
             <button onClick={() => setMostrarCarritoMobile(false)} className="lg:hidden text-gray-400 hover:text-gray-700 text-2xl ml-2">✕</button>
           </div>
 
-          {/* Líneas */}
-          <div className="flex-1 overflow-y-auto px-4 py-3 space-y-2">
+          {/* TODO el contenido scrolleable (líneas + total + receptor + metodos) */}
+          <div className="flex-1 overflow-y-auto">
+            <div className="px-4 py-3 space-y-2">
             {carrito.length === 0 ? (
               <div className="text-center py-16 text-gray-400">
                 <div className="text-5xl mb-3 opacity-50">🛒</div>
@@ -737,7 +740,7 @@ export default function POS({ session }) {
                 </div>
               </div>
             ))}
-          </div>
+            </div>
 
           {/* Totales */}
           <div className="border-t border-gray-100 px-5 py-4 bg-gradient-to-b from-gray-50/50 to-white space-y-1.5">
@@ -829,11 +832,12 @@ export default function POS({ session }) {
               </div>
             </div>
           )}
+          </div>{/* fin del flex-1 overflow-y-auto */}
 
-          {/* Botón cobrar */}
-          <div className="px-5 py-4 border-t border-gray-100 bg-white">
+          {/* Botón cobrar SIEMPRE visible (fuera del scroll) */}
+          <div className="flex-shrink-0 px-5 py-3 border-t border-gray-200 bg-white shadow-[0_-4px_12px_rgba(0,0,0,0.06)]">
             <button onClick={cobrar} disabled={enviando || carrito.length === 0}
-              className="w-full py-4 bg-julia-red text-white text-base font-bold rounded-xl disabled:opacity-50 disabled:cursor-not-allowed hover:bg-red-700 active:scale-[0.98] transition-all shadow-md hover:shadow-lg flex items-center justify-center gap-2">
+              className="w-full py-4 bg-julia-red text-white text-base font-bold rounded-xl disabled:opacity-50 disabled:cursor-not-allowed hover:bg-red-700 active:scale-[0.98] transition-all shadow-lg flex items-center justify-center gap-2">
               {enviando ? (
                 <>
                   <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
