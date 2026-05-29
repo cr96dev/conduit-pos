@@ -4,6 +4,8 @@ import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.ServiceConnection
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.os.IBinder
 import android.os.RemoteException
 import android.util.Log
@@ -31,6 +33,7 @@ class SunmiPrinter {
 
     @Volatile private var service: IWoyouService? = null
     @Volatile private var binding = false
+    @Volatile private var logoBitmap: Bitmap? = null
 
     fun isConnected(): Boolean = service != null
 
@@ -38,6 +41,13 @@ class SunmiPrinter {
         if (service != null) { onConnect?.invoke(true); return }
         if (binding) return
         binding = true
+        // Cargar logo una vez (lo usamos en cada printTicket)
+        try {
+            logoBitmap = BitmapFactory.decodeResource(context.resources, R.drawable.logo_julia)
+            Log.d(TAG, "logo cargado: ${logoBitmap?.width}x${logoBitmap?.height}")
+        } catch (e: Exception) {
+            Log.w(TAG, "no pude cargar logo: ${e.message}")
+        }
         val intent = Intent().apply {
             setPackage(SUNMI_SERVICE_PACKAGE)
             action = SUNMI_SERVICE_ACTION
@@ -80,15 +90,36 @@ class SunmiPrinter {
     fun printTicket(payload: TicketPayload): Boolean {
         val svc = service ?: return false
         return try {
+            // Centrar y meter todo en un buffer para impresion atomica
+            svc.enterPrinterBuffer(true)
+            svc.setAlignment(1, noopCb)               // 1 = center
+
+            // 1. Logo arriba
+            logoBitmap?.let { bmp ->
+                try {
+                    svc.printBitmap(bmp, noopCb)
+                    svc.lineWrap(1, noopCb)
+                } catch (e: Exception) {
+                    Log.w(TAG, "printBitmap fallo, sigo sin logo: ${e.message}")
+                }
+            }
+
+            // 2. Volver a alineacion izquierda + texto formateado
+            svc.setAlignment(0, noopCb)               // 0 = left
             val texto = construirTextoPlano(payload)
             Log.d(TAG, "printTicket bytes=${texto.length} via printText")
             svc.printText(texto, loggingCb)
+
+            // 3. Commit (imprime todo el buffer)
+            svc.exitPrinterBuffer(true)
             true
         } catch (e: RemoteException) {
-            Log.e(TAG, "RemoteException printText", e)
+            Log.e(TAG, "RemoteException printTicket", e)
+            try { svc.exitPrinterBuffer(false) } catch (_: Exception) {}
             false
         } catch (e: Exception) {
             Log.e(TAG, "Error printTicket", e)
+            try { svc.exitPrinterBuffer(false) } catch (_: Exception) {}
             false
         }
     }
@@ -109,11 +140,11 @@ class SunmiPrinter {
         val sub = "-".repeat(W)
 
         val sb = StringBuilder()
-        sb.append(cen(p.merchantName)).append('\n')
+        // OJO: el logo bitmap ya trae el nombre "Julia Bakery", no repetirlo aca.
         p.merchantSubtitle?.let { sb.append(cen(it)).append('\n') }
         p.merchantAddress?.let  { sb.append(cen(it)).append('\n') }
         p.merchantNit?.let      { sb.append(cen("NIT: $it")).append('\n') }
-        sb.append('\n').append(sep).append('\n')
+        sb.append(sep).append('\n')
 
         sb.append("NIT receptor: ${p.receptorNit}").append('\n')
         sb.append("Nombre: ${p.receptorNombre}").append('\n')
