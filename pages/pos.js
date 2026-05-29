@@ -933,8 +933,11 @@ function PantallaExito({ resultado, onNueva }) {
         </div>
       </div>
 
-      {/* Botón FIJO abajo, siempre visible — con fade arriba para indicar scroll */}
-      <div className="sticky bottom-0 left-0 right-0 px-4 py-4 bg-gradient-to-t from-white via-white to-white/70 border-t border-gray-100">
+      {/* Botón FIJO abajo, siempre visible.
+          Usamos flex-shrink-0 en lugar de sticky porque el padre es
+          flex-col fixed inset-0 con altura definida por viewport — el
+          hijo flex-1 + overflow scrollea y este queda anclado abajo. */}
+      <div className="flex-shrink-0 px-4 py-4 bg-white border-t border-gray-200 shadow-[0_-4px_12px_rgba(0,0,0,0.04)]">
         <button onClick={onNueva}
           className="w-full max-w-md mx-auto block px-8 py-4 bg-julia-red text-white text-base font-bold rounded-xl hover:bg-red-700 active:scale-[0.98] transition-all shadow-lg flex items-center justify-center gap-2">
           <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
