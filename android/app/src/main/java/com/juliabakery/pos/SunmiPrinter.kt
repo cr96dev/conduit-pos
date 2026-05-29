@@ -124,8 +124,17 @@ class SunmiPrinter {
         }
     }
 
-    // Construye el ticket como texto plano de 32 columnas. Sin ESC/POS,
-    // sin setFontSize, sin alignment via comando — solo printText.
+    // Construye el ticket como texto plano de 32 columnas siguiendo el
+    // mismo orden de bloques que la factura real de Loyverse:
+    //   1. Header del emisor (razon social, direccion, NIT)
+    //   2. Documento Tributario Electronico / FEL
+    //   3. Datos del DTE (Serie, No. DTE, Correlativo)
+    //   4. Datos del Comprador (Fecha, NIT, Nombre)
+    //   5. Detalle de Factura con headers CANT DETALLE PRECIO TOTAL
+    //   6. Subtotal + IVA + TOTAL
+    //   7. Datos del Certificador (Autorizacion, NIT, Nombre, Fecha)
+    //   8. Footer regulatorio ("Sujeto a pago directo ISR")
+    //   9. Espacio para corte
     private fun construirTextoPlano(p: TicketPayload): String {
         val W = 32
         fun cen(s: String): String {
@@ -136,44 +145,98 @@ class SunmiPrinter {
             val pad = (W - left.length - right.length).coerceAtLeast(1)
             return left + " ".repeat(pad) + right
         }
+        fun wrap(s: String): List<String> {
+            // Parte el string en lineas de max W chars en limites de palabras
+            if (s.length <= W) return listOf(s)
+            val out = mutableListOf<String>()
+            var resto = s
+            while (resto.length > W) {
+                var corte = resto.lastIndexOf(' ', W).coerceAtLeast(W / 2)
+                if (corte <= 0) corte = W
+                out.add(resto.substring(0, corte).trim())
+                resto = resto.substring(corte).trim()
+            }
+            if (resto.isNotEmpty()) out.add(resto)
+            return out
+        }
         val sep = "=".repeat(W)
         val sub = "-".repeat(W)
 
         val sb = StringBuilder()
-        // OJO: el logo bitmap ya trae el nombre "Julia Bakery", no repetirlo aca.
-        p.merchantSubtitle?.let { sb.append(cen(it)).append('\n') }
-        p.merchantAddress?.let  { sb.append(cen(it)).append('\n') }
-        p.merchantNit?.let      { sb.append(cen("NIT: $it")).append('\n') }
+
+        // ===== 1. HEADER EMISOR (logo bitmap ya impreso aparte) =====
+        // El logo bitmap ya trae 'JULIA BAKERY' visualmente, no repetirlo.
+        p.razonSocial?.let {
+            for (line in wrap(it)) sb.append(cen(line)).append('\n')
+        }
+        p.nitEmisor?.let { sb.append(cen("NIT: $it")).append('\n') }
+        p.direccion?.let {
+            for (line in wrap(it)) sb.append(cen(line)).append('\n')
+        }
+        sb.append('\n')
+
+        // ===== 2. TIPO DOCUMENTO =====
+        sb.append(cen("Documento Tributario Electronico")).append('\n')
+        sb.append(cen("FEL - Factura Electronica")).append('\n')
         sb.append(sep).append('\n')
 
-        sb.append("NIT receptor: ${p.receptorNit}").append('\n')
-        sb.append("Nombre: ${p.receptorNombre}").append('\n')
-        sb.append("Fecha: ${p.fecha}").append('\n')
-        p.cajeroNombre?.let { sb.append("Cajero: $it").append('\n') }
-        p.metodoPago?.let   { sb.append("Pago: ${it.uppercase()}").append('\n') }
+        // ===== 3. DATOS DE LA FACTURA =====
+        p.serieSat?.let  { sb.append(cols("Serie:", it)).append('\n') }
+        p.uuidSat?.let   { sb.append("No. de DTE:").append('\n').append(it).append('\n') }
+        p.numeroSat?.let { sb.append(cols("Correlativo:", it)).append('\n') }
         sb.append(sub).append('\n')
 
+        // ===== 4. DATOS DEL COMPRADOR =====
+        sb.append(cen("DATOS DEL COMPRADOR")).append('\n')
+        sb.append('\n')
+        sb.append(cols("FECHA:", p.fecha)).append('\n')
+        sb.append(cols("NIT:", p.receptorNit)).append('\n')
+        sb.append("NOMBRE: ${p.receptorNombre}").append('\n')
+        p.cajeroNombre?.let { sb.append(cols("CAJERO:", it)).append('\n') }
+        p.metodoPago?.let   { sb.append(cols("PAGO:", it.uppercase())).append('\n') }
+        sb.append(sub).append('\n')
+
+        // ===== 5. DETALLE DE FACTURA =====
+        sb.append(cen("DETALLE DE FACTURA")).append('\n')
+        sb.append('\n')
+        // Headers de la tabla — paridad exacta con Loyverse
+        sb.append(String.format("%-4s%-18s%10s", "CANT", "DETALLE", "TOTAL")).append('\n')
+        sb.append(sub).append('\n')
         for (item in p.items) {
-            sb.append(String.format("%-4s%s", item.cantidad, item.descripcion.take(26))).append('\n')
-            val precioLinea = String.format("  Q %.2f x %s", item.precioUnitario, item.cantidad)
-            val subStr = String.format("Q %.2f", item.subtotal)
-            sb.append(cols(precioLinea, subStr)).append('\n')
+            // Linea 1: cant + descripcion + total alineado a derecha
+            val cantStr = item.cantidad.take(4)
+            val descStr = item.descripcion.take(18)
+            val subStr  = String.format("Q %.2f", item.subtotal)
+            sb.append(String.format("%-4s%-18s%10s", cantStr, descStr, subStr)).append('\n')
+            // Linea 2 (opcional): precio unitario indented si cantidad > 1
+            if (item.cantidad != "1" && item.cantidad != "1.0") {
+                sb.append(String.format("    Q %.2f c/u", item.precioUnitario)).append('\n')
+            }
         }
         sb.append(sub).append('\n')
 
-        sb.append(cols("Subtotal:", String.format("Q %.2f", p.totalGravado))).append('\n')
-        sb.append(cols("IVA 12%:", String.format("Q %.2f", p.iva))).append('\n')
+        // ===== 6. TOTALES =====
+        sb.append(cols("Sub total:", String.format("Q %.2f", p.totalGravado))).append('\n')
+        sb.append(cols("IVA (12%):", String.format("Q %.2f", p.iva))).append('\n')
         sb.append(cols("TOTAL:", String.format("Q %.2f", p.total))).append('\n')
         sb.append('\n')
 
-        sb.append(cen("Factura Electronica DTE")).append('\n')
+        // ===== 7. DATOS DEL CERTIFICADOR =====
+        sb.append(sep).append('\n')
+        sb.append(cen("DATOS DEL CERTIFICADOR")).append('\n')
+        sb.append('\n')
         p.uuidSat?.let {
-            sb.append(cen("Autorizacion SAT:")).append('\n')
-            sb.append(cen(it)).append('\n')
+            sb.append("Numero de Autorizacion:").append('\n')
+            sb.append(it).append('\n')
         }
-        p.serieSat?.let     { sb.append(cen("Serie: $it")).append('\n') }
-        p.numeroSat?.let    { sb.append(cen("Numero: $it")).append('\n') }
-        p.certificador?.let { sb.append(cen("Certificador: $it")).append('\n') }
+        p.certificadorNit?.let    { sb.append(cols("NIT:", it)).append('\n') }
+        p.certificadorNombre?.let { sb.append("Nombre: $it").append('\n') }
+        p.fechaCertificacion?.let { sb.append("Fecha cert: $it").append('\n') }
+        sb.append(sep).append('\n')
+
+        // ===== 8. FOOTER REGULATORIO =====
+        sb.append('\n')
+        p.textoFooter?.let { sb.append(cen(it)).append('\n') }
 
         sb.append('\n').append(cen("Gracias por su compra")).append('\n')
         sb.append("\n\n\n\n\n")  // alimentar papel para corte manual
@@ -324,22 +387,36 @@ class SunmiPrinter {
 
 @Serializable
 data class TicketPayload(
-    val merchantName: String,
-    val merchantSubtitle: String? = null,
-    val merchantAddress: String? = null,
-    val merchantNit: String? = null,
+    // Emisor
+    val merchantName: String,                       // nombre comercial (ej. "Julia Bakery")
+    val razonSocial: String? = null,                // ej. "WEIRD DOUGH, SOCIEDAD ANONIMA"
+    val direccion: String? = null,
+    val nitEmisor: String? = null,
+    // Receptor
     val receptorNit: String,
     val receptorNombre: String,
     val fecha: String,
     val cajeroNombre: String? = null,
     val metodoPago: String? = null,
+    // Items + totales
     val items: List<TicketItem>,
     val totalGravado: Double,
     val iva: Double,
     val total: Double,
+    // Certificador (Infile)
     val uuidSat: String? = null,
     val serieSat: String? = null,
     val numeroSat: String? = null,
+    val certificadorNombre: String? = null,         // ej. "INFILE, S.A."
+    val certificadorNit: String? = null,            // ej. "12521329"
+    val fechaCertificacion: String? = null,
+    // Footer regulatorio (ej. "Sujeto a pago directo ISR")
+    val textoFooter: String? = null,
+
+    // Compatibilidad con payloads antiguos (no se usan)
+    val merchantSubtitle: String? = null,
+    val merchantAddress: String? = null,
+    val merchantNit: String? = null,
     val certificador: String? = null,
 )
 

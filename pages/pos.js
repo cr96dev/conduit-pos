@@ -196,6 +196,7 @@ export default function POS({ session }) {
   const debounceTimer = useRef(null)
   const [turno, setTurno] = useState(null)
   const [turnoCargado, setTurnoCargado] = useState(false)
+  const [emisor, setEmisor] = useState(null)  // datos del emisor para imprimir en ticket
 
   // Cargar perfil + catálogo + turno (si cajero)
   useEffect(() => {
@@ -233,6 +234,10 @@ export default function POS({ session }) {
       setProductos(expandirVariantes(its || [], categoriasInfo))
       setCargandoCat(false)
     })
+    // Cargar datos del emisor para incluirlos en el ticket impreso
+    apiFetch('/api/fel/emisor').then(r => r.json()).then(j => {
+      if (j?.emisor) setEmisor(j.emisor)
+    }).catch(() => {})
   }, [session])
 
   const esAdmin = perfil?.rol === 'admin'
@@ -422,29 +427,45 @@ export default function POS({ session }) {
     try {
       if (typeof window !== 'undefined' && window.JuliaPOS && window.JuliaPOS.printTicket) {
         const f = json.factura
+        const e = emisor || {}
+        // Direccion completa del emisor en una linea
+        const direccion = [
+          e.direccion,
+          [e.municipio, e.departamento].filter(Boolean).join(', '),
+        ].filter(Boolean).join(' ')
         const payload = {
-          merchantName: 'Julia Bakery',
-          merchantSubtitle: 'Panaderia',
-          merchantAddress: 'Guatemala City',
-          merchantNit: null,  // TODO: traer de /api/fel/config en v0.3
+          // EMISOR
+          merchantName: e.nombre_comercial || 'Julia Bakery',
+          razonSocial: e.razon_social || null,
+          direccion: direccion || null,
+          nitEmisor: e.nit_emisor || null,
+          // RECEPTOR
           receptorNit: f.receptor_nit,
           receptorNombre: f.receptor_nombre,
           fecha: new Date(f.fecha_certificacion || Date.now()).toLocaleString('es-GT'),
           cajeroNombre: perfil?.nombre_completo || null,
           metodoPago: f.metodo_pago || null,
+          // ITEMS + TOTALES
           items: carrito.map(l => ({
             descripcion: l.descripcion,
             cantidad: String(l.cantidad),
             precioUnitario: Number(l.precio_unitario),
             subtotal: Math.round(Number(l.cantidad) * Number(l.precio_unitario) * 100) / 100,
           })),
-          totalGravado: Number(f.total) / 1.12,
+          totalGravado: Math.round((Number(f.total) / 1.12) * 100) / 100,
           iva: Number(f.iva),
           total: Number(f.total),
+          // CERTIFICADOR (Infile)
           uuidSat: f.uuid_sat,
           serieSat: f.serie_sat,
           numeroSat: f.numero_sat,
-          certificador: 'Infile',
+          certificadorNombre: 'INFILE, S.A.',
+          certificadorNit: '12521329',
+          fechaCertificacion: f.fecha_certificacion
+            ? new Date(f.fecha_certificacion).toLocaleString('es-GT')
+            : null,
+          // Footer regulatorio
+          textoFooter: 'Sujeto a pago directo ISR',
         }
         const r = await window.JuliaPOS.printTicket(payload)
         console.log('[POS] printTicket result:', r)
