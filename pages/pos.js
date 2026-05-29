@@ -872,79 +872,75 @@ export default function POS({ session }) {
 function PantallaExito({ resultado, onNueva }) {
   const f = resultado.factura
   const comandaCreada = resultado.comanda?.ok && resultado.comanda?.comanda
+  const [verDetalles, setVerDetalles] = useState(false)
   return (
-    <div className="fixed inset-0 z-50 bg-gradient-to-b from-gray-50 to-white flex flex-col">
-      {/* Scrollable content */}
-      <div className="flex-1 overflow-y-auto px-4 pt-6 pb-32 flex flex-col items-center">
-        {/* Check animado (mas compacto) */}
-        <div className="relative mb-3">
-          <div className="absolute inset-0 bg-emerald-200/40 rounded-full blur-xl animate-pulse"></div>
-          <div className="relative w-16 h-16 bg-emerald-500 rounded-full flex items-center justify-center shadow-lg">
-            <svg className="w-10 h-10 text-white" fill="none" stroke="currentColor" strokeWidth={3} viewBox="0 0 24 24">
+    <div className="fixed inset-0 z-50 bg-gradient-to-b from-gray-50 to-white overflow-y-auto">
+      <div className="min-h-full flex flex-col items-center justify-start px-4 py-5">
+        {/* Check verde */}
+        <div className="relative mb-2">
+          <div className="absolute inset-0 bg-emerald-200/40 rounded-full blur-xl"></div>
+          <div className="relative w-14 h-14 bg-emerald-500 rounded-full flex items-center justify-center shadow-lg">
+            <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" strokeWidth={3} viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
             </svg>
           </div>
         </div>
 
-        <h2 className="text-xl font-bold text-gray-900">Venta certificada</h2>
-        <p className="text-xs text-gray-500 mb-2">UUID SAT confirmado por Infile</p>
+        <h2 className="text-base font-bold text-gray-900">Venta certificada</h2>
 
-        {/* Total destacado (mas chico) */}
-        <div className="text-4xl font-bold text-julia-red tabular-nums mb-4">
+        {/* Total */}
+        <div className="text-3xl font-bold text-julia-red tabular-nums my-2">
           {'Q ' + Number(f.total).toLocaleString('es-GT', { minimumFractionDigits: 2 })}
         </div>
 
-        {/* Status chips arriba (visibilidad inmediata) */}
-        <div className="flex flex-wrap gap-1.5 mb-4 max-w-md justify-center">
-          <StatusChip
-            ok={resultado.descuento?.pt?.ok}
-            label="Inventario"
-            detail={resultado.descuento?.pt?.ok
-              ? `${resultado.descuento.pt.lineas_procesadas} líneas`
-              : (resultado.descuento?.pt?.error || 'no descontó')} />
-          <StatusChip
-            ok={resultado.asiento?.ok}
-            label="Asiento"
-            detail={resultado.asiento?.ok
-              ? `#${resultado.asiento.numero}`
-              : (resultado.asiento?.error || 'no generado')} />
-          {comandaCreada && (
-            <StatusChip ok={true} label="Barra" detail="Comanda enviada" />
-          )}
-        </div>
-
-        {/* Detalles compactos */}
-        <div className="bg-white border border-gray-100 rounded-2xl shadow-sm p-4 max-w-md w-full space-y-2">
-          <Row k="Receptor" v={`${f.receptor_nit} — ${f.receptor_nombre}`} />
-          <Row k="Pago" v={<span className="capitalize">{f.metodo_pago}</span>} />
-          {resultado.neonet && (
-            <>
-              <div className="border-t border-gray-100 my-1.5"></div>
-              <Row k="Tarjeta" v={<span className="font-mono text-xs">{resultado.neonet.pan_masked || '—'}</span>} />
-              <Row k="Autoriz." v={<span className="font-mono text-xs">{resultado.neonet.authorization_code || '—'}</span>} />
-              {resultado.neonet.origen !== 'prod' && (
-                <Row k="" v={<span className="text-[10px] uppercase tracking-wide bg-amber-100 text-amber-700 px-2 py-0.5 rounded font-bold">{resultado.neonet.origen}</span>} />
-              )}
-            </>
-          )}
-          <div className="border-t border-gray-100 my-1.5"></div>
-          <Row k="UUID SAT" v={<span className="font-mono text-[9px] break-all">{f.uuid_sat}</span>} />
-          <Row k="Serie / Núm." v={<span className="font-mono text-xs">{f.serie_sat || '—'} / {f.numero_sat || '—'}</span>} />
-        </div>
-      </div>
-
-      {/* Botón FIJO abajo, siempre visible.
-          Usamos flex-shrink-0 en lugar de sticky porque el padre es
-          flex-col fixed inset-0 con altura definida por viewport — el
-          hijo flex-1 + overflow scrollea y este queda anclado abajo. */}
-      <div className="flex-shrink-0 px-4 py-4 bg-white border-t border-gray-200 shadow-[0_-4px_12px_rgba(0,0,0,0.04)]">
+        {/* BOTÓN PROMINENTE arriba — siempre visible */}
         <button onClick={onNueva}
-          className="w-full max-w-md mx-auto block px-8 py-4 bg-julia-red text-white text-base font-bold rounded-xl hover:bg-red-700 active:scale-[0.98] transition-all shadow-lg flex items-center justify-center gap-2">
+          className="w-full max-w-sm block px-8 py-4 mt-2 bg-julia-red text-white text-base font-bold rounded-2xl hover:bg-red-700 active:scale-[0.98] transition-all shadow-lg flex items-center justify-center gap-2">
           <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
           </svg>
           Nueva venta
         </button>
+
+        {/* Status chips compactos */}
+        <div className="flex flex-wrap gap-1.5 mt-4 max-w-sm justify-center">
+          <StatusChip
+            ok={resultado.descuento?.pt?.ok}
+            label="Inventario"
+            detail={resultado.descuento?.pt?.ok ? '✓' : '⚠'} />
+          <StatusChip
+            ok={resultado.asiento?.ok}
+            label="Asiento"
+            detail={resultado.asiento?.ok ? `#${resultado.asiento.numero}` : '⚠'} />
+          {comandaCreada && <StatusChip ok={true} label="Barra" detail="enviada" />}
+        </div>
+
+        {/* Toggle ver detalles — colapsable */}
+        <button
+          onClick={() => setVerDetalles(v => !v)}
+          className="mt-4 text-xs text-gray-400 hover:text-gray-700 flex items-center gap-1">
+          {verDetalles ? '▴ Ocultar detalles' : '▾ Ver detalles SAT, NIT, voucher'}
+        </button>
+
+        {verDetalles && (
+          <div className="bg-white border border-gray-100 rounded-2xl shadow-sm p-4 max-w-sm w-full space-y-2 mt-2 mb-4">
+            <Row k="Receptor" v={`${f.receptor_nit} — ${f.receptor_nombre}`} />
+            <Row k="Pago" v={<span className="capitalize">{f.metodo_pago}</span>} />
+            {resultado.neonet && (
+              <>
+                <div className="border-t border-gray-100 my-1.5"></div>
+                <Row k="Tarjeta" v={<span className="font-mono text-xs">{resultado.neonet.pan_masked || '—'}</span>} />
+                <Row k="Autoriz." v={<span className="font-mono text-xs">{resultado.neonet.authorization_code || '—'}</span>} />
+                {resultado.neonet.origen !== 'prod' && (
+                  <Row k="" v={<span className="text-[10px] uppercase tracking-wide bg-amber-100 text-amber-700 px-2 py-0.5 rounded font-bold">{resultado.neonet.origen}</span>} />
+                )}
+              </>
+            )}
+            <div className="border-t border-gray-100 my-1.5"></div>
+            <Row k="UUID SAT" v={<span className="font-mono text-[9px] break-all">{f.uuid_sat}</span>} />
+            <Row k="Serie/Núm" v={<span className="font-mono text-xs">{f.serie_sat || '—'} / {f.numero_sat || '—'}</span>} />
+          </div>
+        )}
       </div>
     </div>
   )
