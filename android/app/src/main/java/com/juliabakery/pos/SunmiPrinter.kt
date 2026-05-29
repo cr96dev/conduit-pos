@@ -80,16 +80,74 @@ class SunmiPrinter {
     fun printTicket(payload: TicketPayload): Boolean {
         val svc = service ?: return false
         return try {
-            val bytes = construirEscPos(payload)
-            svc.sendRAWData(bytes, noopCb)
+            val texto = construirTextoPlano(payload)
+            Log.d(TAG, "printTicket bytes=${texto.length} via printText")
+            svc.printText(texto, loggingCb)
             true
         } catch (e: RemoteException) {
-            Log.e(TAG, "RemoteException", e)
+            Log.e(TAG, "RemoteException printText", e)
             false
         } catch (e: Exception) {
             Log.e(TAG, "Error printTicket", e)
             false
         }
+    }
+
+    // Construye el ticket como texto plano de 32 columnas. Sin ESC/POS,
+    // sin setFontSize, sin alignment via comando — solo printText.
+    private fun construirTextoPlano(p: TicketPayload): String {
+        val W = 32
+        fun cen(s: String): String {
+            val pad = ((W - s.length) / 2).coerceAtLeast(0)
+            return " ".repeat(pad) + s
+        }
+        fun cols(left: String, right: String): String {
+            val pad = (W - left.length - right.length).coerceAtLeast(1)
+            return left + " ".repeat(pad) + right
+        }
+        val sep = "=".repeat(W)
+        val sub = "-".repeat(W)
+
+        val sb = StringBuilder()
+        sb.append(cen(p.merchantName)).append('\n')
+        p.merchantSubtitle?.let { sb.append(cen(it)).append('\n') }
+        p.merchantAddress?.let  { sb.append(cen(it)).append('\n') }
+        p.merchantNit?.let      { sb.append(cen("NIT: $it")).append('\n') }
+        sb.append('\n').append(sep).append('\n')
+
+        sb.append("NIT receptor: ${p.receptorNit}").append('\n')
+        sb.append("Nombre: ${p.receptorNombre}").append('\n')
+        sb.append("Fecha: ${p.fecha}").append('\n')
+        p.cajeroNombre?.let { sb.append("Cajero: $it").append('\n') }
+        p.metodoPago?.let   { sb.append("Pago: ${it.uppercase()}").append('\n') }
+        sb.append(sub).append('\n')
+
+        for (item in p.items) {
+            sb.append(String.format("%-4s%s", item.cantidad, item.descripcion.take(26))).append('\n')
+            val precioLinea = String.format("  Q %.2f x %s", item.precioUnitario, item.cantidad)
+            val subStr = String.format("Q %.2f", item.subtotal)
+            sb.append(cols(precioLinea, subStr)).append('\n')
+        }
+        sb.append(sub).append('\n')
+
+        sb.append(cols("Subtotal:", String.format("Q %.2f", p.totalGravado))).append('\n')
+        sb.append(cols("IVA 12%:", String.format("Q %.2f", p.iva))).append('\n')
+        sb.append(cols("TOTAL:", String.format("Q %.2f", p.total))).append('\n')
+        sb.append('\n')
+
+        sb.append(cen("Factura Electronica DTE")).append('\n')
+        p.uuidSat?.let {
+            sb.append(cen("Autorizacion SAT:")).append('\n')
+            sb.append(cen(it)).append('\n')
+        }
+        p.serieSat?.let     { sb.append(cen("Serie: $it")).append('\n') }
+        p.numeroSat?.let    { sb.append(cen("Numero: $it")).append('\n') }
+        p.certificador?.let { sb.append(cen("Certificador: $it")).append('\n') }
+
+        sb.append('\n').append(cen("Gracias por su compra")).append('\n')
+        sb.append("\n\n\n\n\n")  // alimentar papel para corte manual
+
+        return sb.toString()
     }
 
     // ---------- ESC/POS builder ----------
@@ -195,14 +253,32 @@ class SunmiPrinter {
 
     private val noopCb = object : ICallback.Stub() {
         override fun onRunResult(isSuccess: Boolean) {
-            Log.d(TAG, "onRunResult: $isSuccess")
+            Log.d(TAG, "noopCb.onRunResult: $isSuccess")
         }
-        override fun onReturnString(result: String?) {}
+        override fun onReturnString(result: String?) {
+            Log.d(TAG, "noopCb.onReturnString: $result")
+        }
         override fun onRaiseException(code: Int, msg: String?) {
-            Log.w(TAG, "printer exception code=$code msg=$msg")
+            Log.w(TAG, "noopCb.onRaiseException code=$code msg=$msg")
         }
         override fun onPrintResult(code: Int, msg: String?) {
-            Log.d(TAG, "onPrintResult: code=$code msg=$msg")
+            Log.d(TAG, "noopCb.onPrintResult code=$code msg=$msg")
+        }
+    }
+
+    // Mas verbose para diagnostico
+    private val loggingCb = object : ICallback.Stub() {
+        override fun onRunResult(isSuccess: Boolean) {
+            Log.i(TAG, ">>> printText.onRunResult success=$isSuccess")
+        }
+        override fun onReturnString(result: String?) {
+            Log.i(TAG, ">>> printText.onReturnString: $result")
+        }
+        override fun onRaiseException(code: Int, msg: String?) {
+            Log.e(TAG, ">>> printText.onRaiseException code=$code msg=$msg")
+        }
+        override fun onPrintResult(code: Int, msg: String?) {
+            Log.i(TAG, ">>> printText.onPrintResult code=$code msg=$msg")
         }
     }
 
