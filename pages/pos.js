@@ -463,6 +463,17 @@ export default function POS({ session }) {
     setMostrarCarritoMobile(false)
   }
 
+  // Cantidades por variant_id en el carrito — para mostrar badge en cards.
+  // OJO: este hook DEBE estar antes de cualquier early return; si quedaba
+  // despues, React tiraba "Rendered fewer hooks than expected" (error #300).
+  const carritoPorVariant = useMemo(() => {
+    const m = new Map()
+    for (const l of carrito) {
+      if (l.variant_id) m.set(l.variant_id, (m.get(l.variant_id) || 0) + Number(l.cantidad))
+    }
+    return m
+  }, [carrito])
+
   if (perfil && !esAdmin && !esCajero) {
     return (
       <POSChrome perfil={perfil} kiosko={kiosko} turno={turno}>
@@ -482,15 +493,6 @@ export default function POS({ session }) {
       </div>
     )
   }
-
-  // Cantidades por variant_id en el carrito — para mostrar badge en cards.
-  const carritoPorVariant = useMemo(() => {
-    const m = new Map()
-    for (const l of carrito) {
-      if (l.variant_id) m.set(l.variant_id, (m.get(l.variant_id) || 0) + Number(l.cantidad))
-    }
-    return m
-  }, [carrito])
 
   return (
     <POSChrome perfil={perfil} kiosko={kiosko} turno={turno}>
