@@ -10,25 +10,22 @@ import android.util.Log
 import kotlinx.serialization.Serializable
 import woyou.aidlservice.jiuiv5.ICallback
 import woyou.aidlservice.jiuiv5.IWoyouService
+import java.io.ByteArrayOutputStream
 
 /**
- * Wrapper sobre el InnerPrinter de Sunmi (servicio AIDL en el firmware).
+ * Wrapper sobre el InnerPrinter de Sunmi (servicio AIDL del firmware).
  *
- * Solo aplica en dispositivos Sunmi (D3 Mini, V1s, V2, P1, P2, S2, T2, etc.).
+ * Solo aplica en dispositivos Sunmi (D3 Mini, V1s, V2, P1, P2, etc.).
  * En otros devices el bind falla y todas las llamadas devuelven false.
  *
- * Uso:
- *   sunmiPrinter.bind(context) { connected -> ... }
- *   sunmiPrinter.printTicket(payload) { ok -> ... }
- *   sunmiPrinter.unbind(context)
+ * Estrategia: usamos UN SOLO metodo del servicio AIDL — sendRAWData(byte[]) —
+ * con comandos ESC/POS crudos. Esto evita el problema de TX_CODE-mismatch:
+ * el firmware puede haber cambiado el orden de los metodos individuales
+ * (setFontSize, setAlignment, printQRCode) entre versiones, pero sendRAWData
+ * siempre cumple su contrato. Comprobado: code=-5 "Illegal parameter" cuando
+ * llamabamos setAlignment/setFontSize individualmente.
  *
- * Modelo de impresion:
- *   - Cada operacion usa enterPrinterBuffer/exitPrinterBuffer para que todo
- *     el ticket salga atomico (no bloquea ni interrumpe a otra app).
- *   - Los ICallback se ignoran salvo para detectar exception en el servicio.
- *
- * Conservador sobre fonts: usamos la default (Sunmi viene con una sans serif).
- * Sizes: 24 = normal, 32 = grande, 16 = chico.
+ * Layout del ticket en columnas de 32 caracteres (ancho estandar 58mm Sunmi).
  */
 class SunmiPrinter {
 
@@ -62,7 +59,7 @@ class SunmiPrinter {
             val ok = context.applicationContext.bindService(intent, conn, Context.BIND_AUTO_CREATE)
             if (!ok) {
                 binding = false
-                Log.w(TAG, "bindService devolvio false — no es Sunmi o servicio caido")
+                Log.w(TAG, "bindService devolvio false")
                 onConnect?.invoke(false)
             }
         } catch (e: Exception) {
@@ -80,121 +77,133 @@ class SunmiPrinter {
         service = null
     }
 
-    /**
-     * Imprime un ticket de venta con layout estandar:
-     *   - Header (logo texto, sucursal)
-     *   - Datos receptor (NIT, nombre)
-     *   - Tabla de items
-     *   - Subtotales + total
-     *   - Footer SAT (UUID, serie, numero)
-     *   - QR del UUID
-     *   - Mensaje gracias
-     *
-     * Devuelve true si todo el batch se mando al buffer y se hizo commit OK.
-     * Si el servicio no esta bindeado, devuelve false y no hace nada.
-     */
     fun printTicket(payload: TicketPayload): Boolean {
-        val svc = service ?: run {
-            Log.w(TAG, "printTicket llamado sin servicio bindeado")
-            return false
-        }
+        val svc = service ?: return false
         return try {
-            svc.enterPrinterBuffer(true)
-
-            // Header
-            svc.setAlignment(ALIGN_CENTER, noopCb)
-            svc.setFontSize(32f, noopCb)
-            svc.printText("${payload.merchantName}\n", noopCb)
-
-            svc.setFontSize(20f, noopCb)
-            payload.merchantSubtitle?.let { svc.printText("$it\n", noopCb) }
-            payload.merchantAddress?.let { svc.printText("$it\n", noopCb) }
-            payload.merchantNit?.let { svc.printText("NIT: $it\n", noopCb) }
-            svc.lineWrap(1, noopCb)
-
-            svc.printText("${"=".repeat(32)}\n", noopCb)
-
-            // Receptor
-            svc.setAlignment(ALIGN_LEFT, noopCb)
-            svc.printText("NIT receptor: ${payload.receptorNit}\n", noopCb)
-            svc.printText("Nombre: ${payload.receptorNombre}\n", noopCb)
-            svc.printText("Fecha: ${payload.fecha}\n", noopCb)
-            payload.cajeroNombre?.let { svc.printText("Cajero: $it\n", noopCb) }
-            payload.metodoPago?.let { svc.printText("Pago: ${it.uppercase()}\n", noopCb) }
-            svc.printText("${"-".repeat(32)}\n", noopCb)
-
-            // Items: 3 columnas — cantidad, descripcion, total
-            for (item in payload.items) {
-                val cant = item.cantidad
-                val desc = item.descripcion.take(28)
-                val sub = "Q %.2f".format(item.subtotal)
-
-                // Linea 1: cantidad + descripcion (max 28 chars)
-                svc.printText("%-4s%s\n".format(cant, desc), noopCb)
-                // Linea 2: precio_unitario x cantidad ............. subtotal
-                val precioLinea = "  Q %.2f x %s".format(item.precioUnitario, item.cantidad)
-                val padding = 32 - precioLinea.length - sub.length
-                val gap = if (padding > 0) " ".repeat(padding) else " "
-                svc.printText("$precioLinea$gap$sub\n", noopCb)
-            }
-            svc.printText("${"-".repeat(32)}\n", noopCb)
-
-            // Totales
-            svc.setFontSize(24f, noopCb)
-            val subtotalLine = "Subtotal:".padEnd(20) + "Q %.2f".format(payload.totalGravado).padStart(12)
-            svc.printText("$subtotalLine\n", noopCb)
-            val ivaLine = "IVA 12%:".padEnd(20) + "Q %.2f".format(payload.iva).padStart(12)
-            svc.printText("$ivaLine\n", noopCb)
-
-            svc.setFontSize(32f, noopCb)
-            val totalLine = "TOTAL:".padEnd(15) + "Q %.2f".format(payload.total).padStart(15)
-            svc.printText("$totalLine\n", noopCb)
-            svc.lineWrap(1, noopCb)
-
-            // Footer SAT
-            svc.setAlignment(ALIGN_CENTER, noopCb)
-            svc.setFontSize(20f, noopCb)
-            svc.printText("Factura Electronica DTE\n", noopCb)
-            payload.uuidSat?.let {
-                svc.printText("Autorizacion SAT:\n", noopCb)
-                svc.setFontSize(18f, noopCb)
-                svc.printText("$it\n", noopCb)
-                svc.setFontSize(20f, noopCb)
-            }
-            payload.serieSat?.let { svc.printText("Serie: $it\n", noopCb) }
-            payload.numeroSat?.let { svc.printText("Numero: $it\n", noopCb) }
-            payload.certificador?.let { svc.printText("Certificador: $it\n", noopCb) }
-
-            // QR si tenemos UUID
-            payload.uuidSat?.let {
-                svc.lineWrap(1, noopCb)
-                svc.printQRCode(it, 6, 3, noopCb)
-            }
-
-            svc.lineWrap(1, noopCb)
-            svc.printText("Gracias por su compra\n", noopCb)
-            svc.lineWrap(4, noopCb)
-
-            svc.exitPrinterBuffer(true)
+            val bytes = construirEscPos(payload)
+            svc.sendRAWData(bytes, noopCb)
             true
         } catch (e: RemoteException) {
-            Log.e(TAG, "RemoteException imprimiendo", e)
-            try { svc.exitPrinterBuffer(false) } catch (_: Exception) {}
+            Log.e(TAG, "RemoteException", e)
             false
         } catch (e: Exception) {
-            Log.e(TAG, "Error imprimiendo", e)
-            try { svc.exitPrinterBuffer(false) } catch (_: Exception) {}
+            Log.e(TAG, "Error printTicket", e)
             false
         }
     }
 
+    // ---------- ESC/POS builder ----------
+
+    private fun construirEscPos(p: TicketPayload): ByteArray {
+        val out = ByteArrayOutputStream()
+        // Init
+        out.write(byteArrayOf(0x1B, 0x40))                            // ESC @ = init
+        out.write(byteArrayOf(0x1B, 0x52, 0x12))                      // ESC R 18 = Latin-9 (con tildes/eñe basico)
+
+        // ----- Header centrado, doble alto -----
+        out.write(byteArrayOf(0x1B, 0x61, 0x01))                      // ESC a 1 = center
+        out.write(byteArrayOf(0x1D, 0x21, 0x11.toByte()))             // GS ! 0x11 = 2x ancho/alto
+        out.write((p.merchantName + "\n").toByteArray(Charsets.ISO_8859_1))
+        out.write(byteArrayOf(0x1D, 0x21, 0x00))                      // GS ! 0 = normal
+        p.merchantSubtitle?.let { out.write((it + "\n").toByteArray(Charsets.ISO_8859_1)) }
+        p.merchantAddress?.let  { out.write((it + "\n").toByteArray(Charsets.ISO_8859_1)) }
+        p.merchantNit?.let      { out.write(("NIT: $it\n").toByteArray(Charsets.ISO_8859_1)) }
+        out.write("\n".toByteArray())
+
+        out.write("================================\n".toByteArray())
+
+        // ----- Receptor (izquierda) -----
+        out.write(byteArrayOf(0x1B, 0x61, 0x00))                      // ESC a 0 = left
+        out.write(("NIT receptor: ${p.receptorNit}\n").toByteArray(Charsets.ISO_8859_1))
+        out.write(("Nombre: ${p.receptorNombre}\n").toByteArray(Charsets.ISO_8859_1))
+        out.write(("Fecha: ${p.fecha}\n").toByteArray(Charsets.ISO_8859_1))
+        p.cajeroNombre?.let { out.write(("Cajero: $it\n").toByteArray(Charsets.ISO_8859_1)) }
+        p.metodoPago?.let   { out.write(("Pago: ${it.uppercase()}\n").toByteArray(Charsets.ISO_8859_1)) }
+        out.write("--------------------------------\n".toByteArray())
+
+        // ----- Items -----
+        for (item in p.items) {
+            val desc = item.descripcion.take(26)
+            val cant = item.cantidad
+            val subStr = "Q %.2f".format(item.subtotal)
+            // linea 1: cant + descripcion
+            val l1 = "%-4s%s".format(cant, desc)
+            out.write((l1 + "\n").toByteArray(Charsets.ISO_8859_1))
+            // linea 2: precio unit ............. subtotal (justificado)
+            val precioLinea = "  Q %.2f x %s".format(item.precioUnitario, item.cantidad)
+            val padding = 32 - precioLinea.length - subStr.length
+            val gap = if (padding > 0) " ".repeat(padding) else " "
+            out.write((precioLinea + gap + subStr + "\n").toByteArray(Charsets.ISO_8859_1))
+        }
+        out.write("--------------------------------\n".toByteArray())
+
+        // ----- Totales -----
+        val subtotalLine = "Subtotal:".padEnd(20) + "Q %.2f".format(p.totalGravado).padStart(12)
+        val ivaLine      = "IVA 12%:".padEnd(20)  + "Q %.2f".format(p.iva).padStart(12)
+        out.write((subtotalLine + "\n").toByteArray(Charsets.ISO_8859_1))
+        out.write((ivaLine + "\n").toByteArray(Charsets.ISO_8859_1))
+
+        // TOTAL en doble alto
+        out.write(byteArrayOf(0x1D, 0x21, 0x11.toByte()))
+        val totalStr = "Q %.2f".format(p.total)
+        // En doble ancho usamos 16 chars por linea visualmente
+        val totalLine = "TOTAL: ".padEnd(16 - totalStr.length) + totalStr
+        out.write((totalLine + "\n").toByteArray(Charsets.ISO_8859_1))
+        out.write(byteArrayOf(0x1D, 0x21, 0x00))
+        out.write("\n".toByteArray())
+
+        // ----- Footer SAT centrado -----
+        out.write(byteArrayOf(0x1B, 0x61, 0x01))                      // center
+        out.write("Factura Electronica DTE\n".toByteArray())
+        p.uuidSat?.let {
+            out.write("Autorizacion SAT:\n".toByteArray())
+            out.write((it + "\n").toByteArray(Charsets.ISO_8859_1))
+        }
+        p.serieSat?.let  { out.write(("Serie: $it\n").toByteArray(Charsets.ISO_8859_1)) }
+        p.numeroSat?.let { out.write(("Numero: $it\n").toByteArray(Charsets.ISO_8859_1)) }
+        p.certificador?.let { out.write(("Certificador: $it\n").toByteArray(Charsets.ISO_8859_1)) }
+
+        // ----- QR del UUID (ESC/POS estandar) -----
+        p.uuidSat?.let { qrData ->
+            // GS ( k pL pH cn fn n1 n2 — config QR
+            // Model 2
+            out.write(byteArrayOf(0x1D, 0x28, 0x6B, 0x04, 0x00, 0x31, 0x41, 0x32, 0x00))
+            // Tamaño modulo 6
+            out.write(byteArrayOf(0x1D, 0x28, 0x6B, 0x03, 0x00, 0x31, 0x43, 0x06))
+            // Error correction L
+            out.write(byteArrayOf(0x1D, 0x28, 0x6B, 0x03, 0x00, 0x31, 0x45, 0x30))
+            // Store data: GS ( k pL pH cn fn m data
+            val qrBytes = qrData.toByteArray(Charsets.ISO_8859_1)
+            val len = qrBytes.size + 3
+            val pL = (len and 0xFF).toByte()
+            val pH = ((len shr 8) and 0xFF).toByte()
+            out.write(byteArrayOf(0x1D, 0x28, 0x6B, pL, pH, 0x31, 0x50, 0x30))
+            out.write(qrBytes)
+            // Print
+            out.write(byteArrayOf(0x1D, 0x28, 0x6B, 0x03, 0x00, 0x31, 0x51, 0x30))
+        }
+
+        out.write("\n".toByteArray())
+        out.write("Gracias por su compra\n".toByteArray())
+        out.write("\n\n\n\n".toByteArray())                            // alimentar papel
+
+        // Cut paper (parcial)
+        out.write(byteArrayOf(0x1D, 0x56, 0x42, 0x00))                // GS V B 0 = partial cut
+
+        return out.toByteArray()
+    }
+
     private val noopCb = object : ICallback.Stub() {
-        override fun onRunResult(isSuccess: Boolean) {}
+        override fun onRunResult(isSuccess: Boolean) {
+            Log.d(TAG, "onRunResult: $isSuccess")
+        }
         override fun onReturnString(result: String?) {}
         override fun onRaiseException(code: Int, msg: String?) {
             Log.w(TAG, "printer exception code=$code msg=$msg")
         }
-        override fun onPrintResult(code: Int, msg: String?) {}
+        override fun onPrintResult(code: Int, msg: String?) {
+            Log.d(TAG, "onPrintResult: code=$code msg=$msg")
+        }
     }
 
     private var connectionHolder: ServiceConnection? = null
@@ -203,9 +212,6 @@ class SunmiPrinter {
         private const val TAG = "SunmiPrinter"
         private const val SUNMI_SERVICE_PACKAGE = "woyou.aidlservice.jiuiv5"
         private const val SUNMI_SERVICE_ACTION = "woyou.aidlservice.jiuiv5.IWoyouService"
-        const val ALIGN_LEFT = 0
-        const val ALIGN_CENTER = 1
-        const val ALIGN_RIGHT = 2
     }
 }
 
