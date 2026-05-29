@@ -878,40 +878,34 @@ function PantallaExito({ resultado, onNueva }) {
   const comandaCreada = resultado.comanda?.ok && resultado.comanda?.comanda
   const [verDetalles, setVerDetalles] = useState(false)
   return (
-    <div className="fixed inset-0 z-50 bg-gradient-to-b from-gray-50 to-white overflow-y-auto">
-      <div className="min-h-full flex flex-col items-center justify-start px-4 py-5">
-        {/* Check verde */}
-        <div className="relative mb-2">
-          <div className="absolute inset-0 bg-emerald-200/40 rounded-full blur-xl"></div>
-          <div className="relative w-14 h-14 bg-emerald-500 rounded-full flex items-center justify-center shadow-lg">
-            <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" strokeWidth={3} viewBox="0 0 24 24">
+    <div className="fixed inset-0 z-50 bg-gradient-to-b from-gray-50 to-white flex items-center justify-center p-6 overflow-y-auto">
+      <div className="w-full max-w-lg text-center flex flex-col items-center">
+        {/* Check verde grande con halo */}
+        <div className="relative mb-5">
+          <div className="absolute inset-0 bg-emerald-200/50 rounded-full blur-2xl animate-pulse"></div>
+          <div className="relative w-28 h-28 bg-emerald-500 rounded-full flex items-center justify-center shadow-2xl">
+            <svg className="w-16 h-16 text-white" fill="none" stroke="currentColor" strokeWidth={3} viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
             </svg>
           </div>
         </div>
 
-        <h2 className="text-base font-bold text-gray-900">Venta certificada</h2>
+        <h2 className="text-3xl font-bold text-gray-900 mb-1">Venta certificada</h2>
+        <p className="text-sm text-gray-500 mb-4">UUID SAT confirmado por Infile</p>
 
-        {/* Total */}
-        <div className="text-3xl font-bold text-julia-red tabular-nums my-2">
+        {/* Total prominente */}
+        <div className="text-6xl font-bold text-julia-red tabular-nums my-3 leading-none">
           {'Q ' + Number(f.total).toLocaleString('es-GT', { minimumFractionDigits: 2 })}
         </div>
 
-        {/* BOTÓN PROMINENTE arriba — siempre visible */}
-        <button onClick={onNueva}
-          className="w-full max-w-sm block px-8 py-4 mt-2 bg-julia-red text-white text-base font-bold rounded-2xl hover:bg-red-700 active:scale-[0.98] transition-all shadow-lg flex items-center justify-center gap-2">
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
-          </svg>
-          Nueva venta
-        </button>
-
-        {/* Status chips compactos */}
-        <div className="flex flex-wrap gap-1.5 mt-4 max-w-sm justify-center">
+        {/* Status chips */}
+        <div className="flex flex-wrap gap-2 my-5 justify-center">
           <StatusChip
             ok={resultado.descuento?.pt?.ok}
             label="Inventario"
-            detail={resultado.descuento?.pt?.ok ? '✓' : '⚠'} />
+            detail={resultado.descuento?.pt?.ok
+              ? `${resultado.descuento.pt.lineas_procesadas} líneas`
+              : '⚠'} />
           <StatusChip
             ok={resultado.asiento?.ok}
             label="Asiento"
@@ -919,15 +913,24 @@ function PantallaExito({ resultado, onNueva }) {
           {comandaCreada && <StatusChip ok={true} label="Barra" detail="enviada" />}
         </div>
 
-        {/* Toggle ver detalles — colapsable */}
+        {/* Botón Nueva venta grande, centrado */}
+        <button onClick={onNueva}
+          className="w-full max-w-sm block px-8 py-5 mt-2 bg-julia-red text-white text-lg font-bold rounded-2xl hover:bg-red-700 active:scale-[0.98] transition-all shadow-xl flex items-center justify-center gap-3">
+          <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+          </svg>
+          Nueva venta
+        </button>
+
+        {/* Toggle ver detalles */}
         <button
           onClick={() => setVerDetalles(v => !v)}
-          className="mt-4 text-xs text-gray-400 hover:text-gray-700 flex items-center gap-1">
+          className="mt-5 text-xs text-gray-400 hover:text-gray-700 flex items-center gap-1">
           {verDetalles ? '▴ Ocultar detalles' : '▾ Ver detalles SAT, NIT, voucher'}
         </button>
 
         {verDetalles && (
-          <div className="bg-white border border-gray-100 rounded-2xl shadow-sm p-4 max-w-sm w-full space-y-2 mt-2 mb-4">
+          <div className="bg-white border border-gray-100 rounded-2xl shadow-sm p-5 w-full max-w-sm space-y-2 mt-3 text-left">
             <Row k="Receptor" v={`${f.receptor_nit} — ${f.receptor_nombre}`} />
             <Row k="Pago" v={<span className="capitalize">{f.metodo_pago}</span>} />
             {resultado.neonet && (
