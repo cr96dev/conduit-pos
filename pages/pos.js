@@ -10,6 +10,7 @@ import Head from 'next/head'
 import { supabase } from '../lib/supabase'
 import Layout from '../components/Layout'
 import { SkeletonRow } from '../components/Skeleton'
+import SoporteBubble from '../components/SoporteBubble'
 import { useEsKiosko } from '../lib/kiosko'
 
 // Wrapper de layout: en modo kiosko (wrapper Android Sunmi) renderiza un
@@ -890,6 +891,27 @@ export default function POS({ session }) {
           <span className="tabular-nums font-bold">{fmtQ(totales.total)}</span>
         </button>
       )}
+
+      {/* Burbuja de soporte tecnico — Claude responde con contexto operativo */}
+      <SoporteBubble
+        perfil={perfil}
+        obtenerContexto={() => ({
+          pagina: 'pos',
+          kiosko,
+          turno_abierto: turno
+            ? { id: turno.id, monto_apertura: turno.monto_apertura }
+            : null,
+          carrito_items: carrito.length,
+          carrito_total: totales.total,
+          carrito_descripciones: carrito.map(l => `${l.cantidad}× ${l.descripcion}`).slice(0, 5),
+          receptor: receptor.nit !== 'CF'
+            ? `${receptor.nit} - ${receptor.nombre}`
+            : 'CONSUMIDOR FINAL',
+          metodo_pago: metodoPago,
+          ultimo_error: err || null,
+          puente_nativo_disponible: typeof window !== 'undefined' && !!window.JuliaPOS,
+        })}
+      />
     </POSChrome>
   )
 }
