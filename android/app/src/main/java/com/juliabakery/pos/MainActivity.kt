@@ -17,6 +17,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
+import androidx.appcompat.app.AlertDialog
 import com.juliabakery.pos.databinding.ActivityMainBinding
 
 /**
@@ -42,6 +43,26 @@ class MainActivity : AppCompatActivity() {
     @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        // ===== ANTI-TAMPERING =====
+        // Verificar que el APK fue firmado con el keystore oficial Julia Bakery.
+        // Si fue re-firmado (decompile + repack), bloquear y mostrar mensaje.
+        // En DEBUG no aplica (SignatureGuard.verify devuelve true).
+        if (!SignatureGuard.verify(this)) {
+            Log.e("MainActivity", "Firma del APK no coincide. Bloqueando.")
+            AlertDialog.Builder(this)
+                .setTitle("Aplicación no oficial")
+                .setMessage("Esta versión de Julia Bakery POS fue alterada o no proviene del repositorio oficial. " +
+                    "Por seguridad la aplicación se cerrará. Contactá al administrador.")
+                .setCancelable(false)
+                .setPositiveButton("Cerrar") { _, _ ->
+                    finishAffinity()
+                    android.os.Process.killProcess(android.os.Process.myPid())
+                }
+                .show()
+            return  // No inicializar nada mas
+        }
+
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 

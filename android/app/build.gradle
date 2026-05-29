@@ -12,8 +12,8 @@ android {
         applicationId "com.juliabakery.pos"
         minSdk 24                 // Android 7.0 — Sunmi D3 Mini ship con 7.1+
         targetSdk 35
-        versionCode 7
-        versionName "0.2.5"
+        versionCode 8
+        versionName "0.3.0"
 
         // URLs configurables por build type. Override en linea de comandos:
         //   ./gradlew assembleDebug -PJULIA_BASE_URL="https://preview-foo.vercel.app"
@@ -56,7 +56,8 @@ android {
         }
         release {
             buildConfigField "boolean", "WEBVIEW_DEBUG", "false"
-            minifyEnabled false       // sin obfuscacion por ahora (debug-friendly)
+            minifyEnabled true        // R8 obfuscation + shrinking
+            shrinkResources true      // remueve resources no usados
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
             // Aplica firma release si las env vars estan presentes; si no, gradle falla
             // con mensaje claro (mejor que silenciosamente caer a debug signing).
