@@ -11,12 +11,12 @@ import { supabase } from '../lib/supabase'
 import Layout from '../components/Layout'
 import { SkeletonRow } from '../components/Skeleton'
 import SoporteBubble from '../components/SoporteBubble'
-import { useEsKiosko } from '../lib/kiosko'
+import { useEsKiosko, esKiosko } from '../lib/kiosko'
 
 // Wrapper de layout: en modo kiosko (wrapper Android Sunmi) renderiza un
 // header minimo con logo + cajero + logout. En desktop usa el Layout
 // completo con sidebar y navegacion a otros modulos.
-function POSChrome({ perfil, kiosko, turno, children }) {
+function POSChrome({ perfil, kiosko, turno, onMostrarHistorial, onMostrarBandeja, pedidosPendientesCount, children }) {
   // Admin desktop -> Layout completo con sidebar. (Si admin es cajero, no
   // queremos perder el sidebar.) Solo en kiosko o si rol=cajero mostramos
   // el chrome minimo con cajero/turno + Cerrar caja + Mis turnos.
@@ -32,12 +32,36 @@ function POSChrome({ perfil, kiosko, turno, children }) {
             {perfil?.nombre_completo || 'Cajero'}
           </div>
           {turno && (
-            <span className="text-[10px] bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded uppercase tracking-wide hidden sm:inline">
-              Caja abierta
-            </span>
+            <button onClick={() => window.location.href = '/mis-turnos'}
+              title={`Apertura ${new Date(turno.fecha_apertura).toLocaleTimeString('es-GT', { hour: '2-digit', minute: '2-digit' })} · Q${Number(turno.monto_apertura || 0).toFixed(2)}`}
+              className="text-[10px] bg-emerald-50 hover:bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded uppercase tracking-wide hidden sm:inline">
+              Caja abierta · {new Date(turno.fecha_apertura).toLocaleTimeString('es-GT', { hour: '2-digit', minute: '2-digit' })}
+            </button>
           )}
         </div>
         <div className="flex items-center gap-1 flex-shrink-0">
+          {turno && onMostrarBandeja && (
+            <button onClick={onMostrarBandeja}
+              className={`text-xs px-3 py-1.5 rounded-lg font-semibold flex items-center gap-1.5 transition-colors ${
+                pedidosPendientesCount > 0
+                  ? 'bg-amber-100 text-amber-800 hover:bg-amber-200 ring-2 ring-amber-300/50'
+                  : 'text-amber-700 hover:bg-amber-50'
+              }`}
+              title="Bandeja de pedidos pendientes (Pedidos Ya)">
+              📦 Pedidos
+              {pedidosPendientesCount > 0 && (
+                <span className="bg-amber-600 text-white rounded-full px-1.5 py-0.5 text-[10px] font-bold tabular-nums">
+                  {pedidosPendientesCount}
+                </span>
+              )}
+            </button>
+          )}
+          {turno && onMostrarHistorial && (
+            <button onClick={onMostrarHistorial}
+              className="text-[11px] text-blue-600 hover:bg-blue-50 px-2 py-1 rounded-lg font-medium">
+              Historial
+            </button>
+          )}
           {esCajero && (
             <>
               <button onClick={() => window.location.href = '/mis-turnos'}
@@ -67,6 +91,598 @@ function POSChrome({ perfil, kiosko, turno, children }) {
   )
 }
 
+// Sugerencias frecuentes de modificadores para items (especialmente bebidas de
+// barra). El cajero las toca como chips para agregar/quitar. Tambien hay un
+// textarea libre debajo. La nota final se concatena a la descripcion del item
+// antes de enviarla al FEL — asi aparece en la factura, en el ticket impreso
+// y en la comanda de barra sin tocar el backend.
+const SUGERENCIAS_NOTA = [
+  'Leche deslactosada',
+  'Leche de soya',
+  'Leche de almendra',
+  'Sin azucar',
+  'Extra azucar',
+  'Doble shot',
+  'Descafeinado',
+  'Caliente',
+  'Frio',
+  'Hielo extra',
+  'Sin hielo',
+  'Para llevar',
+]
+
+// Modal de edicion de nota para una linea del carrito. El cajero puede tocar
+// chips de sugerencias (las activa/desactiva) y/o escribir texto libre.
+function ModalNotaItem({ descripcion, value, onClose, onSave }) {
+  const [text, setText] = useState(value || '')
+
+  function toggleSugerencia(sug) {
+    const lower = sug.toLowerCase()
+    const partes = text.split(/[,·]/).map(s => s.trim()).filter(Boolean)
+    const idx = partes.findIndex(p => p.toLowerCase() === lower)
+    if (idx >= 0) partes.splice(idx, 1)
+    else partes.push(sug)
+    setText(partes.join(', '))
+  }
+
+  function estaActiva(sug) {
+    return text.toLowerCase().split(/[,·]/).map(s => s.trim()).includes(sug.toLowerCase())
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4" onClick={onClose}>
+      <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-5 max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+        <h3 className="text-lg font-semibold text-gray-900 mb-1">Nota del producto</h3>
+        <p className="text-xs text-gray-500 mb-1">{descripcion}</p>
+        <p className="text-[11px] text-gray-400 mb-4">
+          Aparece en el ticket impreso, en la factura y en la comanda de barra.
+        </p>
+
+        <div className="flex flex-wrap gap-2 mb-4">
+          {SUGERENCIAS_NOTA.map(s => {
+            const activa = estaActiva(s)
+            return (
+              <button key={s} onClick={() => toggleSugerencia(s)}
+                className={`text-sm px-3 py-2 rounded-full font-medium border-2 transition-colors ${
+                  activa
+                    ? 'bg-julia-red text-white border-julia-red'
+                    : 'bg-white text-gray-700 border-gray-200 hover:border-julia-red/40'
+                }`}>
+                {activa ? '✓ ' : '+ '}{s}
+              </button>
+            )
+          })}
+        </div>
+
+        <label className="block text-xs text-gray-500 mb-1 font-medium">O escribí libremente</label>
+        <textarea value={text} onChange={e => setText(e.target.value)} rows={3}
+          maxLength={200}
+          placeholder="Ej: latte con leche deslactosada, sin azucar..."
+          className="w-full px-3 py-3 text-base border-2 border-gray-200 rounded-xl focus:outline-none focus:border-julia-red" />
+        <div className="text-[10px] text-gray-400 text-right mt-1">{text.length}/200</div>
+
+        <div className="grid grid-cols-2 gap-2 mt-4">
+          <button onClick={onClose}
+            className="py-4 border-2 border-gray-200 text-base font-semibold text-gray-700 rounded-xl hover:bg-gray-50">
+            Cancelar
+          </button>
+          <button onClick={() => onSave(text.trim())}
+            className="py-4 bg-julia-red text-white text-base font-semibold rounded-xl hover:bg-red-700">
+            Guardar nota
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// Modal para guardar el carrito actual como pedido pendiente (Pedidos Ya).
+// El cajero ingresa una referencia (ej: "Pedidos Ya #4521" o nombre cliente).
+// Al guardar, el carrito se persiste en la tabla pedidos_pendientes y aparece
+// en la bandeja para que cualquier cajero del turno lo facture cuando llegue
+// el driver. NO emite factura todavia.
+function ModalGuardarPedido({ totalEstimado, cantItems, onClose, onGuardar }) {
+  const [referencia, setReferencia] = useState('')
+  const [origen, setOrigen] = useState('pedidos_ya')
+  const [notas, setNotas] = useState('')
+  const [enviando, setEnviando] = useState(false)
+  const [error, setError] = useState(null)
+
+  async function submit() {
+    setError(null)
+    if (!referencia.trim()) { setError('Ingresá una referencia (cliente o #pedido)'); return }
+    setEnviando(true)
+    try {
+      await onGuardar({ referencia: referencia.trim(), origen, notas: notas.trim() })
+    } catch (e) {
+      setError(e?.message || 'No se pudo guardar')
+      setEnviando(false)
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4" onClick={onClose}>
+      <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-5" onClick={e => e.stopPropagation()}>
+        <h3 className="text-xl font-semibold text-gray-900 mb-1">Guardar pedido pendiente</h3>
+        <p className="text-xs text-gray-500 mb-4">
+          El pedido queda en la bandeja sin facturar.<br/>
+          Se factura cuando el driver recoge.
+        </p>
+
+        <div className="bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 mb-4 flex justify-between items-center">
+          <span className="text-sm text-gray-500">{cantItems} ítems</span>
+          <span className="text-xl font-bold text-julia-red tabular-nums">{fmtQ(totalEstimado)}</span>
+        </div>
+
+        <label className="block text-sm text-gray-600 font-medium mb-1.5">
+          Referencia <span className="text-red-500">*</span>
+        </label>
+        <input type="text" value={referencia} onChange={e => setReferencia(e.target.value)}
+          autoFocus maxLength={200}
+          placeholder="Ej: Pedidos Ya #4521  ·  Juan  ·  Para llevar #2"
+          className="w-full px-4 py-3 text-base border-2 border-gray-200 rounded-xl mb-4 focus:outline-none focus:border-julia-red" />
+
+        <label className="block text-sm text-gray-600 font-medium mb-1.5">Canal del pedido</label>
+        <div className="grid grid-cols-3 gap-2 mb-4">
+          {[
+            { id: 'pedidos_ya', label: 'Pedidos Ya' },
+            { id: 'telefono',   label: 'Teléfono' },
+            { id: 'walkin',     label: 'Mostrador' },
+          ].map(o => (
+            <button key={o.id} onClick={() => setOrigen(o.id)}
+              className={`text-sm py-3 rounded-lg font-semibold transition-colors ${
+                origen === o.id
+                  ? 'bg-julia-red text-white'
+                  : 'border-2 border-gray-200 text-gray-700 hover:border-julia-red/40'
+              }`}>{o.label}</button>
+          ))}
+        </div>
+
+        <label className="block text-sm text-gray-600 font-medium mb-1.5">Notas internas (opcional)</label>
+        <textarea value={notas} onChange={e => setNotas(e.target.value)} rows={2}
+          maxLength={500}
+          placeholder="Ej: cliente paga al recibir, sin pan tostado..."
+          className="w-full px-3 py-2.5 text-base border-2 border-gray-200 rounded-xl mb-3 focus:outline-none focus:border-julia-red" />
+
+        {error && (
+          <div className="bg-red-50 border border-red-100 rounded-lg px-3 py-2 text-sm text-red-700 mb-3">{error}</div>
+        )}
+
+        <div className="grid grid-cols-2 gap-2">
+          <button onClick={onClose} disabled={enviando}
+            className="py-4 border-2 border-gray-200 text-base font-semibold text-gray-700 rounded-xl hover:bg-gray-50 disabled:opacity-50">
+            Cancelar
+          </button>
+          <button onClick={submit} disabled={enviando}
+            className="py-4 bg-julia-red text-white text-base font-semibold rounded-xl hover:bg-red-700 disabled:opacity-50">
+            {enviando ? 'Guardando...' : 'Guardar pedido'}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// Bandeja: lista los pedidos pendientes del turno actual con accion
+// Continuar (carga al carrito + permite editar y cobrar) y Cancelar.
+// Auto-refresca al abrir.
+function ModalBandejaPedidos({ pedidos, cargando, onClose, onContinuar, onCancelar, onRefresh }) {
+  const [cancelandoId, setCancelandoId] = useState(null)
+  const [motivos, setMotivos] = useState({})
+
+  async function cancelar(p) {
+    const motivo = (motivos[p.id] || '').trim()
+    setCancelandoId(p.id)
+    try {
+      await onCancelar(p.id, motivo || 'Sin motivo especificado')
+    } finally {
+      setCancelandoId(null)
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" onClick={onClose}>
+      <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[88vh] flex flex-col overflow-hidden" onClick={e => e.stopPropagation()}>
+        <div className="px-5 py-3 border-b border-gray-100 flex justify-between items-center bg-amber-50">
+          <div>
+            <div className="text-base font-bold text-gray-900">Pedidos pendientes</div>
+            <div className="text-xs text-gray-500">Sin facturar — esperando que el driver recoja</div>
+          </div>
+          <div className="flex items-center gap-2">
+            <button onClick={onRefresh} title="Recargar"
+              className="text-gray-500 hover:text-julia-red w-9 h-9 flex items-center justify-center rounded-lg hover:bg-amber-100">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
+            </button>
+            <button onClick={onClose}
+              className="text-gray-400 hover:text-gray-700 text-2xl leading-none w-9 h-9 flex items-center justify-center">✕</button>
+          </div>
+        </div>
+
+        <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-gray-50">
+          {cargando && (
+            <div className="text-center py-8 text-sm text-gray-400">Cargando pedidos…</div>
+          )}
+          {!cargando && pedidos.length === 0 && (
+            <div className="text-center py-12">
+              <div className="text-5xl mb-3 opacity-50">📦</div>
+              <div className="text-base font-medium text-gray-600">No hay pedidos pendientes</div>
+              <div className="text-xs text-gray-400 mt-1">Cuando armes un pedido y lo guardes, aparecerá acá.</div>
+            </div>
+          )}
+          {pedidos.map(p => {
+            const items = Array.isArray(p.items) ? p.items : []
+            const totalItems = items.reduce((s, it) => s + Number(it.cantidad || 0), 0)
+            const minutos = Math.floor((Date.now() - new Date(p.created_at).getTime()) / 60000)
+            return (
+              <div key={p.id} className="bg-white border-2 border-gray-100 rounded-xl p-4 hover:border-amber-200 transition-colors">
+                <div className="flex justify-between items-start gap-3 mb-2">
+                  <div className="flex-1 min-w-0">
+                    <div className="text-base font-bold text-gray-900 truncate">{p.referencia}</div>
+                    <div className="text-xs text-gray-500 mt-0.5">
+                      <span className="capitalize">{p.origen?.replace('_', ' ')}</span>
+                      {' · '}
+                      <span>{p.cajero_creador_nombre || 'cajero'}</span>
+                      {' · '}
+                      <span>hace {minutos}min</span>
+                    </div>
+                  </div>
+                  <div className="text-right flex-shrink-0">
+                    <div className="text-lg font-bold text-gray-900 tabular-nums">{fmtQ(p.total_estimado)}</div>
+                    <div className="text-[10px] text-gray-400">{totalItems} ítems</div>
+                  </div>
+                </div>
+
+                {/* Preview de items */}
+                <div className="text-xs text-gray-600 mb-3 bg-gray-50 rounded-lg px-3 py-2 max-h-24 overflow-y-auto">
+                  {items.slice(0, 5).map((it, i) => (
+                    <div key={i} className="flex justify-between gap-2">
+                      <span className="truncate">{it.cantidad}× {it.descripcion}</span>
+                    </div>
+                  ))}
+                  {items.length > 5 && (
+                    <div className="text-gray-400 italic text-[11px] mt-1">y {items.length - 5} más…</div>
+                  )}
+                </div>
+
+                {p.notas && (
+                  <div className="text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded-md px-2 py-1 mb-3">
+                    📝 {p.notas}
+                  </div>
+                )}
+
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="flex flex-col gap-1">
+                    <button onClick={() => onContinuar(p)}
+                      className="py-3 bg-emerald-600 text-white font-semibold rounded-lg hover:bg-emerald-700 text-sm">
+                      📥 Cobrar / Continuar
+                    </button>
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <input type="text" placeholder="Motivo cancelación..."
+                      value={motivos[p.id] || ''}
+                      onChange={e => setMotivos({ ...motivos, [p.id]: e.target.value })}
+                      className="text-xs border border-gray-200 rounded-lg px-2 py-1.5" />
+                    <button onClick={() => cancelar(p)} disabled={cancelandoId === p.id}
+                      className="py-2 border-2 border-red-200 text-red-700 font-semibold rounded-lg hover:bg-red-50 text-xs disabled:opacity-50">
+                      {cancelandoId === p.id ? 'Cancelando...' : 'Cancelar pedido'}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// Modal para dividir el pago entre varios metodos. El cajero agrega pagos
+// (metodo + monto) hasta llegar al total de la venta. Al guardar, el carrito
+// se cobra con pagos[] (multi-metodo); en facturas_fel queda metodo_pago='mixto'.
+function ModalDividirPago({ totalVenta, pagosInicial, onClose, onGuardar }) {
+  const [pagos, setPagos] = useState(
+    pagosInicial && pagosInicial.length > 0
+      ? pagosInicial.map(p => ({ ...p }))
+      : [{ metodo: 'efectivo', monto: '' }]
+  )
+  const [error, setError] = useState(null)
+
+  const sumaActual = pagos.reduce((s, p) => s + (Number(p.monto) || 0), 0)
+  const restante = Math.round((totalVenta - sumaActual) * 100) / 100
+  const cuadra = Math.abs(restante) < 0.01
+
+  function agregar() {
+    // Agrega un pago nuevo precargado con el restante (si lo hay)
+    setPagos(prev => [...prev, { metodo: 'efectivo', monto: restante > 0 ? restante.toFixed(2) : '' }])
+  }
+  function quitar(i) {
+    setPagos(prev => prev.filter((_, idx) => idx !== i))
+  }
+  function actualizar(i, patch) {
+    setPagos(prev => prev.map((p, idx) => idx === i ? { ...p, ...patch } : p))
+  }
+
+  function guardar() {
+    setError(null)
+    if (pagos.length === 0) { setError('Agregá al menos un pago'); return }
+    for (const [i, p] of pagos.entries()) {
+      const m = Number(p.monto)
+      if (!Number.isFinite(m) || m <= 0) {
+        setError(`Pago ${i + 1}: monto inválido (> 0)`); return
+      }
+    }
+    if (!cuadra) {
+      setError(`La suma (Q${sumaActual.toFixed(2)}) no cuadra con el total (Q${totalVenta.toFixed(2)})`)
+      return
+    }
+    // Normalizar montos a numero
+    onGuardar(pagos.map(p => ({
+      metodo: p.metodo,
+      monto: Number(p.monto),
+      referencia: p.referencia || null,
+    })))
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4" onClick={onClose}>
+      <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg p-5 max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+        <h3 className="text-xl font-semibold text-gray-900 mb-1">Dividir pago</h3>
+        <p className="text-xs text-gray-500 mb-4">
+          Agregá varios pagos (efectivo + tarjeta, etc) hasta cubrir el total.
+        </p>
+
+        <div className="bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 mb-4 grid grid-cols-3 gap-2 text-center">
+          <div>
+            <div className="text-[10px] uppercase tracking-wide text-gray-500 font-bold">Total venta</div>
+            <div className="text-base font-bold text-gray-900 tabular-nums">{fmtQ(totalVenta)}</div>
+          </div>
+          <div>
+            <div className="text-[10px] uppercase tracking-wide text-gray-500 font-bold">Cubierto</div>
+            <div className="text-base font-bold text-emerald-600 tabular-nums">{fmtQ(sumaActual)}</div>
+          </div>
+          <div>
+            <div className="text-[10px] uppercase tracking-wide text-gray-500 font-bold">Falta</div>
+            <div className={`text-base font-bold tabular-nums ${
+              restante > 0 ? 'text-amber-600' : restante < 0 ? 'text-red-600' : 'text-emerald-600'
+            }`}>
+              {fmtQ(restante)}
+            </div>
+          </div>
+        </div>
+
+        <div className="space-y-2 mb-3">
+          {pagos.map((p, i) => (
+            <div key={i} className="bg-white border-2 border-gray-100 rounded-xl p-3 flex items-center gap-2">
+              <div className="text-xs text-gray-400 font-bold w-5 text-center">{i + 1}</div>
+              <select value={p.metodo} onChange={e => actualizar(i, { metodo: e.target.value })}
+                className="flex-1 text-base border-2 border-gray-200 rounded-lg px-2 py-2 bg-white font-medium focus:outline-none focus:border-julia-red">
+                <option value="efectivo">Efectivo</option>
+                <option value="tarjeta">Tarjeta</option>
+                <option value="transferencia">Transferencia</option>
+                <option value="pedidos_ya">Pedidos Ya</option>
+                <option value="otro">Otro</option>
+              </select>
+              <input type="number" step="0.01" min="0" value={p.monto}
+                onChange={e => actualizar(i, { monto: e.target.value })}
+                inputMode="decimal"
+                placeholder="0.00"
+                className="w-28 text-right text-base px-2 py-2 border-2 border-gray-200 rounded-lg tabular-nums focus:outline-none focus:border-julia-red" />
+              {pagos.length > 1 && (
+                <button onClick={() => quitar(i)}
+                  className="text-gray-300 hover:text-red-500 w-9 h-9 flex items-center justify-center">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              )}
+            </div>
+          ))}
+        </div>
+
+        <button onClick={agregar}
+          className="w-full py-3 border-2 border-dashed border-gray-300 text-gray-600 font-semibold rounded-xl hover:border-julia-red hover:text-julia-red text-base mb-3">
+          + Agregar otro pago
+        </button>
+
+        {error && (
+          <div className="bg-red-50 border border-red-100 rounded-lg px-3 py-2 text-sm text-red-700 mb-3">{error}</div>
+        )}
+
+        <div className="grid grid-cols-2 gap-2">
+          <button onClick={onClose}
+            className="py-4 border-2 border-gray-200 text-base font-semibold text-gray-700 rounded-xl hover:bg-gray-50">
+            Cancelar
+          </button>
+          <button onClick={guardar} disabled={!cuadra}
+            className="py-4 bg-julia-red text-white text-base font-semibold rounded-xl hover:bg-red-700 disabled:opacity-40 disabled:cursor-not-allowed">
+            Guardar pagos
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// Motivos pre-canned para reimprimir factura desde POS (mismo set que /facturacion).
+const MOTIVOS_REIMPRIMIR_POS = {
+  cliente_perdio: 'Cliente perdió el ticket',
+  no_salio:      'No salió bien la primera vez',
+  duplicado:     'Cliente pidió duplicado',
+}
+
+// Modal: historial de facturas emitidas por este cajero en su turno actual.
+// Permite reimprimir cualquiera con leyenda "REIMPRESION N°X".
+function ModalHistorialFacturas({ perfil, turno, emisor, onClose, toast }) {
+  const [items, setItems] = useState(null)
+  const [err, setErr] = useState(null)
+  const [reimprimiendo, setReimprimiendo] = useState(null) // id en proceso
+  const [motivos, setMotivos] = useState({})               // id -> 'cliente_perdio' | 'otro' | etc
+  const [otrosTexto, setOtrosTexto] = useState({})         // id -> texto libre
+
+  useEffect(() => {
+    (async () => {
+      // Solo facturas certificadas, de este cajero, desde la apertura del turno.
+      const params = new URLSearchParams({
+        creado_por: perfil.id,
+        desde: turno.fecha_apertura,
+        estado: 'certificada',
+        limit: '50',
+      })
+      const r = await apiFetch(`/api/fel/facturas?${params.toString()}`)
+      const j = await r.json()
+      if (!r.ok || !j.ok) { setErr(j.error || 'No pude cargar el historial'); setItems([]); return }
+      setItems(j.facturas || [])
+    })()
+  }, [perfil.id, turno.fecha_apertura])
+
+  async function reimprimir(factura) {
+    const motivoKey = motivos[factura.id] || 'cliente_perdio'
+    const motivoFinal = motivoKey === 'otro'
+      ? (otrosTexto[factura.id] || '').trim()
+      : MOTIVOS_REIMPRIMIR_POS[motivoKey]
+    if (!motivoFinal) { setErr('Especifica el motivo'); return }
+
+    setReimprimiendo(factura.id); setErr(null)
+    const r = await apiFetch(`/api/fel/facturas/${factura.id}/reimprimir`, {
+      method: 'POST',
+      body: JSON.stringify({ motivo: motivoFinal }),
+    })
+    const j = await r.json()
+    if (!r.ok || !j.ok) {
+      setReimprimiendo(null)
+      setErr(j.error || 'Falló reimpresión')
+      return
+    }
+
+    // Mismo payload que pos.js arma al imprimir un ticket nuevo.
+    const fac = j.factura
+    const em = j.emisor || emisor || {}
+    const direccion = [
+      em.direccion,
+      [em.municipio, em.departamento].filter(Boolean).join(', '),
+    ].filter(Boolean).join(' ')
+    const payload = {
+      merchantName: em.nombre_comercial || 'Julia Bakery',
+      razonSocial: em.razon_social || null,
+      direccion: direccion || null,
+      nitEmisor: em.nit_emisor || null,
+      receptorNit: fac.receptor_nit,
+      receptorNombre: fac.receptor_nombre,
+      fecha: fac.fecha_certificacion
+        ? new Date(fac.fecha_certificacion).toLocaleString('es-GT')
+        : new Date(fac.fecha_emision).toLocaleString('es-GT'),
+      cajeroNombre: null,
+      metodoPago: null,
+      items: (j.items || []).map(it => ({
+        descripcion: it.descripcion,
+        cantidad: String(it.cantidad),
+        precioUnitario: Number(it.precio_unitario),
+        subtotal: Number(it.subtotal),
+      })),
+      totalGravado: Number(fac.total_gravado),
+      iva: Number(fac.iva),
+      total: Number(fac.total),
+      uuidSat: fac.uuid_sat,
+      serieSat: fac.serie_sat,
+      numeroSat: fac.numero_sat,
+      certificadorNombre: 'INFILE, S.A.',
+      certificadorNit: '12521329',
+      fechaCertificacion: fac.fecha_certificacion
+        ? new Date(fac.fecha_certificacion).toLocaleString('es-GT')
+        : null,
+      textoFooter: 'Sujeto a pago directo ISR (5111420251235387 - 01/04/2025)',
+      esReimpresion: true,
+      reimpresionNum: j.reimpresionNum || 1,
+    }
+
+    let printedOk = false
+    let printMsg = 'sin_bridge'
+    try {
+      if (typeof window !== 'undefined' && window.JuliaPOS && window.JuliaPOS.printTicket) {
+        const pr = await window.JuliaPOS.printTicket(payload)
+        printedOk = !!pr?.ok
+        printMsg = pr?.error_message || (pr?.ok ? 'impreso' : 'fallo')
+      } else {
+        printMsg = 'no_wrapper'
+      }
+    } catch (e) {
+      printMsg = e?.message || 'exception'
+    }
+
+    setReimprimiendo(null)
+    if (toast) {
+      toast(printedOk
+        ? `Reimpresión N°${j.reimpresionNum} OK`
+        : `Audit OK, impresora: ${printMsg}`)
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" onClick={onClose}>
+      <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[85vh] flex flex-col overflow-hidden" onClick={e => e.stopPropagation()}>
+        <div className="px-4 py-3 border-b border-gray-100 flex justify-between items-center">
+          <div className="text-sm font-semibold text-gray-900">Historial del turno</div>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-700 text-xl leading-none">✕</button>
+        </div>
+        <div className="flex-1 overflow-y-auto p-3 space-y-2">
+          {err && <div className="text-xs bg-red-50 text-red-700 rounded-lg px-3 py-2">{err}</div>}
+          {items === null && <div className="text-xs text-gray-400 text-center py-8">Cargando…</div>}
+          {items?.length === 0 && <div className="text-xs text-gray-400 text-center py-8">No emitiste facturas certificadas en este turno todavía.</div>}
+          {items?.map(f => {
+            const motivoSel = motivos[f.id] || 'cliente_perdio'
+            return (
+              <div key={f.id} className="border border-gray-100 rounded-xl p-3 space-y-2 bg-gray-50">
+                <div className="flex justify-between items-start gap-3 text-xs">
+                  <div className="min-w-0 flex-1">
+                    <div className="font-medium text-gray-900 truncate">
+                      {f.serie_sat ? `${f.serie_sat}-` : ''}{f.numero_sat || f.id.slice(0, 8)}
+                    </div>
+                    <div className="text-gray-500">{f.receptor_nombre} · NIT {f.receptor_nit}</div>
+                    <div className="text-[10px] text-gray-400">{new Date(f.fecha_emision).toLocaleString('es-GT')}</div>
+                  </div>
+                  <div className="text-right tabular-nums font-semibold text-gray-900">{fmtQ(f.total)}</div>
+                </div>
+                <div className="flex gap-2 items-center">
+                  <select
+                    value={motivoSel}
+                    onChange={e => setMotivos({ ...motivos, [f.id]: e.target.value })}
+                    className="flex-1 text-xs border border-gray-200 rounded-lg px-2 py-1.5 bg-white"
+                  >
+                    {Object.entries(MOTIVOS_REIMPRIMIR_POS).map(([k, v]) => (
+                      <option key={k} value={k}>{v}</option>
+                    ))}
+                    <option value="otro">Otro</option>
+                  </select>
+                  <button
+                    onClick={() => reimprimir(f)}
+                    disabled={reimprimiendo === f.id}
+                    className="text-xs bg-blue-600 text-white px-3 py-1.5 rounded-lg font-medium disabled:opacity-50"
+                  >
+                    {reimprimiendo === f.id ? '…' : 'Reimprimir'}
+                  </button>
+                </div>
+                {motivoSel === 'otro' && (
+                  <input
+                    type="text"
+                    placeholder="Motivo..."
+                    maxLength={200}
+                    value={otrosTexto[f.id] || ''}
+                    onChange={e => setOtrosTexto({ ...otrosTexto, [f.id]: e.target.value })}
+                    className="w-full text-xs border border-gray-200 rounded-lg px-2 py-1.5"
+                  />
+                )}
+              </div>
+            )
+          })}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 async function apiFetch(path, opts = {}) {
   const { data: { session } } = await supabase.auth.getSession()
   const headers = { 'Content-Type': 'application/json', ...(opts.headers || {}) }
@@ -75,6 +691,12 @@ async function apiFetch(path, opts = {}) {
 }
 
 const fmtQ = (n) => 'Q ' + Number(n || 0).toLocaleString('es-GT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+
+// Escapa caracteres especiales de regex (usado para reconstruir descripcion
+// limpia cuando volvemos a editar un pedido pendiente).
+function escapeRegex(s) {
+  return String(s || '').replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+}
 
 // Genera un idsale corto (8 hex chars) — sirve para correlacionar la venta
 // con la respuesta del Intent NeoPOS, y como UNIQUE en neonet_transacciones
@@ -135,9 +757,17 @@ async function cobrarTarjetaNeonet({ idsale, amountCents }) {
   }
 }
 
+// Label del metodo "tarjeta" cambia segun el flag NEXT_PUBLIC_TARJETA_INTEGRADA:
+// - 'true' -> "Tarjeta" (a secas; el POS llama a Neonet automaticamente)
+// - cualquier otro valor -> "Tarjeta (lector externo)" (la cajera cobra en
+//   un dispositivo aparte ej. BAC PAX; el POS solo registra la venta)
+const TARJETA_INTEGRADA_FE = String(
+  typeof process !== 'undefined' ? (process.env.NEXT_PUBLIC_TARJETA_INTEGRADA || 'false') : 'false'
+).toLowerCase() === 'true'
+
 const METODOS_PAGO = [
   { id: 'efectivo',      label: 'Efectivo' },
-  { id: 'tarjeta',       label: 'Tarjeta' },
+  { id: 'tarjeta',       label: TARJETA_INTEGRADA_FE ? 'Tarjeta' : 'Tarjeta (lector externo)' },
   { id: 'transferencia', label: 'Transferencia' },
   { id: 'pedidos_ya',    label: 'Pedidos Ya' },
   { id: 'otro',          label: 'Otro' },
@@ -186,8 +816,16 @@ export default function POS({ session }) {
   const [resultado, setResultado] = useState(null)
   const [consultando, setConsultando] = useState(false)
   const [nitMsg, setNitMsg] = useState(null)        // 'NIT no encontrado en RTU' o null
+  const [mostrarHistorial, setMostrarHistorial] = useState(false)
+  const [toastMsg, setToastMsg] = useState(null)    // mensaje breve, auto-dismiss
+  function flashToast(msg) {
+    setToastMsg(msg)
+    setTimeout(() => setToastMsg(null), 3500)
+  }
   const [err, setErr] = useState(null)
   const [mostrarCarritoMobile, setMostrarCarritoMobile] = useState(false)
+  // Edicion de nota/extras de una linea del carrito. { idx, descripcion, value } o null.
+  const [lineaConNota, setLineaConNota] = useState(null)
   // Fase de autorización Neonet (cuando metodoPago='tarjeta' y estamos
   // esperando respuesta del bridge / mock). { idsale, monto } o null.
   const [neonetFase, setNeonetFase] = useState(null)
@@ -199,9 +837,48 @@ export default function POS({ session }) {
   const [turnoCargado, setTurnoCargado] = useState(false)
   const [emisor, setEmisor] = useState(null)  // datos del emisor para imprimir en ticket
 
+  // ===== Bandeja de pedidos pendientes (Pedidos Ya) =====
+  // pedidoEditando: si el carrito proviene de un pedido pendiente, este id
+  // hace que "Cobrar" llame a /api/pos/pedidos/:id/facturar en vez de
+  // /api/pos/ventas — asi el pedido se marca como entregado_facturado.
+  const [pedidosPendientes, setPedidosPendientes] = useState([])
+  const [cargandoPedidos, setCargandoPedidos] = useState(false)
+  const [mostrarBandeja, setMostrarBandeja] = useState(false)
+  const [mostrarGuardarPedido, setMostrarGuardarPedido] = useState(false)
+  const [pedidoEditando, setPedidoEditando] = useState(null)  // { id, referencia } o null
+
+  // Split payments: si !== null, se manda pagos[] al endpoint y queda 'mixto'
+  // en facturas_fel. null = comportamiento legacy (1 metodo plano).
+  const [pagosDivididos, setPagosDivididos] = useState(null)  // null | [{metodo, monto, ...}]
+  const [mostrarDividirPago, setMostrarDividirPago] = useState(false)
+
+  async function recargarPedidos() {
+    setCargandoPedidos(true)
+    try {
+      const r = await apiFetch('/api/pos/pedidos?estado=pendiente_entrega&limit=50')
+      const j = await r.json()
+      if (j.ok) setPedidosPendientes(j.pedidos || [])
+    } finally {
+      setCargandoPedidos(false)
+    }
+  }
+
   // Cargar perfil + catálogo + turno (si cajero)
   useEffect(() => {
-    if (!session) { router.push('/'); return }
+    // Sin sesion: en kiosko (wrapper Sunmi) -> PIN del cajero. En desktop ->
+    // login admin email/password. Asi el cajero no ve un form de email que
+    // no sabe usar y el admin no esta forzado a tener PIN.
+    //
+    // Usamos esKiosko() directo (no el hook) porque el hook parte en false
+    // por SSR-safe y se actualiza tras montar. En este punto (useEffect post
+    // montaje) el bridge ya inyecto su User-Agent / window.JuliaPOS, asi que
+    // el check sincrono es confiable.
+    if (!session) {
+      const k = esKiosko()
+      console.log('[POS] sin sesion. kiosko=' + k + ' ua=' + (typeof navigator !== 'undefined' ? navigator.userAgent : '?'))
+      router.push(k ? '/cajero-login' : '/')
+      return
+    }
     supabase.from('perfiles').select('id, email, nombre_completo, rol').eq('id', session.user.id).single()
       .then(({ data }) => {
         const p = data || { id: session.user.id, email: session.user.email, rol: 'empleado' }
@@ -239,6 +916,8 @@ export default function POS({ session }) {
     apiFetch('/api/fel/emisor').then(r => r.json()).then(j => {
       if (j?.emisor) setEmisor(j.emisor)
     }).catch(() => {})
+    // Cargar pedidos pendientes del turno (best effort)
+    recargarPedidos()
   }, [session])
 
   const esAdmin = perfil?.rol === 'admin'
@@ -271,7 +950,11 @@ export default function POS({ session }) {
 
   function agregarProducto(p) {
     setCarrito(prev => {
-      const idx = prev.findIndex(l => l.variant_id === p.variant_id)
+      // Solo agrupar con una linea existente si NINGUNA de las dos tiene nota.
+      // Asi si el cajero ya armo "1 latte deslactosado", el siguiente tap del
+      // mismo latte crea una linea nueva (sin nota) — listo para personalizar
+      // diferente o cobrar como normal.
+      const idx = prev.findIndex(l => l.variant_id === p.variant_id && !l.notas)
       if (idx >= 0) {
         const next = [...prev]
         next[idx] = { ...next[idx], cantidad: next[idx].cantidad + 1 }
@@ -283,6 +966,7 @@ export default function POS({ session }) {
         cantidad: 1,
         precio_unitario: p.precio || 0,
         descuenta_insumos: false,
+        notas: '',
       }]
     })
   }
@@ -353,10 +1037,21 @@ export default function POS({ session }) {
     if (receptor.nit !== 'CF' && !receptor.nombre.trim()) { setErr('Nombre del receptor requerido (o usá CF)'); return }
     setEnviando(true)
 
-    // Si es tarjeta, primero autorizar con Neonet (bridge Sunmi en prod, mock en desktop).
-    // Si rechaza, abortar antes de tocar el FEL.
+    // Si es tarjeta y tenemos integracion automatica habilitada, primero
+    // autorizar con Neonet (bridge Sunmi en prod, mock en desktop). Si
+    // rechaza, abortar antes de tocar el FEL.
+    //
+    // Si tarjetaIntegrada=false (default), se asume que el cajero pasó la
+    // tarjeta en un lector EXTERNO (ej. BAC PAX standalone), recibió aprobado
+    // ahí mismo, y ahora solo registra la venta en el POS para certificar +
+    // imprimir. No llamamos a ningun procesador.
+    //
+    // Toggle desde Vercel: NEXT_PUBLIC_TARJETA_INTEGRADA='true' habilita el
+    // flujo integrado. Cualquier otro valor (o falta) = modo externo.
+    const tarjetaIntegrada = String(process.env.NEXT_PUBLIC_TARJETA_INTEGRADA || 'false').toLowerCase() === 'true'
+
     let neonet_resultado = null
-    if (metodoPago === 'tarjeta') {
+    if (metodoPago === 'tarjeta' && tarjetaIntegrada) {
       const amountCents = Math.round(totales.total * 100)
       if (amountCents <= 0) {
         setEnviando(false); setErr('Monto inválido para tarjeta')
@@ -398,10 +1093,18 @@ export default function POS({ session }) {
       }
     }
 
+    // Si la linea tiene una nota (ej "leche deslactosada"), la concatenamos a
+    // la descripcion antes de mandar al FEL. Asi sale tal cual en la factura,
+    // en el ticket impreso y en la comanda de barra (que toma el snapshot de
+    // items) sin tocar el backend.
+    const fusionarDesc = (l) => l.notas
+      ? `${l.descripcion} · ${l.notas}`
+      : l.descripcion
+
     const body = {
       items: carrito.map(l => ({
         variant_id: l.variant_id,
-        descripcion: l.descripcion,
+        descripcion: fusionarDesc(l),
         cantidad: Number(l.cantidad),
         precio_unitario: Number(l.precio_unitario),
         descuenta_insumos: l.descuenta_insumos,
@@ -410,9 +1113,16 @@ export default function POS({ session }) {
       })),
       receptor,
       metodo_pago: metodoPago,
+      ...(pagosDivididos ? { pagos: pagosDivididos } : {}),
       ...(neonet_resultado ? { neonet_resultado } : {}),
     }
-    const res = await apiFetch('/api/pos/ventas', { method: 'POST', body: JSON.stringify(body) })
+    // Si veniamos editando un pedido pendiente, lo facturamos via el endpoint
+    // que ademas marca el pedido como entregado. Reusa /api/pos/ventas
+    // internamente — mismo flujo de certificacion + descuento + asiento.
+    const url = pedidoEditando
+      ? `/api/pos/pedidos/${pedidoEditando.id}/facturar`
+      : '/api/pos/ventas'
+    const res = await apiFetch(url, { method: 'POST', body: JSON.stringify(body) })
     const json = await res.json()
     setEnviando(false)
     if (!res.ok) {
@@ -446,9 +1156,11 @@ export default function POS({ session }) {
           fecha: new Date(f.fecha_certificacion || Date.now()).toLocaleString('es-GT'),
           cajeroNombre: perfil?.nombre_completo || null,
           metodoPago: f.metodo_pago || null,
-          // ITEMS + TOTALES
+          // ITEMS + TOTALES. La descripcion incluye la nota/extras si la hay,
+          // igual que en el body del FEL — para que el ticket impreso refleje
+          // exactamente lo facturado.
           items: carrito.map(l => ({
-            descripcion: l.descripcion,
+            descripcion: fusionarDesc(l),
             cantidad: String(l.cantidad),
             precioUnitario: Number(l.precio_unitario),
             subtotal: Math.round(Number(l.cantidad) * Number(l.precio_unitario) * 100) / 100,
@@ -466,7 +1178,7 @@ export default function POS({ session }) {
             ? new Date(f.fecha_certificacion).toLocaleString('es-GT')
             : null,
           // Footer regulatorio
-          textoFooter: 'Sujeto a pago directo ISR',
+          textoFooter: 'Sujeto a pago directo ISR (5111420251235387 - 01/04/2025)',
         }
         const r = await window.JuliaPOS.printTicket(payload)
         console.log('[POS] printTicket result:', r)
@@ -480,9 +1192,88 @@ export default function POS({ session }) {
     setCarrito([])
     setReceptor({ nit: 'CF', nombre: 'CONSUMIDOR FINAL', email: '' })
     setMetodoPago('efectivo')
+    setPagosDivididos(null)
     setResultado(null)
     setErr(null)
     setMostrarCarritoMobile(false)
+    setPedidoEditando(null)  // si veniamos de un pedido, salir del modo edicion
+    recargarPedidos()  // refrescar bandeja despues de cualquier venta
+  }
+
+  // ===== Handlers de pedidos pendientes =====
+
+  // Guarda el carrito actual como pedido pendiente. Sale del modal con
+  // referencia/origen/notas. Limpia el carrito tras guardar.
+  async function guardarPedidoActual({ referencia, origen, notas }) {
+    if (carrito.length === 0) throw new Error('Carrito vacío')
+    const body = {
+      referencia,
+      origen,
+      notas,
+      receptor,
+      items: carrito.map(l => ({
+        variant_id: l.variant_id,
+        descripcion: l.notas ? `${l.descripcion} · ${l.notas}` : l.descripcion,
+        cantidad: Number(l.cantidad),
+        precio_unitario: Number(l.precio_unitario),
+        descuenta_insumos: l.descuenta_insumos,
+        receta_id: l.receta_id || null,
+        unidad_medida: 'UND',
+        notas: l.notas || null,  // tambien por separado para poder editar despues
+      })),
+    }
+    const r = await apiFetch('/api/pos/pedidos', { method: 'POST', body: JSON.stringify(body) })
+    const j = await r.json()
+    if (!r.ok || !j.ok) throw new Error(j.error || 'No se pudo guardar el pedido')
+    // Limpia el carrito y refresca la bandeja
+    setCarrito([])
+    setReceptor({ nit: 'CF', nombre: 'CONSUMIDOR FINAL', email: '' })
+    setMetodoPago('efectivo')
+    setMostrarGuardarPedido(false)
+    flashToast(`Pedido "${referencia}" guardado en bandeja`)
+    recargarPedidos()
+  }
+
+  // Carga los items de un pedido al carrito + entra en modo edicion.
+  // Al cobrar despues, en vez de POST /api/pos/ventas llama
+  // /api/pos/pedidos/:id/facturar (que marca el pedido como entregado).
+  function continuarPedido(pedido) {
+    // Mapear items del pedido al shape del carrito (preservando notas si las hay)
+    const lineas = (pedido.items || []).map(it => ({
+      variant_id: it.variant_id || null,
+      // Si la nota viene separada, restaurar la descripcion limpia; sino dejar
+      // la descripcion tal cual (puede contener la nota concatenada del save).
+      descripcion: it.notas
+        ? String(it.descripcion).replace(new RegExp(`\\s·\\s${escapeRegex(it.notas)}$`), '')
+        : it.descripcion,
+      cantidad: Number(it.cantidad),
+      precio_unitario: Number(it.precio_unitario),
+      descuenta_insumos: !!it.descuenta_insumos,
+      receta_id: it.receta_id || null,
+      notas: it.notas || '',
+    }))
+    setCarrito(lineas)
+    setReceptor({
+      nit: pedido.receptor_nit || 'CF',
+      nombre: pedido.receptor_nombre || 'CONSUMIDOR FINAL',
+      email: pedido.receptor_email || '',
+    })
+    setMetodoPago('pedidos_ya')
+    setPedidoEditando({ id: pedido.id, referencia: pedido.referencia })
+    setMostrarBandeja(false)
+    setMostrarCarritoMobile(true)
+  }
+
+  async function cancelarPedido(pedidoId, motivo) {
+    const url = `/api/pos/pedidos/${pedidoId}?motivo=${encodeURIComponent(motivo || '')}`
+    const r = await apiFetch(url, { method: 'DELETE' })
+    const j = await r.json()
+    if (!r.ok || !j.ok) {
+      flashToast(`Error: ${j.error || 'no se pudo cancelar'}`)
+      return
+    }
+    flashToast('Pedido cancelado')
+    recargarPedidos()
   }
 
   // Cantidades por variant_id en el carrito — para mostrar badge en cards.
@@ -517,8 +1308,77 @@ export default function POS({ session }) {
   }
 
   return (
-    <POSChrome perfil={perfil} kiosko={kiosko} turno={turno}>
+    <POSChrome perfil={perfil} kiosko={kiosko} turno={turno}
+      onMostrarHistorial={turno ? () => setMostrarHistorial(true) : null}
+      onMostrarBandeja={turno ? () => { setMostrarBandeja(true); recargarPedidos() } : null}
+      pedidosPendientesCount={pedidosPendientes.length}>
       <Head><title>Punto de Venta · Julia Bakery</title></Head>
+
+      {/* Modal historial de facturas del turno actual */}
+      {mostrarHistorial && perfil && turno && (
+        <ModalHistorialFacturas
+          perfil={perfil}
+          turno={turno}
+          emisor={emisor}
+          onClose={() => setMostrarHistorial(false)}
+          toast={flashToast}
+        />
+      )}
+
+      {/* Modal nota/extras de un item del carrito */}
+      {lineaConNota && (
+        <ModalNotaItem
+          descripcion={lineaConNota.descripcion}
+          value={lineaConNota.value}
+          onClose={() => setLineaConNota(null)}
+          onSave={(texto) => {
+            setLinea(lineaConNota.idx, { notas: texto })
+            setLineaConNota(null)
+          }}
+        />
+      )}
+
+      {/* Modal: guardar carrito como pedido pendiente (Pedidos Ya) */}
+      {mostrarGuardarPedido && (
+        <ModalGuardarPedido
+          totalEstimado={totales.total}
+          cantItems={carrito.length}
+          onClose={() => setMostrarGuardarPedido(false)}
+          onGuardar={guardarPedidoActual}
+        />
+      )}
+
+      {/* Modal: bandeja de pedidos pendientes — el cajero ve y maneja */}
+      {mostrarBandeja && (
+        <ModalBandejaPedidos
+          pedidos={pedidosPendientes}
+          cargando={cargandoPedidos}
+          onClose={() => setMostrarBandeja(false)}
+          onContinuar={continuarPedido}
+          onCancelar={cancelarPedido}
+          onRefresh={recargarPedidos}
+        />
+      )}
+
+      {/* Modal: dividir pago en multiples metodos */}
+      {mostrarDividirPago && (
+        <ModalDividirPago
+          totalVenta={totales.total}
+          pagosInicial={pagosDivididos}
+          onClose={() => setMostrarDividirPago(false)}
+          onGuardar={(pagos) => {
+            setPagosDivididos(pagos)
+            setMostrarDividirPago(false)
+          }}
+        />
+      )}
+
+      {/* Toast breve - confirma reimpresion / errores menores */}
+      {toastMsg && (
+        <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 bg-gray-900 text-white text-xs px-4 py-2 rounded-full shadow-lg">
+          {toastMsg}
+        </div>
+      )}
 
       {/* Overlay mientras se esta autorizando la tarjeta con NeoPOS */}
       {neonetFase && (
@@ -631,7 +1491,7 @@ export default function POS({ session }) {
                 </div>
               </div>
             ) : (
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
+              <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                 {productosFiltrados.map(p => {
                   const cantEnCarrito = carritoPorVariant.get(p.variant_id) || 0
                   return (
@@ -699,9 +1559,13 @@ export default function POS({ session }) {
           {/* Header */}
           <div className="flex-shrink-0 px-5 py-3 border-b border-gray-100 flex items-center justify-between bg-white">
             <div>
-              <h2 className="text-base font-bold text-gray-900">Venta actual</h2>
+              <h2 className="text-base font-bold text-gray-900">
+                {pedidoEditando ? '📦 Facturando pedido' : 'Venta actual'}
+              </h2>
               <p className="text-xs text-gray-400">
-                {carrito.length === 0 ? 'Sin productos aún' : `${carrito.length} ${carrito.length === 1 ? 'línea' : 'líneas'}`}
+                {pedidoEditando
+                  ? <span className="text-amber-700 font-medium">{pedidoEditando.referencia}</span>
+                  : (carrito.length === 0 ? 'Sin productos aún' : `${carrito.length} ${carrito.length === 1 ? 'línea' : 'líneas'}`)}
               </p>
             </div>
             {carrito.length > 0 && (
@@ -726,37 +1590,54 @@ export default function POS({ session }) {
               <div key={i} className="bg-gray-50 border border-gray-100 rounded-xl p-3 hover:border-gray-200 transition-colors">
                 <div className="flex items-start justify-between gap-2 mb-2">
                   <div className="flex-1 min-w-0">
-                    <div className="text-sm font-medium text-gray-900 leading-tight line-clamp-2">{l.descripcion}</div>
+                    <div className="text-base font-semibold text-gray-900 leading-tight line-clamp-2">{l.descripcion}</div>
+                    {l.notas && (
+                      <div className="text-xs text-amber-800 italic mt-1.5 bg-amber-50 border border-amber-200 rounded-md px-2 py-1">
+                        ✏️ {l.notas}
+                      </div>
+                    )}
                   </div>
-                  <button onClick={() => quitarLinea(i)}
-                    className="flex-shrink-0 text-gray-300 hover:text-red-500 transition-colors w-6 h-6 flex items-center justify-center">
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                  </button>
+                  <div className="flex flex-col gap-1 flex-shrink-0">
+                    <button onClick={() => setLineaConNota({ idx: i, descripcion: l.descripcion, value: l.notas || '' })}
+                      title={l.notas ? 'Editar nota' : 'Agregar nota / extras'}
+                      className={`w-9 h-9 flex items-center justify-center rounded-lg transition-colors ${
+                        l.notas
+                          ? 'bg-amber-100 text-amber-700 hover:bg-amber-200'
+                          : 'bg-white border border-gray-200 text-gray-500 hover:text-julia-red hover:border-julia-red/40'
+                      }`}>
+                      <span className="text-base">✏️</span>
+                    </button>
+                    <button onClick={() => quitarLinea(i)}
+                      title="Quitar producto"
+                      className="w-9 h-9 flex items-center justify-center bg-white border border-gray-200 text-gray-400 hover:text-red-500 hover:border-red-200 rounded-lg transition-colors">
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  </div>
                 </div>
                 <div className="flex items-center gap-2">
-                  {/* Cantidad con +/- */}
+                  {/* Cantidad con +/- — botones grandes para uso táctil */}
                   <div className="flex items-center bg-white border border-gray-200 rounded-lg overflow-hidden">
                     <button
                       onClick={() => setLinea(i, { cantidad: Math.max(0, Number(l.cantidad) - 1) })}
-                      className="w-8 h-8 text-gray-500 hover:bg-gray-100 active:bg-gray-200 transition-colors font-medium">
+                      className="w-11 h-11 text-gray-700 hover:bg-gray-100 active:bg-gray-200 transition-colors font-bold text-xl">
                       −
                     </button>
                     <input type="number" step="any" min="0" value={l.cantidad}
                       onChange={e => setLinea(i, { cantidad: Number(e.target.value) || 0 })}
-                      className="w-12 text-center text-sm tabular-nums focus:outline-none border-x border-gray-200" />
+                      className="w-14 text-center text-base font-semibold tabular-nums focus:outline-none border-x border-gray-200" />
                     <button
                       onClick={() => setLinea(i, { cantidad: Number(l.cantidad) + 1 })}
-                      className="w-8 h-8 text-gray-500 hover:bg-gray-100 active:bg-gray-200 transition-colors font-medium">
+                      className="w-11 h-11 text-gray-700 hover:bg-gray-100 active:bg-gray-200 transition-colors font-bold text-xl">
                       +
                     </button>
                   </div>
                   <span className="text-xs text-gray-400">×</span>
                   <input type="number" step="any" min="0" value={l.precio_unitario}
                     onChange={e => setLinea(i, { precio_unitario: Number(e.target.value) || 0 })}
-                    className="flex-1 text-right text-sm px-2 py-1.5 bg-white border border-gray-200 rounded-lg tabular-nums focus:outline-none focus:border-julia-red" />
-                  <span className="text-sm font-bold text-gray-900 tabular-nums min-w-[80px] text-right">
+                    className="flex-1 text-right text-base px-2 py-2 bg-white border border-gray-200 rounded-lg tabular-nums focus:outline-none focus:border-julia-red" />
+                  <span className="text-base font-bold text-gray-900 tabular-nums min-w-[90px] text-right">
                     {fmtQ(Number(l.cantidad) * Number(l.precio_unitario))}
                   </span>
                 </div>
@@ -782,13 +1663,13 @@ export default function POS({ session }) {
             <div className="text-[11px] uppercase tracking-wider text-gray-500 font-bold">Receptor</div>
             <div className="flex gap-1 bg-gray-100 p-1 rounded-xl">
               <button onClick={() => setNitMode(true)}
-                className={`flex-1 text-sm py-2 rounded-lg font-medium transition-colors ${
+                className={`flex-1 text-base py-3.5 rounded-lg font-semibold transition-colors ${
                   receptor.nit === 'CF' ? 'bg-white shadow-sm text-julia-red' : 'text-gray-500'
                 }`}>
                 Consumidor final
               </button>
               <button onClick={() => setNitMode(false)}
-                className={`flex-1 text-sm py-2 rounded-lg font-medium transition-colors ${
+                className={`flex-1 text-base py-3.5 rounded-lg font-semibold transition-colors ${
                   receptor.nit !== 'CF' ? 'bg-white shadow-sm text-julia-red' : 'text-gray-500'
                 }`}>
                 Con NIT
@@ -829,19 +1710,59 @@ export default function POS({ session }) {
             )}
           </div>
 
-          {/* Método de pago */}
+          {/* Método de pago — botones grandes para uso táctil */}
           <div className="px-5 py-4 border-t border-gray-100">
-            <div className="text-[11px] uppercase tracking-wider text-gray-500 font-bold mb-2.5">Método de pago</div>
-            <div className="grid grid-cols-2 gap-2">
-              {METODOS_PAGO.map(m => (
-                <button key={m.id} onClick={() => setMetodoPago(m.id)}
-                  className={`text-sm py-3 rounded-xl font-medium transition-all ${
-                    metodoPago === m.id
-                      ? 'bg-julia-red text-white shadow-md ring-2 ring-julia-red/20'
-                      : 'border border-gray-200 text-gray-700 hover:border-julia-red/40 bg-white'
-                  }`}>{m.label}</button>
-              ))}
+            <div className="flex justify-between items-center mb-2.5">
+              <div className="text-[11px] uppercase tracking-wider text-gray-500 font-bold">Método de pago</div>
+              {carrito.length > 0 && (
+                <button
+                  onClick={() => setMostrarDividirPago(true)}
+                  className={`text-xs font-semibold px-2.5 py-1 rounded-lg transition-colors ${
+                    pagosDivididos
+                      ? 'bg-blue-100 text-blue-700 hover:bg-blue-200 ring-2 ring-blue-200'
+                      : 'text-blue-600 hover:bg-blue-50'
+                  }`}>
+                  {pagosDivididos ? `✂️ ${pagosDivididos.length} pagos` : '✂️ Dividir pago'}
+                </button>
+              )}
             </div>
+
+            {pagosDivididos ? (
+              // Vista compacta del desglose dividido. Tocar para editar / quitar.
+              <div className="space-y-2">
+                <div className="bg-blue-50 border-2 border-blue-200 rounded-xl p-3 space-y-1.5">
+                  {pagosDivididos.map((p, i) => (
+                    <div key={i} className="flex justify-between text-sm">
+                      <span className="capitalize text-blue-900 font-medium">
+                        {i + 1}. {String(p.metodo).replace('_', ' ')}
+                      </span>
+                      <span className="font-bold text-blue-900 tabular-nums">{fmtQ(p.monto)}</span>
+                    </div>
+                  ))}
+                </div>
+                <div className="flex gap-2">
+                  <button onClick={() => setMostrarDividirPago(true)}
+                    className="flex-1 text-sm py-2.5 border-2 border-blue-200 text-blue-700 font-semibold rounded-lg hover:bg-blue-50">
+                    Editar pagos
+                  </button>
+                  <button onClick={() => setPagosDivididos(null)}
+                    className="text-sm py-2.5 px-4 border-2 border-gray-200 text-gray-600 font-semibold rounded-lg hover:bg-gray-50">
+                    Quitar
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 gap-2.5">
+                {METODOS_PAGO.map(m => (
+                  <button key={m.id} onClick={() => setMetodoPago(m.id)}
+                    className={`text-base py-5 rounded-xl font-semibold transition-all ${
+                      metodoPago === m.id
+                        ? 'bg-julia-red text-white shadow-md ring-2 ring-julia-red/20'
+                        : 'border-2 border-gray-200 text-gray-700 hover:border-julia-red/40 bg-white'
+                    }`}>{m.label}</button>
+                ))}
+              </div>
+            )}
           </div>
 
           {err && (
@@ -856,22 +1777,42 @@ export default function POS({ session }) {
           )}
           </div>{/* fin del flex-1 overflow-y-auto */}
 
-          {/* Botón cobrar SIEMPRE visible (fuera del scroll) */}
-          <div className="flex-shrink-0 px-5 py-3 border-t border-gray-200 bg-white shadow-[0_-4px_12px_rgba(0,0,0,0.06)]">
+          {/* Botones cobrar / guardar pedido SIEMPRE visibles (fuera del scroll) — grandes para uso táctil */}
+          <div className="flex-shrink-0 px-5 py-3 border-t border-gray-200 bg-white shadow-[0_-4px_12px_rgba(0,0,0,0.06)] space-y-2">
             <button onClick={cobrar} disabled={enviando || carrito.length === 0}
-              className="w-full py-4 bg-julia-red text-white text-base font-bold rounded-xl disabled:opacity-50 disabled:cursor-not-allowed hover:bg-red-700 active:scale-[0.98] transition-all shadow-lg flex items-center justify-center gap-2">
+              className="w-full py-6 bg-julia-red text-white text-2xl font-bold rounded-xl disabled:opacity-50 disabled:cursor-not-allowed hover:bg-red-700 active:scale-[0.98] transition-all shadow-lg flex items-center justify-center gap-3">
               {enviando ? (
                 <>
-                  <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                  <div className="w-6 h-6 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
                   <span>Procesando...</span>
                 </>
               ) : (
                 <>
-                  <span>Cobrar</span>
+                  <span>{pedidoEditando ? 'Facturar pedido' : 'Cobrar'}</span>
                   <span className="tabular-nums">{fmtQ(totales.total)}</span>
                 </>
               )}
             </button>
+
+            {/* Botones secundarios: Guardar pedido (modo normal) o Cancelar edicion (modo pedido) */}
+            {pedidoEditando ? (
+              <button
+                onClick={() => {
+                  if (confirm('Volver al modo de venta normal? Se descarta el carrito (el pedido sigue en la bandeja).')) {
+                    nuevaVenta()
+                  }
+                }}
+                className="w-full py-3 border-2 border-amber-300 text-amber-800 font-semibold rounded-xl hover:bg-amber-50 text-sm">
+                Salir sin facturar (deja el pedido pendiente)
+              </button>
+            ) : (
+              carrito.length > 0 && (
+                <button onClick={() => setMostrarGuardarPedido(true)} disabled={enviando}
+                  className="w-full py-3 border-2 border-amber-300 text-amber-800 font-semibold rounded-xl hover:bg-amber-50 text-base disabled:opacity-50 flex items-center justify-center gap-2">
+                  📦 Guardar como pedido pendiente
+                </button>
+              )
+            )}
           </div>
         </div>
       </div>

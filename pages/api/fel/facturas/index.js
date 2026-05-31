@@ -16,13 +16,16 @@ async function list(req, res) {
   const auth = await requireAuth(req)
   if (auth.error) return res.status(auth.status).json({ error: auth.error })
 
-  const { desde, hasta, estado, limit = 100 } = req.query
+  const { desde, hasta, estado, limit = 100, creado_por } = req.query
   let q = auth.admin.from('facturas_fel').select('*')
     .order('fecha_emision', { ascending: false })
     .limit(Math.min(Number(limit) || 100, 500))
   if (desde) q = q.gte('fecha_emision', desde)
   if (hasta) q = q.lte('fecha_emision', hasta + 'T23:59:59')
   if (estado) q = q.eq('estado', estado)
+  // Filtro por cajero/emisor. UI del POS lo usa para el "historial del turno"
+  // (solo las facturas que emitio este cajero). Admin no lo pasa -> ve todas.
+  if (creado_por) q = q.eq('creado_por', creado_por)
   const { data, error } = await q
   if (error) return res.status(500).json({ ok: false, error: error.message })
   return res.status(200).json({ ok: true, facturas: data })

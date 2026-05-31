@@ -90,38 +90,71 @@ class SunmiPrinter {
     fun printTicket(payload: TicketPayload): Boolean {
         val svc = service ?: return false
         return try {
-            // Centrar y meter todo en un buffer para impresion atomica
-            svc.enterPrinterBuffer(true)
-            svc.setAlignment(1, noopCb)               // 1 = center
+            // Usamos sendRAWData (no printText + exitPrinterBuffer) para
+            // evitar el auto-kick implicito del firmware Sunmi InnerPrinter.
 
-            // 1. Logo arriba
-            logoBitmap?.let { bmp ->
-                try {
-                    svc.printBitmap(bmp, noopCb)
-                    svc.lineWrap(1, noopCb)
-                } catch (e: Exception) {
-                    Log.w(TAG, "printBitmap fallo, sigo sin logo: ${e.message}")
+            // 1. Logo bitmap (no para cierre de turno — es ticket operativo)
+            if (!payload.esCierreTurno) {
+                logoBitmap?.let { bmp ->
+                    try {
+                        svc.setAlignment(1, noopCb)
+                        svc.printBitmap(bmp, noopCb)
+                        svc.lineWrap(1, noopCb)
+                        svc.setAlignment(0, noopCb)
+                    } catch (e: Exception) {
+                        Log.w(TAG, "printBitmap fallo, sigo sin logo: ${e.message}")
+                    }
                 }
             }
 
-            // 2. Volver a alineacion izquierda + texto formateado
-            svc.setAlignment(0, noopCb)               // 0 = left
-            val texto = construirTextoPlano(payload)
-            Log.d(TAG, "printTicket bytes=${texto.length} via printText")
-            svc.printText(texto, loggingCb)
+            // 2. Cuerpo del ticket — dispatch segun tipo de payload
+            val texto = if (payload.esCierreTurno) {
+                construirTextoCierreTurno(payload)
+            } else {
+                construirTextoPlano(payload)
+            }
+            val bytes = wrapEscPos(texto)
+            Log.d(TAG, "printTicket bytes=${bytes.size} esCierreTurno=${payload.esCierreTurno}")
+            svc.sendRAWData(bytes, loggingCb)
 
-            // 3. Commit (imprime todo el buffer)
-            svc.exitPrinterBuffer(true)
+            // 3. Cashbox: solo en venta-nueva-en-efectivo. Cierre de turno NO
+            //    (la caja ya esta cerrada). Reimpresion NO. Tarjeta/etc NO.
+            val debeAbrirCaja = !payload.esReimpresion
+                && !payload.esCierreTurno
+                && payload.metodoPago?.trim()?.lowercase() == "efectivo"
+            if (debeAbrirCaja) {
+                kickCashDrawer(svc)
+            } else {
+                Log.d(TAG, "cashbox: no aplica (esReimpresion=${payload.esReimpresion} esCierreTurno=${payload.esCierreTurno} metodoPago=${payload.metodoPago})")
+            }
             true
         } catch (e: RemoteException) {
             Log.e(TAG, "RemoteException printTicket", e)
-            try { svc.exitPrinterBuffer(false) } catch (_: Exception) {}
             false
         } catch (e: Exception) {
             Log.e(TAG, "Error printTicket", e)
-            try { svc.exitPrinterBuffer(false) } catch (_: Exception) {}
             false
         }
+    }
+
+    /**
+     * Encapsula el texto plano del ticket en bytes ESC/POS con:
+     * - ESC @ (init)
+     * - ESC R 18 (charset Latin-9 para tildes/eñe)
+     * - El texto en si en Latin-1
+     * - GS V B 0 (cut parcial al final)
+     *
+     * NO incluye comandos de drawer-kick. Por eso bypassa el auto-kick que el
+     * firmware Sunmi mete cuando se usa printText.
+     */
+    private fun wrapEscPos(texto: String): ByteArray {
+        val out = ByteArrayOutputStream()
+        out.write(byteArrayOf(0x1B, 0x40))                       // ESC @ = init
+        out.write(byteArrayOf(0x1B, 0x52, 0x12))                 // ESC R 18 = Latin-9
+        out.write(texto.toByteArray(Charsets.ISO_8859_1))
+        out.write("\n\n".toByteArray())                          // padding pre-cut
+        out.write(byteArrayOf(0x1D, 0x56, 0x42, 0x00))           // GS V B 0 = partial cut
+        return out.toByteArray()
     }
 
     // Construye el ticket como texto plano de 32 columnas siguiendo el
@@ -163,6 +196,19 @@ class SunmiPrinter {
         val sub = "-".repeat(W)
 
         val sb = StringBuilder()
+
+        // ===== 0. BANNER REIMPRESION (solo si aplica) =====
+        // SAT exige que las copias fisicas de una factura ya emitida lleven
+        // marca visible que las distinga del original. Lo ponemos arriba de
+        // todo, con bordes para resaltar.
+        if (p.esReimpresion) {
+            val num = p.reimpresionNum ?: 1
+            sb.append(sep).append('\n')
+            sb.append(cen("*** REIMPRESION N°$num ***")).append('\n')
+            sb.append(cen("DUPLICADO DE FACTURA ORIGINAL")).append('\n')
+            sb.append(sep).append('\n')
+            sb.append('\n')
+        }
 
         // ===== 1. HEADER EMISOR (logo bitmap ya impreso aparte) =====
         // El logo bitmap ya trae 'JULIA BAKERY' visualmente, no repetirlo.
@@ -244,6 +290,85 @@ class SunmiPrinter {
         return sb.toString()
     }
 
+    /**
+     * Layout dedicado para tickets de CIERRE DE TURNO.
+     *
+     * Diferencias vs construirTextoPlano (factura FEL):
+     *   - SIN logo (es operativo, no comprobante fiscal)
+     *   - SIN datos certificador SAT (no es FEL)
+     *   - Titulo grande "CIERRE DE TURNO"
+     *   - Items[] vienen pre-armados desde JS como lineas del desglose
+     *     (apertura, ventas por metodo, esperado, contado, diferencia).
+     *     Cada item.descripcion + item.subtotal se imprime como key-value.
+     *
+     * El payload trae:
+     *   - razonSocial = "CIERRE DE TURNO"
+     *   - receptorNombre = nombre del cajero
+     *   - fecha = fecha cierre
+     *   - fechaApertura = inicio del turno
+     *   - items = lineas del desglose ya formateadas
+     *   - total = ventas total
+     *   - textoFooter = "Turno #xxx · Cerrado yyy"
+     */
+    private fun construirTextoCierreTurno(p: TicketPayload): String {
+        val W = 32
+        fun cen(s: String): String {
+            val pad = ((W - s.length) / 2).coerceAtLeast(0)
+            return " ".repeat(pad) + s
+        }
+        fun cols(left: String, right: String): String {
+            val pad = (W - left.length - right.length).coerceAtLeast(1)
+            return left + " ".repeat(pad) + right
+        }
+        val sep = "=".repeat(W)
+        val sub = "-".repeat(W)
+
+        val sb = StringBuilder()
+
+        // ===== Header =====
+        sb.append(sep).append('\n')
+        sb.append(cen("CIERRE DE TURNO")).append('\n')
+        sb.append(cen(p.merchantName)).append('\n')
+        sb.append(sep).append('\n')
+        sb.append('\n')
+
+        // ===== Identificacion =====
+        sb.append("Cajero: ${p.receptorNombre}").append('\n')
+        p.fechaApertura?.let { sb.append("Apertura: $it").append('\n') }
+        sb.append("Cierre:   ${p.fecha}").append('\n')
+        sb.append(sub).append('\n')
+
+        // ===== Desglose (items[] ya viene armado desde JS) =====
+        sb.append(cen("DESGLOSE DEL TURNO")).append('\n')
+        sb.append('\n')
+        for (item in p.items) {
+            val monto = String.format("Q %.2f", item.subtotal)
+            // Si descripcion empieza con "—" es una subcategoria (sangria)
+            val esSubcategoria = item.descripcion.startsWith("—")
+            if (esSubcategoria) {
+                sb.append(cols("  " + item.descripcion.substring(1).trim(), monto)).append('\n')
+            } else {
+                sb.append(cols(item.descripcion, monto)).append('\n')
+            }
+        }
+        sb.append(sub).append('\n')
+
+        // ===== Total grande =====
+        sb.append(cols("TOTAL VENTAS:", String.format("Q %.2f", p.total))).append('\n')
+        sb.append(sep).append('\n')
+        sb.append('\n')
+
+        // ===== Footer =====
+        p.textoFooter?.let {
+            for (line in it.chunked(W)) sb.append(cen(line)).append('\n')
+        }
+        sb.append('\n')
+        sb.append(cen("--- FIN CIERRE ---")).append('\n')
+        sb.append("\n\n\n\n\n")  // padding para corte manual
+
+        return sb.toString()
+    }
+
     // ---------- ESC/POS builder ----------
 
     private fun construirEscPos(p: TicketPayload): ByteArray {
@@ -251,6 +376,17 @@ class SunmiPrinter {
         // Init
         out.write(byteArrayOf(0x1B, 0x40))                            // ESC @ = init
         out.write(byteArrayOf(0x1B, 0x52, 0x12))                      // ESC R 18 = Latin-9 (con tildes/eñe basico)
+
+        // ----- Banner REIMPRESION (si aplica), arriba de todo -----
+        if (p.esReimpresion) {
+            val num = p.reimpresionNum ?: 1
+            out.write(byteArrayOf(0x1B, 0x61, 0x01))                  // ESC a 1 = center
+            out.write(byteArrayOf(0x1D, 0x21, 0x11.toByte()))         // doble ancho/alto
+            out.write("REIMPRESION N°$num\n".toByteArray(Charsets.ISO_8859_1))
+            out.write(byteArrayOf(0x1D, 0x21, 0x00))                  // normal
+            out.write("DUPLICADO DE FACTURA ORIGINAL\n".toByteArray(Charsets.ISO_8859_1))
+            out.write("================================\n\n".toByteArray())
+        }
 
         // ----- Header centrado, doble alto -----
         out.write(byteArrayOf(0x1B, 0x61, 0x01))                      // ESC a 1 = center
@@ -345,6 +481,34 @@ class SunmiPrinter {
         return out.toByteArray()
     }
 
+    /**
+     * Abre la gaveta de efectivo conectada a la Sunmi via el comando ESC/POS
+     * estandar "ESC p" (0x1B 0x70). La Sunmi enruta sendRAWData con esta
+     * secuencia al pin de la gaveta.
+     *
+     * Bytes: ESC p m t1 t2
+     *   - m  = 0x00 -> pin 2 (default en cajones estandar)
+     *   - t1 = 0x19 (25 ms) -> tiempo de pulso ON
+     *   - t2 = 0xFA (250 ms) -> tiempo de pulso OFF
+     *
+     * Si el cajon no esta conectado o esta apagado, el comando se descarta
+     * silenciosamente — no falla la impresion del ticket.
+     *
+     * IMPORTANTE: para que esto sea la UNICA fuente de aperturas, el setting
+     * "auto-open drawer on print" del sistema operativo Sunmi tiene que estar
+     * APAGADO. Si esta prendido, la gaveta se abrira en TODO print (incluyendo
+     * tarjeta y reimpresion), arruinando la regla.
+     */
+    private fun kickCashDrawer(svc: IWoyouService) {
+        try {
+            val cmd = byteArrayOf(0x1B, 0x70, 0x00, 0x19.toByte(), 0xFA.toByte())
+            svc.sendRAWData(cmd, noopCb)
+            Log.d(TAG, "cashbox: kick enviado")
+        } catch (e: Exception) {
+            Log.w(TAG, "cashbox kick fallo (no critico): ${e.message}")
+        }
+    }
+
     private val noopCb = object : ICallback.Stub() {
         override fun onRunResult(isSuccess: Boolean) {
             Log.d(TAG, "noopCb.onRunResult: $isSuccess")
@@ -412,6 +576,20 @@ data class TicketPayload(
     val fechaCertificacion: String? = null,
     // Footer regulatorio (ej. "Sujeto a pago directo ISR")
     val textoFooter: String? = null,
+
+    // Marca de reimpresion. Si esReimpresion=true se imprime un banner
+    // grande "*** REIMPRESION N°X ***" arriba del ticket, y el certificador
+    // SAT se reusa del original (no se recertifica). reimpresionNum es el
+    // contador de copias emitidas (1 = primera copia despues del original).
+    val esReimpresion: Boolean = false,
+    val reimpresionNum: Int? = null,
+
+    // Marca de cierre de turno. Si esCierreTurno=true, se usa un layout
+    // operativo dedicado (sin logo, sin certificador SAT, con titulo
+    // "CIERRE DE TURNO" y items[] como desglose por metodo de pago).
+    val esCierreTurno: Boolean = false,
+    val fechaApertura: String? = null,
+    val tipo: String? = null,             // 'cierre_turno' u otros marcadores futuros
 
     // Compatibilidad con payloads antiguos (no se usan)
     val merchantSubtitle: String? = null,
