@@ -25,32 +25,32 @@ function POSChrome({ perfil, kiosko, turno, onMostrarHistorial, onMostrarBandeja
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
-      <header className="bg-white border-b border-gray-100 px-3 py-2 flex items-center justify-between flex-shrink-0 gap-2">
+      <header className="bg-white border-b border-gray-100 px-3 py-2.5 flex items-center justify-between flex-shrink-0 gap-2">
         <div className="flex items-center gap-2 min-w-0">
-          <img src="/logo.png" alt="" className="h-8 w-auto flex-shrink-0" />
-          <div className="text-sm font-semibold text-gray-900 truncate">
+          <img src="/logo.png" alt="" className="h-10 w-auto flex-shrink-0" />
+          <div className="text-base font-bold text-gray-900 truncate">
             {perfil?.nombre_completo || 'Cajero'}
           </div>
           {turno && (
             <button onClick={() => window.location.href = '/mis-turnos'}
               title={`Apertura ${new Date(turno.fecha_apertura).toLocaleTimeString('es-GT', { hour: '2-digit', minute: '2-digit' })} · Q${Number(turno.monto_apertura || 0).toFixed(2)}`}
-              className="text-[10px] bg-emerald-50 hover:bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded uppercase tracking-wide hidden sm:inline">
-              Caja abierta · {new Date(turno.fecha_apertura).toLocaleTimeString('es-GT', { hour: '2-digit', minute: '2-digit' })}
+              className="text-sm bg-emerald-50 hover:bg-emerald-100 text-emerald-700 px-3 py-1.5 rounded-lg font-semibold uppercase tracking-wide hidden sm:inline">
+              ● {new Date(turno.fecha_apertura).toLocaleTimeString('es-GT', { hour: '2-digit', minute: '2-digit' })}
             </button>
           )}
         </div>
-        <div className="flex items-center gap-1 flex-shrink-0">
+        <div className="flex items-center gap-1.5 flex-shrink-0">
           {turno && onMostrarBandeja && (
             <button onClick={onMostrarBandeja}
-              className={`text-xs px-3 py-1.5 rounded-lg font-semibold flex items-center gap-1.5 transition-colors ${
+              className={`text-base px-4 py-2.5 rounded-lg font-bold flex items-center gap-2 transition-colors ${
                 pedidosPendientesCount > 0
                   ? 'bg-amber-100 text-amber-800 hover:bg-amber-200 ring-2 ring-amber-300/50'
-                  : 'text-amber-700 hover:bg-amber-50'
+                  : 'bg-amber-50 text-amber-700 hover:bg-amber-100'
               }`}
               title="Bandeja de pedidos pendientes (Pedidos Ya)">
               📦 Pedidos
               {pedidosPendientesCount > 0 && (
-                <span className="bg-amber-600 text-white rounded-full px-1.5 py-0.5 text-[10px] font-bold tabular-nums">
+                <span className="bg-amber-600 text-white rounded-full px-2 py-0.5 text-sm font-bold tabular-nums min-w-[24px] text-center">
                   {pedidosPendientesCount}
                 </span>
               )}
@@ -58,19 +58,19 @@ function POSChrome({ perfil, kiosko, turno, onMostrarHistorial, onMostrarBandeja
           )}
           {turno && onMostrarHistorial && (
             <button onClick={onMostrarHistorial}
-              className="text-[11px] text-blue-600 hover:bg-blue-50 px-2 py-1 rounded-lg font-medium">
+              className="text-base bg-blue-50 text-blue-700 hover:bg-blue-100 px-4 py-2.5 rounded-lg font-bold">
               Historial
             </button>
           )}
           {esCajero && (
             <>
               <button onClick={() => window.location.href = '/mis-turnos'}
-                className="text-[11px] text-gray-500 hover:text-julia-red px-2 py-1">
+                className="text-base text-gray-700 hover:text-julia-red px-3 py-2.5 font-semibold rounded-lg hover:bg-gray-100">
                 Mis turnos
               </button>
               {turno && (
                 <button onClick={() => window.location.href = '/cerrar-caja'}
-                  className="text-[11px] bg-amber-100 text-amber-800 hover:bg-amber-200 px-3 py-1.5 rounded-lg font-medium">
+                  className="text-base bg-amber-100 text-amber-900 hover:bg-amber-200 px-4 py-2.5 rounded-lg font-bold">
                   Cerrar caja
                 </button>
               )}
@@ -81,7 +81,7 @@ function POSChrome({ perfil, kiosko, turno, onMostrarHistorial, onMostrarBandeja
               await supabase.auth.signOut()
               window.location.href = esCajero ? '/cajero-login' : '/'
             }}
-            className="text-[11px] text-gray-400 hover:text-julia-red px-2 py-1">
+            className="text-base text-gray-500 hover:text-julia-red px-3 py-2.5 font-semibold rounded-lg hover:bg-gray-100">
             Salir
           </button>
         </div>
@@ -131,19 +131,19 @@ function ModalNotaItem({ descripcion, value, onClose, onSave }) {
 
   return (
     <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4" onClick={onClose}>
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-5 max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
-        <h3 className="text-lg font-semibold text-gray-900 mb-1">Nota del producto</h3>
-        <p className="text-xs text-gray-500 mb-1">{descripcion}</p>
-        <p className="text-[11px] text-gray-400 mb-4">
+      <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 max-h-[92vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+        <h3 className="text-2xl font-bold text-gray-900 mb-1">Nota del producto</h3>
+        <p className="text-base font-semibold text-gray-700 mb-1">{descripcion}</p>
+        <p className="text-sm text-gray-500 mb-5">
           Aparece en el ticket impreso, en la factura y en la comanda de barra.
         </p>
 
-        <div className="flex flex-wrap gap-2 mb-4">
+        <div className="flex flex-wrap gap-2 mb-5">
           {SUGERENCIAS_NOTA.map(s => {
             const activa = estaActiva(s)
             return (
               <button key={s} onClick={() => toggleSugerencia(s)}
-                className={`text-sm px-3 py-2 rounded-full font-medium border-2 transition-colors ${
+                className={`text-base px-4 py-3 rounded-full font-bold border-2 transition-colors ${
                   activa
                     ? 'bg-julia-red text-white border-julia-red'
                     : 'bg-white text-gray-700 border-gray-200 hover:border-julia-red/40'
@@ -154,20 +154,20 @@ function ModalNotaItem({ descripcion, value, onClose, onSave }) {
           })}
         </div>
 
-        <label className="block text-xs text-gray-500 mb-1 font-medium">O escribí libremente</label>
+        <label className="block text-sm text-gray-600 mb-1.5 font-bold uppercase tracking-wide">O escribí libremente</label>
         <textarea value={text} onChange={e => setText(e.target.value)} rows={3}
           maxLength={200}
           placeholder="Ej: latte con leche deslactosada, sin azucar..."
-          className="w-full px-3 py-3 text-base border-2 border-gray-200 rounded-xl focus:outline-none focus:border-julia-red" />
-        <div className="text-[10px] text-gray-400 text-right mt-1">{text.length}/200</div>
+          className="w-full px-4 py-3.5 text-base border-2 border-gray-200 rounded-xl focus:outline-none focus:border-julia-red" />
+        <div className="text-sm text-gray-500 text-right mt-1.5 font-medium">{text.length}/200</div>
 
-        <div className="grid grid-cols-2 gap-2 mt-4">
+        <div className="grid grid-cols-2 gap-2.5 mt-5">
           <button onClick={onClose}
-            className="py-4 border-2 border-gray-200 text-base font-semibold text-gray-700 rounded-xl hover:bg-gray-50">
+            className="py-5 border-2 border-gray-200 text-lg font-bold text-gray-700 rounded-xl hover:bg-gray-50">
             Cancelar
           </button>
           <button onClick={() => onSave(text.trim())}
-            className="py-4 bg-julia-red text-white text-base font-semibold rounded-xl hover:bg-red-700">
+            className="py-5 bg-julia-red text-white text-lg font-bold rounded-xl hover:bg-red-700">
             Guardar nota
           </button>
         </div>
@@ -202,35 +202,35 @@ function ModalGuardarPedido({ totalEstimado, cantItems, onClose, onGuardar }) {
 
   return (
     <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4" onClick={onClose}>
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-5" onClick={e => e.stopPropagation()}>
-        <h3 className="text-xl font-semibold text-gray-900 mb-1">Guardar pedido pendiente</h3>
-        <p className="text-xs text-gray-500 mb-4">
+      <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 max-h-[92vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+        <h3 className="text-2xl font-bold text-gray-900 mb-1">Guardar pedido pendiente</h3>
+        <p className="text-base text-gray-600 mb-5">
           El pedido queda en la bandeja sin facturar.<br/>
           Se factura cuando el driver recoge.
         </p>
 
-        <div className="bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 mb-4 flex justify-between items-center">
-          <span className="text-sm text-gray-500">{cantItems} ítems</span>
-          <span className="text-xl font-bold text-julia-red tabular-nums">{fmtQ(totalEstimado)}</span>
+        <div className="bg-gray-50 border-2 border-gray-200 rounded-xl px-4 py-4 mb-5 flex justify-between items-center">
+          <span className="text-base text-gray-700 font-semibold">{cantItems} ítems</span>
+          <span className="text-2xl font-bold text-julia-red tabular-nums">{fmtQ(totalEstimado)}</span>
         </div>
 
-        <label className="block text-sm text-gray-600 font-medium mb-1.5">
+        <label className="block text-sm text-gray-700 font-bold uppercase tracking-wide mb-1.5">
           Referencia <span className="text-red-500">*</span>
         </label>
         <input type="text" value={referencia} onChange={e => setReferencia(e.target.value)}
           autoFocus maxLength={200}
-          placeholder="Ej: Pedidos Ya #4521  ·  Juan  ·  Para llevar #2"
-          className="w-full px-4 py-3 text-base border-2 border-gray-200 rounded-xl mb-4 focus:outline-none focus:border-julia-red" />
+          placeholder="Ej: Pedidos Ya #4521 · Juan"
+          className="w-full px-4 py-3.5 text-base border-2 border-gray-200 rounded-xl mb-5 focus:outline-none focus:border-julia-red" />
 
-        <label className="block text-sm text-gray-600 font-medium mb-1.5">Canal del pedido</label>
-        <div className="grid grid-cols-3 gap-2 mb-4">
+        <label className="block text-sm text-gray-700 font-bold uppercase tracking-wide mb-1.5">Canal del pedido</label>
+        <div className="grid grid-cols-3 gap-2 mb-5">
           {[
             { id: 'pedidos_ya', label: 'Pedidos Ya' },
             { id: 'telefono',   label: 'Teléfono' },
             { id: 'walkin',     label: 'Mostrador' },
           ].map(o => (
             <button key={o.id} onClick={() => setOrigen(o.id)}
-              className={`text-sm py-3 rounded-lg font-semibold transition-colors ${
+              className={`text-base py-4 rounded-lg font-bold transition-colors ${
                 origen === o.id
                   ? 'bg-julia-red text-white'
                   : 'border-2 border-gray-200 text-gray-700 hover:border-julia-red/40'
@@ -238,23 +238,23 @@ function ModalGuardarPedido({ totalEstimado, cantItems, onClose, onGuardar }) {
           ))}
         </div>
 
-        <label className="block text-sm text-gray-600 font-medium mb-1.5">Notas internas (opcional)</label>
+        <label className="block text-sm text-gray-700 font-bold uppercase tracking-wide mb-1.5">Notas internas (opcional)</label>
         <textarea value={notas} onChange={e => setNotas(e.target.value)} rows={2}
           maxLength={500}
           placeholder="Ej: cliente paga al recibir, sin pan tostado..."
-          className="w-full px-3 py-2.5 text-base border-2 border-gray-200 rounded-xl mb-3 focus:outline-none focus:border-julia-red" />
+          className="w-full px-4 py-3.5 text-base border-2 border-gray-200 rounded-xl mb-4 focus:outline-none focus:border-julia-red" />
 
         {error && (
-          <div className="bg-red-50 border border-red-100 rounded-lg px-3 py-2 text-sm text-red-700 mb-3">{error}</div>
+          <div className="bg-red-50 border-2 border-red-200 rounded-xl px-4 py-3 text-base font-medium text-red-700 mb-4">{error}</div>
         )}
 
-        <div className="grid grid-cols-2 gap-2">
+        <div className="grid grid-cols-2 gap-2.5">
           <button onClick={onClose} disabled={enviando}
-            className="py-4 border-2 border-gray-200 text-base font-semibold text-gray-700 rounded-xl hover:bg-gray-50 disabled:opacity-50">
+            className="py-5 border-2 border-gray-200 text-lg font-bold text-gray-700 rounded-xl hover:bg-gray-50 disabled:opacity-50">
             Cancelar
           </button>
           <button onClick={submit} disabled={enviando}
-            className="py-4 bg-julia-red text-white text-base font-semibold rounded-xl hover:bg-red-700 disabled:opacity-50">
+            className="py-5 bg-julia-red text-white text-lg font-bold rounded-xl hover:bg-red-700 disabled:opacity-50">
             {enviando ? 'Guardando...' : 'Guardar pedido'}
           </button>
         </div>
@@ -282,33 +282,33 @@ function ModalBandejaPedidos({ pedidos, cargando, onClose, onContinuar, onCancel
 
   return (
     <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" onClick={onClose}>
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[88vh] flex flex-col overflow-hidden" onClick={e => e.stopPropagation()}>
-        <div className="px-5 py-3 border-b border-gray-100 flex justify-between items-center bg-amber-50">
+      <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[92vh] flex flex-col overflow-hidden" onClick={e => e.stopPropagation()}>
+        <div className="px-5 py-4 border-b border-gray-100 flex justify-between items-center bg-amber-50">
           <div>
-            <div className="text-base font-bold text-gray-900">Pedidos pendientes</div>
-            <div className="text-xs text-gray-500">Sin facturar — esperando que el driver recoja</div>
+            <div className="text-xl font-bold text-gray-900">📦 Pedidos pendientes</div>
+            <div className="text-sm text-gray-700 mt-0.5">Sin facturar — esperando que el driver recoja</div>
           </div>
           <div className="flex items-center gap-2">
             <button onClick={onRefresh} title="Recargar"
-              className="text-gray-500 hover:text-julia-red w-9 h-9 flex items-center justify-center rounded-lg hover:bg-amber-100">
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+              className="text-gray-700 hover:text-julia-red w-11 h-11 flex items-center justify-center rounded-lg hover:bg-amber-100">
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
               </svg>
             </button>
             <button onClick={onClose}
-              className="text-gray-400 hover:text-gray-700 text-2xl leading-none w-9 h-9 flex items-center justify-center">✕</button>
+              className="text-gray-500 hover:text-gray-700 text-3xl leading-none w-11 h-11 flex items-center justify-center">✕</button>
           </div>
         </div>
 
         <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-gray-50">
           {cargando && (
-            <div className="text-center py-8 text-sm text-gray-400">Cargando pedidos…</div>
+            <div className="text-center py-10 text-base text-gray-500 font-medium">Cargando pedidos…</div>
           )}
           {!cargando && pedidos.length === 0 && (
             <div className="text-center py-12">
-              <div className="text-5xl mb-3 opacity-50">📦</div>
-              <div className="text-base font-medium text-gray-600">No hay pedidos pendientes</div>
-              <div className="text-xs text-gray-400 mt-1">Cuando armes un pedido y lo guardes, aparecerá acá.</div>
+              <div className="text-6xl mb-3 opacity-50">📦</div>
+              <div className="text-lg font-bold text-gray-700">No hay pedidos pendientes</div>
+              <div className="text-base text-gray-500 mt-1.5">Cuando armes un pedido y lo guardes, aparecerá acá.</div>
             </div>
           )}
           {pedidos.map(p => {
@@ -317,55 +317,53 @@ function ModalBandejaPedidos({ pedidos, cargando, onClose, onContinuar, onCancel
             const minutos = Math.floor((Date.now() - new Date(p.created_at).getTime()) / 60000)
             return (
               <div key={p.id} className="bg-white border-2 border-gray-100 rounded-xl p-4 hover:border-amber-200 transition-colors">
-                <div className="flex justify-between items-start gap-3 mb-2">
+                <div className="flex justify-between items-start gap-3 mb-3">
                   <div className="flex-1 min-w-0">
-                    <div className="text-base font-bold text-gray-900 truncate">{p.referencia}</div>
-                    <div className="text-xs text-gray-500 mt-0.5">
+                    <div className="text-lg font-bold text-gray-900 truncate">{p.referencia}</div>
+                    <div className="text-sm text-gray-600 mt-1 font-medium">
                       <span className="capitalize">{p.origen?.replace('_', ' ')}</span>
                       {' · '}
                       <span>{p.cajero_creador_nombre || 'cajero'}</span>
                       {' · '}
-                      <span>hace {minutos}min</span>
+                      <span className={minutos > 30 ? 'text-red-600 font-bold' : ''}>hace {minutos}min</span>
                     </div>
                   </div>
                   <div className="text-right flex-shrink-0">
-                    <div className="text-lg font-bold text-gray-900 tabular-nums">{fmtQ(p.total_estimado)}</div>
-                    <div className="text-[10px] text-gray-400">{totalItems} ítems</div>
+                    <div className="text-2xl font-bold text-gray-900 tabular-nums">{fmtQ(p.total_estimado)}</div>
+                    <div className="text-sm text-gray-500 font-medium">{totalItems} ítems</div>
                   </div>
                 </div>
 
                 {/* Preview de items */}
-                <div className="text-xs text-gray-600 mb-3 bg-gray-50 rounded-lg px-3 py-2 max-h-24 overflow-y-auto">
+                <div className="text-base text-gray-700 mb-3 bg-gray-50 rounded-lg px-3 py-2.5 max-h-28 overflow-y-auto font-medium">
                   {items.slice(0, 5).map((it, i) => (
                     <div key={i} className="flex justify-between gap-2">
                       <span className="truncate">{it.cantidad}× {it.descripcion}</span>
                     </div>
                   ))}
                   {items.length > 5 && (
-                    <div className="text-gray-400 italic text-[11px] mt-1">y {items.length - 5} más…</div>
+                    <div className="text-gray-500 italic text-sm mt-1">y {items.length - 5} más…</div>
                   )}
                 </div>
 
                 {p.notas && (
-                  <div className="text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded-md px-2 py-1 mb-3">
+                  <div className="text-sm font-medium text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 mb-3">
                     📝 {p.notas}
                   </div>
                 )}
 
-                <div className="grid grid-cols-2 gap-2">
-                  <div className="flex flex-col gap-1">
-                    <button onClick={() => onContinuar(p)}
-                      className="py-3 bg-emerald-600 text-white font-semibold rounded-lg hover:bg-emerald-700 text-sm">
-                      📥 Cobrar / Continuar
-                    </button>
-                  </div>
-                  <div className="flex flex-col gap-1">
+                <div className="grid grid-cols-2 gap-2.5">
+                  <button onClick={() => onContinuar(p)}
+                    className="py-4 bg-emerald-600 text-white font-bold rounded-xl hover:bg-emerald-700 text-base shadow">
+                    📥 Cobrar / Continuar
+                  </button>
+                  <div className="flex flex-col gap-1.5">
                     <input type="text" placeholder="Motivo cancelación..."
                       value={motivos[p.id] || ''}
                       onChange={e => setMotivos({ ...motivos, [p.id]: e.target.value })}
-                      className="text-xs border border-gray-200 rounded-lg px-2 py-1.5" />
+                      className="text-sm border-2 border-gray-200 rounded-lg px-3 py-2.5 focus:outline-none focus:border-julia-red" />
                     <button onClick={() => cancelar(p)} disabled={cancelandoId === p.id}
-                      className="py-2 border-2 border-red-200 text-red-700 font-semibold rounded-lg hover:bg-red-50 text-xs disabled:opacity-50">
+                      className="py-2.5 border-2 border-red-200 text-red-700 font-bold rounded-lg hover:bg-red-50 text-sm disabled:opacity-50">
                       {cancelandoId === p.id ? 'Cancelando...' : 'Cancelar pedido'}
                     </button>
                   </div>
@@ -428,24 +426,24 @@ function ModalDividirPago({ totalVenta, pagosInicial, onClose, onGuardar }) {
 
   return (
     <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4" onClick={onClose}>
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg p-5 max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
-        <h3 className="text-xl font-semibold text-gray-900 mb-1">Dividir pago</h3>
-        <p className="text-xs text-gray-500 mb-4">
-          Agregá varios pagos (efectivo + tarjeta, etc) hasta cubrir el total.
+      <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg p-6 max-h-[92vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+        <h3 className="text-2xl font-bold text-gray-900 mb-1">Dividir pago</h3>
+        <p className="text-base text-gray-600 mb-5">
+          Agregá varios pagos hasta cubrir el total.
         </p>
 
-        <div className="bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 mb-4 grid grid-cols-3 gap-2 text-center">
+        <div className="bg-gray-50 border-2 border-gray-200 rounded-xl px-4 py-4 mb-5 grid grid-cols-3 gap-2 text-center">
           <div>
-            <div className="text-[10px] uppercase tracking-wide text-gray-500 font-bold">Total venta</div>
-            <div className="text-base font-bold text-gray-900 tabular-nums">{fmtQ(totalVenta)}</div>
+            <div className="text-sm uppercase tracking-wide text-gray-600 font-bold">Total</div>
+            <div className="text-xl font-bold text-gray-900 tabular-nums mt-1">{fmtQ(totalVenta)}</div>
           </div>
           <div>
-            <div className="text-[10px] uppercase tracking-wide text-gray-500 font-bold">Cubierto</div>
-            <div className="text-base font-bold text-emerald-600 tabular-nums">{fmtQ(sumaActual)}</div>
+            <div className="text-sm uppercase tracking-wide text-gray-600 font-bold">Cubierto</div>
+            <div className="text-xl font-bold text-emerald-600 tabular-nums mt-1">{fmtQ(sumaActual)}</div>
           </div>
           <div>
-            <div className="text-[10px] uppercase tracking-wide text-gray-500 font-bold">Falta</div>
-            <div className={`text-base font-bold tabular-nums ${
+            <div className="text-sm uppercase tracking-wide text-gray-600 font-bold">Falta</div>
+            <div className={`text-xl font-bold tabular-nums mt-1 ${
               restante > 0 ? 'text-amber-600' : restante < 0 ? 'text-red-600' : 'text-emerald-600'
             }`}>
               {fmtQ(restante)}
@@ -453,12 +451,12 @@ function ModalDividirPago({ totalVenta, pagosInicial, onClose, onGuardar }) {
           </div>
         </div>
 
-        <div className="space-y-2 mb-3">
+        <div className="space-y-3 mb-4">
           {pagos.map((p, i) => (
-            <div key={i} className="bg-white border-2 border-gray-100 rounded-xl p-3 flex items-center gap-2">
-              <div className="text-xs text-gray-400 font-bold w-5 text-center">{i + 1}</div>
+            <div key={i} className="bg-white border-2 border-gray-200 rounded-xl p-3 flex items-center gap-2">
+              <div className="text-lg text-gray-700 font-bold w-7 text-center bg-gray-100 rounded h-10 flex items-center justify-center">{i + 1}</div>
               <select value={p.metodo} onChange={e => actualizar(i, { metodo: e.target.value })}
-                className="flex-1 text-base border-2 border-gray-200 rounded-lg px-2 py-2 bg-white font-medium focus:outline-none focus:border-julia-red">
+                className="flex-1 text-base border-2 border-gray-200 rounded-lg px-3 py-3 bg-white font-semibold focus:outline-none focus:border-julia-red">
                 <option value="efectivo">Efectivo</option>
                 <option value="tarjeta">Tarjeta</option>
                 <option value="transferencia">Transferencia</option>
@@ -469,11 +467,12 @@ function ModalDividirPago({ totalVenta, pagosInicial, onClose, onGuardar }) {
                 onChange={e => actualizar(i, { monto: e.target.value })}
                 inputMode="decimal"
                 placeholder="0.00"
-                className="w-28 text-right text-base px-2 py-2 border-2 border-gray-200 rounded-lg tabular-nums focus:outline-none focus:border-julia-red" />
+                className="w-32 text-right text-lg font-bold px-3 py-3 border-2 border-gray-200 rounded-lg tabular-nums focus:outline-none focus:border-julia-red" />
               {pagos.length > 1 && (
                 <button onClick={() => quitar(i)}
-                  className="text-gray-300 hover:text-red-500 w-9 h-9 flex items-center justify-center">
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                  title="Quitar este pago"
+                  className="text-gray-400 hover:text-red-500 w-11 h-11 flex items-center justify-center bg-gray-50 border-2 border-gray-200 rounded-lg hover:border-red-200 hover:bg-red-50">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
                   </svg>
                 </button>
@@ -483,21 +482,21 @@ function ModalDividirPago({ totalVenta, pagosInicial, onClose, onGuardar }) {
         </div>
 
         <button onClick={agregar}
-          className="w-full py-3 border-2 border-dashed border-gray-300 text-gray-600 font-semibold rounded-xl hover:border-julia-red hover:text-julia-red text-base mb-3">
+          className="w-full py-4 border-2 border-dashed border-gray-300 text-gray-700 font-bold rounded-xl hover:border-julia-red hover:text-julia-red text-lg mb-4">
           + Agregar otro pago
         </button>
 
         {error && (
-          <div className="bg-red-50 border border-red-100 rounded-lg px-3 py-2 text-sm text-red-700 mb-3">{error}</div>
+          <div className="bg-red-50 border-2 border-red-200 rounded-xl px-4 py-3 text-base font-medium text-red-700 mb-4">{error}</div>
         )}
 
-        <div className="grid grid-cols-2 gap-2">
+        <div className="grid grid-cols-2 gap-2.5">
           <button onClick={onClose}
-            className="py-4 border-2 border-gray-200 text-base font-semibold text-gray-700 rounded-xl hover:bg-gray-50">
+            className="py-5 border-2 border-gray-200 text-lg font-bold text-gray-700 rounded-xl hover:bg-gray-50">
             Cancelar
           </button>
           <button onClick={guardar} disabled={!cuadra}
-            className="py-4 bg-julia-red text-white text-base font-semibold rounded-xl hover:bg-red-700 disabled:opacity-40 disabled:cursor-not-allowed">
+            className="py-5 bg-julia-red text-white text-lg font-bold rounded-xl hover:bg-red-700 disabled:opacity-40 disabled:cursor-not-allowed">
             Guardar pagos
           </button>
         </div>
@@ -1557,24 +1556,24 @@ export default function POS({ session }) {
            ============================================================ */}
         <div className={`bg-white border-t-2 lg:border-t-0 lg:border-l border-gray-100 flex flex-col h-screen lg:h-[calc(100vh-3.5rem)] lg:sticky lg:top-[3.5rem] ${mostrarCarritoMobile ? 'fixed inset-0 z-40 lg:static lg:inset-auto' : 'hidden lg:flex'}`}>
           {/* Header */}
-          <div className="flex-shrink-0 px-5 py-3 border-b border-gray-100 flex items-center justify-between bg-white">
+          <div className="flex-shrink-0 px-5 py-3.5 border-b border-gray-100 flex items-center justify-between bg-white">
             <div>
-              <h2 className="text-base font-bold text-gray-900">
+              <h2 className="text-lg font-bold text-gray-900">
                 {pedidoEditando ? '📦 Facturando pedido' : 'Venta actual'}
               </h2>
-              <p className="text-xs text-gray-400">
+              <p className="text-sm text-gray-500 font-medium">
                 {pedidoEditando
-                  ? <span className="text-amber-700 font-medium">{pedidoEditando.referencia}</span>
+                  ? <span className="text-amber-700 font-bold">{pedidoEditando.referencia}</span>
                   : (carrito.length === 0 ? 'Sin productos aún' : `${carrito.length} ${carrito.length === 1 ? 'línea' : 'líneas'}`)}
               </p>
             </div>
             {carrito.length > 0 && (
               <button onClick={() => setCarrito([])}
-                className="text-xs text-gray-400 hover:text-red-500 transition-colors">
+                className="text-sm font-semibold text-gray-500 hover:text-red-500 transition-colors px-3 py-2 rounded-lg hover:bg-red-50">
                 Vaciar
               </button>
             )}
-            <button onClick={() => setMostrarCarritoMobile(false)} className="lg:hidden text-gray-400 hover:text-gray-700 text-2xl ml-2">✕</button>
+            <button onClick={() => setMostrarCarritoMobile(false)} className="lg:hidden text-gray-400 hover:text-gray-700 text-3xl ml-2">✕</button>
           </div>
 
           {/* TODO el contenido scrolleable (líneas + total + receptor + metodos) */}
@@ -1587,12 +1586,12 @@ export default function POS({ session }) {
                 <div className="text-xs mt-1">Tocá un producto para agregarlo</div>
               </div>
             ) : carrito.map((l, i) => (
-              <div key={i} className="bg-gray-50 border border-gray-100 rounded-xl p-3 hover:border-gray-200 transition-colors">
+              <div key={i} className="bg-gray-50 border-2 border-gray-100 rounded-xl p-3 hover:border-gray-200 transition-colors">
                 <div className="flex items-start justify-between gap-2 mb-2">
                   <div className="flex-1 min-w-0">
-                    <div className="text-base font-semibold text-gray-900 leading-tight line-clamp-2">{l.descripcion}</div>
+                    <div className="text-base font-bold text-gray-900 leading-tight line-clamp-2">{l.descripcion}</div>
                     {l.notas && (
-                      <div className="text-xs text-amber-800 italic mt-1.5 bg-amber-50 border border-amber-200 rounded-md px-2 py-1">
+                      <div className="text-sm text-amber-800 italic font-medium mt-1.5 bg-amber-50 border border-amber-200 rounded-md px-2 py-1.5">
                         ✏️ {l.notas}
                       </div>
                     )}
@@ -1600,17 +1599,17 @@ export default function POS({ session }) {
                   <div className="flex flex-col gap-1 flex-shrink-0">
                     <button onClick={() => setLineaConNota({ idx: i, descripcion: l.descripcion, value: l.notas || '' })}
                       title={l.notas ? 'Editar nota' : 'Agregar nota / extras'}
-                      className={`w-9 h-9 flex items-center justify-center rounded-lg transition-colors ${
+                      className={`w-11 h-11 flex items-center justify-center rounded-lg transition-colors ${
                         l.notas
                           ? 'bg-amber-100 text-amber-700 hover:bg-amber-200'
-                          : 'bg-white border border-gray-200 text-gray-500 hover:text-julia-red hover:border-julia-red/40'
+                          : 'bg-white border-2 border-gray-200 text-gray-500 hover:text-julia-red hover:border-julia-red/40'
                       }`}>
-                      <span className="text-base">✏️</span>
+                      <span className="text-xl">✏️</span>
                     </button>
                     <button onClick={() => quitarLinea(i)}
                       title="Quitar producto"
-                      className="w-9 h-9 flex items-center justify-center bg-white border border-gray-200 text-gray-400 hover:text-red-500 hover:border-red-200 rounded-lg transition-colors">
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                      className="w-11 h-11 flex items-center justify-center bg-white border-2 border-gray-200 text-gray-400 hover:text-red-500 hover:border-red-200 rounded-lg transition-colors">
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
                       </svg>
                     </button>
@@ -1646,49 +1645,49 @@ export default function POS({ session }) {
             </div>
 
           {/* Totales */}
-          <div className="border-t border-gray-100 px-5 py-4 bg-gradient-to-b from-gray-50/50 to-white space-y-1.5">
-            <div className="flex justify-between text-sm text-gray-500">
+          <div className="border-t border-gray-100 px-5 py-4 bg-gradient-to-b from-gray-50/50 to-white space-y-2">
+            <div className="flex justify-between text-base text-gray-600 font-medium">
               <span>Subtotal (sin IVA)</span><span className="tabular-nums">{fmtQ(totales.gravable)}</span>
             </div>
-            <div className="flex justify-between text-sm text-gray-500">
+            <div className="flex justify-between text-base text-gray-600 font-medium">
               <span>IVA 12%</span><span className="tabular-nums">{fmtQ(totales.iva)}</span>
             </div>
-            <div className="flex justify-between text-2xl font-bold text-gray-900 pt-3 mt-2 border-t-2 border-gray-200">
+            <div className="flex justify-between text-3xl font-bold text-gray-900 pt-3 mt-2 border-t-2 border-gray-200">
               <span>Total</span><span className="tabular-nums text-julia-red">{fmtQ(totales.total)}</span>
             </div>
           </div>
 
           {/* Receptor */}
-          <div className="px-5 py-4 border-t border-gray-100 space-y-2.5">
-            <div className="text-[11px] uppercase tracking-wider text-gray-500 font-bold">Receptor</div>
-            <div className="flex gap-1 bg-gray-100 p-1 rounded-xl">
+          <div className="px-5 py-4 border-t border-gray-100 space-y-3">
+            <div className="text-sm uppercase tracking-wider text-gray-600 font-bold">Receptor</div>
+            <div className="flex gap-1.5 bg-gray-100 p-1.5 rounded-xl">
               <button onClick={() => setNitMode(true)}
-                className={`flex-1 text-base py-3.5 rounded-lg font-semibold transition-colors ${
+                className={`flex-1 text-base py-4 rounded-lg font-bold transition-colors ${
                   receptor.nit === 'CF' ? 'bg-white shadow-sm text-julia-red' : 'text-gray-500'
                 }`}>
                 Consumidor final
               </button>
               <button onClick={() => setNitMode(false)}
-                className={`flex-1 text-base py-3.5 rounded-lg font-semibold transition-colors ${
+                className={`flex-1 text-base py-4 rounded-lg font-bold transition-colors ${
                   receptor.nit !== 'CF' ? 'bg-white shadow-sm text-julia-red' : 'text-gray-500'
                 }`}>
                 Con NIT
               </button>
             </div>
             {receptor.nit !== 'CF' && (
-              <div className="space-y-2">
+              <div className="space-y-2.5">
                 <div className="relative">
                   <input type="text" placeholder="NIT (sin guiones)" value={receptor.nit}
                     onChange={e => setReceptor(r => ({ ...r, nit: e.target.value }))}
                     onBlur={() => consultarNit(receptor.nit)}
-                    className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-julia-red pr-10"
+                    className="w-full px-4 py-3.5 text-base border-2 border-gray-200 rounded-lg focus:outline-none focus:border-julia-red pr-11"
                     inputMode="text" autoComplete="off" />
                   {consultando ? (
-                    <span className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 border-2 border-gray-200 border-t-julia-red rounded-full animate-spin" title="Consultando RTU…" />
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 border-2 border-gray-200 border-t-julia-red rounded-full animate-spin" title="Consultando RTU…" />
                   ) : (
                     receptor.nit && ultimoNitConsultado.current === normalizarNit(receptor.nit) && receptor.nombre && !nitMsg && (
                       <span className="absolute right-3 top-1/2 -translate-y-1/2 text-emerald-600" title="NIT confirmado en RTU">
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+                        <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                         </svg>
                       </span>
@@ -1697,12 +1696,12 @@ export default function POS({ session }) {
                 </div>
                 <input type="text" placeholder="Nombre receptor" value={receptor.nombre}
                   onChange={e => setReceptor(r => ({ ...r, nombre: e.target.value }))}
-                  className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-julia-red" />
+                  className="w-full px-4 py-3.5 text-base border-2 border-gray-200 rounded-lg focus:outline-none focus:border-julia-red" />
                 <input type="email" placeholder="Email (opcional)" value={receptor.email}
                   onChange={e => setReceptor(r => ({ ...r, email: e.target.value }))}
-                  className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-julia-red" />
+                  className="w-full px-4 py-3.5 text-base border-2 border-gray-200 rounded-lg focus:outline-none focus:border-julia-red" />
                 {nitMsg && (
-                  <div className="text-xs text-amber-700 bg-amber-50 border border-amber-100 rounded-lg px-3 py-2">
+                  <div className="text-sm text-amber-800 font-medium bg-amber-50 border border-amber-200 rounded-lg px-4 py-3">
                     {nitMsg}
                   </div>
                 )}
@@ -1712,56 +1711,56 @@ export default function POS({ session }) {
 
           {/* Método de pago — botones grandes para uso táctil */}
           <div className="px-5 py-4 border-t border-gray-100">
-            <div className="flex justify-between items-center mb-2.5">
-              <div className="text-[11px] uppercase tracking-wider text-gray-500 font-bold">Método de pago</div>
-              {carrito.length > 0 && (
-                <button
-                  onClick={() => setMostrarDividirPago(true)}
-                  className={`text-xs font-semibold px-2.5 py-1 rounded-lg transition-colors ${
-                    pagosDivididos
-                      ? 'bg-blue-100 text-blue-700 hover:bg-blue-200 ring-2 ring-blue-200'
-                      : 'text-blue-600 hover:bg-blue-50'
-                  }`}>
-                  {pagosDivididos ? `✂️ ${pagosDivididos.length} pagos` : '✂️ Dividir pago'}
-                </button>
-              )}
-            </div>
+            <div className="text-sm uppercase tracking-wider text-gray-600 font-bold mb-3">Método de pago</div>
 
             {pagosDivididos ? (
-              // Vista compacta del desglose dividido. Tocar para editar / quitar.
-              <div className="space-y-2">
-                <div className="bg-blue-50 border-2 border-blue-200 rounded-xl p-3 space-y-1.5">
+              // Vista expandida del split — botones grandes para uso tactil
+              <div className="space-y-3">
+                <div className="bg-blue-50 border-2 border-blue-300 rounded-xl p-4 space-y-2.5">
+                  <div className="text-sm uppercase tracking-wider text-blue-700 font-bold mb-1">
+                    ✂️ {pagosDivididos.length} pagos divididos
+                  </div>
                   {pagosDivididos.map((p, i) => (
-                    <div key={i} className="flex justify-between text-sm">
-                      <span className="capitalize text-blue-900 font-medium">
+                    <div key={i} className="flex justify-between items-center text-lg bg-white rounded-lg px-3 py-2.5 border border-blue-200">
+                      <span className="capitalize text-blue-900 font-bold">
                         {i + 1}. {String(p.metodo).replace('_', ' ')}
                       </span>
-                      <span className="font-bold text-blue-900 tabular-nums">{fmtQ(p.monto)}</span>
+                      <span className="font-bold text-blue-900 tabular-nums text-lg">{fmtQ(p.monto)}</span>
                     </div>
                   ))}
                 </div>
-                <div className="flex gap-2">
+                <div className="grid grid-cols-2 gap-2.5">
                   <button onClick={() => setMostrarDividirPago(true)}
-                    className="flex-1 text-sm py-2.5 border-2 border-blue-200 text-blue-700 font-semibold rounded-lg hover:bg-blue-50">
+                    className="text-base py-4 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 shadow">
                     Editar pagos
                   </button>
                   <button onClick={() => setPagosDivididos(null)}
-                    className="text-sm py-2.5 px-4 border-2 border-gray-200 text-gray-600 font-semibold rounded-lg hover:bg-gray-50">
+                    className="text-base py-4 border-2 border-gray-300 text-gray-700 font-bold rounded-xl hover:bg-gray-50">
                     Quitar
                   </button>
                 </div>
               </div>
             ) : (
-              <div className="grid grid-cols-2 gap-2.5">
-                {METODOS_PAGO.map(m => (
-                  <button key={m.id} onClick={() => setMetodoPago(m.id)}
-                    className={`text-base py-5 rounded-xl font-semibold transition-all ${
-                      metodoPago === m.id
-                        ? 'bg-julia-red text-white shadow-md ring-2 ring-julia-red/20'
-                        : 'border-2 border-gray-200 text-gray-700 hover:border-julia-red/40 bg-white'
-                    }`}>{m.label}</button>
-                ))}
-              </div>
+              <>
+                <div className="grid grid-cols-2 gap-2.5">
+                  {METODOS_PAGO.map(m => (
+                    <button key={m.id} onClick={() => setMetodoPago(m.id)}
+                      className={`text-base py-5 rounded-xl font-bold transition-all ${
+                        metodoPago === m.id
+                          ? 'bg-julia-red text-white shadow-md ring-2 ring-julia-red/20'
+                          : 'border-2 border-gray-200 text-gray-700 hover:border-julia-red/40 bg-white'
+                      }`}>{m.label}</button>
+                  ))}
+                </div>
+                {/* Botón "Dividir pago" — primario y grande para Sunmi táctil */}
+                {carrito.length > 0 && (
+                  <button
+                    onClick={() => setMostrarDividirPago(true)}
+                    className="w-full mt-3 py-4 text-base font-bold rounded-xl bg-blue-50 text-blue-700 border-2 border-blue-200 hover:bg-blue-100 hover:border-blue-300 transition-colors flex items-center justify-center gap-2">
+                    ✂️ Dividir pago en varios métodos
+                  </button>
+                )}
+              </>
             )}
           </div>
 
