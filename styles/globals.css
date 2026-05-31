@@ -1,29 +1,32 @@
-/* Tipografias del manual de marca (sustitutos libres via Google Fonts):
-   - Cormorant Garamond ~ Adobe Caslon (body)
-   - Cinzel ~ Brown Sugar Regular (display) */
-@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=Cinzel:wght@400;500;600;700&display=swap');
+/* Tipografias:
+   - Inter (body): sans-serif tecnica/sobria. Optimizada para UI/POS.
+     Reemplaza a Cormorant Garamond del manual de marca — los cajeros pidieron
+     un font "mas normal y tecnologico, no tan estilizado".
+   - Cinzel: SOLO en .font-display (titulos de marca, paginas de marketing).
+     El POS y modulos operativos usan Inter por defecto. */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Cinzel:wght@400;500;600;700&display=swap');
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 body {
-  font-family: 'Cormorant Garamond', 'Georgia', serif;
-  font-feature-settings: 'liga', 'kern';
-  /* Lining + tabular figures: que los 0-9 queden a la misma altura y mismo ancho.
-     Cormorant Garamond usa "oldstyle figures" por default que son lindas en texto
-     continuo pero confunden en datos. */
-  font-variant-numeric: lining-nums tabular-nums;
+  font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';  /* Inter stylistic alternates: 0 con slash, 1 con serif, etc */
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 /* Refuerzo en elementos donde los numeros son protagonistas */
 input, table, td, th, .tabular-nums {
-  font-variant-numeric: lining-nums tabular-nums;
-  font-feature-settings: 'lnum', 'tnum';
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum';
 }
 
-h1, h2, h3, .font-display {
-  font-family: 'Cinzel', 'Cormorant Garamond', 'Georgia', serif;
+/* Headings por default heredan Inter del body. Solo `.font-display` mantiene
+   Cinzel para los lugares de branding (landing, manual de marca, etc). */
+.font-display {
+  font-family: 'Cinzel', 'Georgia', serif;
   letter-spacing: 0.02em;
 }
 

@@ -1616,26 +1616,28 @@ export default function POS({ session }) {
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
-                  {/* Cantidad con +/- — botones grandes para uso táctil */}
-                  <div className="flex items-center bg-white border border-gray-200 rounded-lg overflow-hidden">
+                  {/* Cantidad con +/- — solo botones, sin input editable
+                      para evitar typos del cajero (productos de panaderia son
+                      enteros: 1 pan, 1 latte, etc). */}
+                  <div className="flex items-center bg-white border-2 border-gray-200 rounded-lg overflow-hidden">
                     <button
-                      onClick={() => setLinea(i, { cantidad: Math.max(0, Number(l.cantidad) - 1) })}
-                      className="w-11 h-11 text-gray-700 hover:bg-gray-100 active:bg-gray-200 transition-colors font-bold text-xl">
+                      onClick={() => setLinea(i, { cantidad: Math.max(1, Number(l.cantidad) - 1) })}
+                      className="w-12 h-12 text-gray-700 hover:bg-gray-100 active:bg-gray-200 transition-colors font-bold text-2xl">
                       −
                     </button>
-                    <input type="number" step="any" min="0" value={l.cantidad}
-                      onChange={e => setLinea(i, { cantidad: Number(e.target.value) || 0 })}
-                      className="w-14 text-center text-base font-semibold tabular-nums focus:outline-none border-x border-gray-200" />
+                    <div className="w-14 h-12 text-center text-lg font-bold text-gray-900 tabular-nums border-x-2 border-gray-200 flex items-center justify-center select-none">
+                      {l.cantidad}
+                    </div>
                     <button
                       onClick={() => setLinea(i, { cantidad: Number(l.cantidad) + 1 })}
-                      className="w-11 h-11 text-gray-700 hover:bg-gray-100 active:bg-gray-200 transition-colors font-bold text-xl">
+                      className="w-12 h-12 text-gray-700 hover:bg-gray-100 active:bg-gray-200 transition-colors font-bold text-2xl">
                       +
                     </button>
                   </div>
-                  <span className="text-xs text-gray-400">×</span>
+                  <span className="text-sm text-gray-400 font-bold">×</span>
                   <input type="number" step="any" min="0" value={l.precio_unitario}
                     onChange={e => setLinea(i, { precio_unitario: Number(e.target.value) || 0 })}
-                    className="flex-1 text-right text-base px-2 py-2 bg-white border border-gray-200 rounded-lg tabular-nums focus:outline-none focus:border-julia-red" />
+                    className="flex-1 text-right text-base font-semibold px-2 py-2.5 bg-white border-2 border-gray-200 rounded-lg tabular-nums focus:outline-none focus:border-julia-red" />
                   <span className="text-base font-bold text-gray-900 tabular-nums min-w-[90px] text-right">
                     {fmtQ(Number(l.cantidad) * Number(l.precio_unitario))}
                   </span>
