@@ -77,25 +77,26 @@ export default function Dashboard({ session }) {
     const hoy = gtDayRange(0)
     const ayer = gtDayRange(1)
 
-    // Ventas hoy
+    // Ventas hoy — desde facturas_fel certificadas, en tiempo real.
+    // Cada venta del POS Julia Bakery se ve al instante (no espera polling).
     const { data: hoyRows } = await supabase
-      .from('loyverse_receipts')
-      .select('total_money')
-      .eq('receipt_type', 'SALE')
-      .gte('receipt_date', hoy.fromUtc)
-      .lt('receipt_date', hoy.toUtc)
+      .from('facturas_fel')
+      .select('total')
+      .eq('estado', 'certificada')
+      .gte('fecha_emision', hoy.fromUtc)
+      .lt('fecha_emision', hoy.toUtc)
 
-    const hoyTotal = (hoyRows || []).reduce((s, r) => s + Number(r.total_money || 0), 0)
+    const hoyTotal = (hoyRows || []).reduce((s, r) => s + Number(r.total || 0), 0)
 
     // Ventas ayer
     const { data: ayerRows } = await supabase
-      .from('loyverse_receipts')
-      .select('total_money')
-      .eq('receipt_type', 'SALE')
-      .gte('receipt_date', ayer.fromUtc)
-      .lt('receipt_date', ayer.toUtc)
+      .from('facturas_fel')
+      .select('total')
+      .eq('estado', 'certificada')
+      .gte('fecha_emision', ayer.fromUtc)
+      .lt('fecha_emision', ayer.toUtc)
 
-    const ayerTotal = (ayerRows || []).reduce((s, r) => s + Number(r.total_money || 0), 0)
+    const ayerTotal = (ayerRows || []).reduce((s, r) => s + Number(r.total || 0), 0)
 
     setStats({ hoyTotal, hoyCount: hoyRows?.length || 0, ayerTotal })
 
@@ -106,17 +107,17 @@ export default function Dashboard({ session }) {
     const inicio = dias[0].fromUtc
     const fin = dias[dias.length - 1].toUtc
     const { data: semanaRows } = await supabase
-      .from('loyverse_receipts')
-      .select('receipt_date, total_money')
-      .eq('receipt_type', 'SALE')
-      .gte('receipt_date', inicio)
-      .lt('receipt_date', fin)
+      .from('facturas_fel')
+      .select('fecha_emision, total')
+      .eq('estado', 'certificada')
+      .gte('fecha_emision', inicio)
+      .lt('fecha_emision', fin)
 
     const labelDia = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb']
     const graficaData = dias.map(d => {
       const total = (semanaRows || [])
-        .filter(r => r.receipt_date >= d.fromUtc && r.receipt_date < d.toUtc)
-        .reduce((s, r) => s + Number(r.total_money || 0), 0)
+        .filter(r => r.fecha_emision >= d.fromUtc && r.fecha_emision < d.toUtc)
+        .reduce((s, r) => s + Number(r.total || 0), 0)
       return {
         ymd: d.ymd,
         dia: labelDia[new Date(d.fromUtc).getUTCDay()],
@@ -125,37 +126,39 @@ export default function Dashboard({ session }) {
     })
     setGrafica(graficaData)
 
-    // Top items hoy
+    // Top items hoy — desde facturas_fel_items (join con facturas certificadas de hoy)
     const { data: lineas } = await supabase
-      .from('loyverse_receipt_line_items')
-      .select('item_name, variant_name, quantity, total_money, receipt_id, loyverse_receipts!inner(receipt_date, receipt_type)')
-      .eq('loyverse_receipts.receipt_type', 'SALE')
-      .gte('loyverse_receipts.receipt_date', hoy.fromUtc)
-      .lt('loyverse_receipts.receipt_date', hoy.toUtc)
+      .from('facturas_fel_items')
+      .select('descripcion, cantidad, subtotal, facturas_fel!inner(estado, fecha_emision)')
+      .eq('facturas_fel.estado', 'certificada')
+      .gte('facturas_fel.fecha_emision', hoy.fromUtc)
+      .lt('facturas_fel.fecha_emision', hoy.toUtc)
 
     const acumulado = new Map()
     for (const l of lineas || []) {
-      const key = l.item_name || '—'
+      const key = l.descripcion || '—'
       const prev = acumulado.get(key) || { name: key, qty: 0, money: 0 }
-      prev.qty += Number(l.quantity || 0)
-      prev.money += Number(l.total_money || 0)
+      prev.qty += Number(l.cantidad || 0)
+      prev.money += Number(l.subtotal || 0)
       acumulado.set(key, prev)
     }
     setTopItems([...acumulado.values()].sort((a,b) => b.money - a.money).slice(0, 5))
 
-    // Ultimos 10 recibos
+    // Ultimas 10 facturas (certificadas o anuladas para ver actividad)
     const { data: ult } = await supabase
-      .from('loyverse_receipts')
-      .select('loyverse_id, receipt_number, receipt_type, total_money, receipt_date, employee_id')
-      .order('receipt_date', { ascending: false })
+      .from('facturas_fel')
+      .select('id, serie_sat, numero_sat, estado, total, fecha_emision, metodo_pago')
+      .in('estado', ['certificada', 'anulada'])
+      .order('fecha_emision', { ascending: false })
       .limit(10)
     setUltimos(ult || [])
 
-    // Estado del sync
+    // Estado del sync de Loyverse (catálogo de productos). Las ventas ya no
+    // dependen del polling — vienen del POS Julia Bakery en tiempo real.
     const { data: ss } = await supabase
       .from('loyverse_sync_state')
       .select('resource, last_status, last_synced_at')
-      .eq('resource', 'receipts')
+      .eq('resource', 'items')
       .maybeSingle()
     setSyncState(ss)
 
@@ -270,31 +273,34 @@ export default function Dashboard({ session }) {
             )}
           </div>
 
-          {/* Últimos recibos */}
+          {/* Últimas facturas */}
           <div className="card-julia p-5">
-            <h2 className="text-sm font-bold text-gray-900 mb-4">Últimos recibos</h2>
+            <h2 className="text-sm font-bold text-gray-900 mb-4">Últimas facturas</h2>
             {loading ? (
               <div className="space-y-2">
                 {[1,2,3].map(i => <div key={i} className="shimmer h-8 rounded"></div>)}
               </div>
             ) : ultimos.length === 0 ? (
-              <p className="text-sm text-ink-subtle py-4 text-center">Sin recibos aún.</p>
+              <p className="text-sm text-ink-subtle py-4 text-center">Sin facturas aún.</p>
             ) : (
               <div className="space-y-2.5">
-                {ultimos.map(r => (
-                  <div key={r.loyverse_id} className="flex items-center justify-between text-sm py-1.5">
-                    <div className="truncate flex items-center gap-2 min-w-0">
-                      <span className="font-mono text-2xs text-ink-subtle font-medium">{r.receipt_number}</span>
-                      {r.receipt_type === 'REFUND' && <span className="badge badge-danger">devol</span>}
-                      <span className="text-xs text-ink-subtle truncate">
-                        {new Date(r.receipt_date).toLocaleString('es-GT', { day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' })}
+                {ultimos.map(f => {
+                  const ref = f.serie_sat ? `${f.serie_sat.slice(0, 8)}-${f.numero_sat || ''}` : (f.numero_sat || f.id.slice(0, 8))
+                  return (
+                    <div key={f.id} className="flex items-center justify-between text-sm py-1.5">
+                      <div className="truncate flex items-center gap-2 min-w-0">
+                        <span className="font-mono text-2xs text-ink-subtle font-medium truncate max-w-[120px]">{ref}</span>
+                        {f.estado === 'anulada' && <span className="badge badge-danger">anulada</span>}
+                        <span className="text-xs text-ink-subtle truncate">
+                          {new Date(f.fecha_emision).toLocaleString('es-GT', { day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' })}
+                        </span>
+                      </div>
+                      <span className={`font-mono tabular-nums font-semibold ${f.estado === 'anulada' ? 'text-red-600 line-through' : 'text-gray-900'}`}>
+                        {fmtQ(f.total)}
                       </span>
                     </div>
-                    <span className={`font-mono tabular-nums font-semibold ${r.receipt_type === 'REFUND' ? 'text-red-600' : 'text-gray-900'}`}>
-                      {fmtQ(r.total_money)}
-                    </span>
-                  </div>
-                ))}
+                  )
+                })}
               </div>
             )}
           </div>
