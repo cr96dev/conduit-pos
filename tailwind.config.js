@@ -14,9 +14,12 @@ module.exports = {
         },
       },
       fontFamily: {
-        // Sustitutos libres (Google Fonts) cercanos a Adobe Caslon + Brown Sugar.
-        body:    ['"Cormorant Garamond"', 'Georgia', 'serif'],
-        display: ['"Cinzel"', '"Cormorant Garamond"', 'Georgia', 'serif'],
+        // Body: Inter (sans-serif tecnica/sobria) para UI/POS/operacion.
+        body:    ['"Inter"', 'system-ui', '-apple-system', 'Segoe UI', 'Roboto', 'sans-serif'],
+        // Display: Cinzel SOLO para .font-display (branding, marketing).
+        display: ['"Cinzel"', 'Georgia', 'serif'],
+        // Sans alias por si algun componente usa explicitamente font-sans.
+        sans:    ['"Inter"', 'system-ui', '-apple-system', 'Segoe UI', 'Roboto', 'sans-serif'],
       },
     },
   },
