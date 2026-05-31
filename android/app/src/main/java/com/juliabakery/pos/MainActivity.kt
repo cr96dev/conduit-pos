@@ -124,16 +124,29 @@ class MainActivity : AppCompatActivity() {
                         return true
                     }
                     // 2. Modo kiosko: solo permitimos rutas del scope cajero.
-                    //    El login (/) y POS (/pos) son OK; cualquier otro
-                    //    modulo (inventario, planillas, dashboard, admin, etc)
-                    //    queda bloqueado para que el cajero no se distraiga.
-                    //    /_next y /api van OK porque son assets/API.
+                    //    Cualquier modulo admin (inventario, planillas, dashboard,
+                    //    configuracion, etc) queda bloqueado para que el cajero
+                    //    no se distraiga / no rompa cosas.
+                    //
+                    //    Rutas permitidas para el cajero:
+                    //      /                 login admin (back-door para soporte)
+                    //      /pos              punto de venta
+                    //      /cajero-login     login por PIN (kiosko default)
+                    //      /abrir-caja       apertura de turno
+                    //      /cerrar-caja      cierre de turno (con ticket impreso)
+                    //      /mis-turnos       historial del cajero
+                    //      /_next, /api, /auth, /static  assets / endpoints
                     val path = req.url.path ?: "/"
-                    if (path != "/" && path != "/pos"
-                        && !path.startsWith("/_next/")
-                        && !path.startsWith("/api/")
-                        && !path.startsWith("/auth/")
-                        && !path.startsWith("/static/")) {
+                    val rutasPermitidas = setOf(
+                        "/", "/pos",
+                        "/cajero-login", "/abrir-caja", "/cerrar-caja", "/mis-turnos",
+                    )
+                    val esPermitida = path in rutasPermitidas
+                        || path.startsWith("/_next/")
+                        || path.startsWith("/api/")
+                        || path.startsWith("/auth/")
+                        || path.startsWith("/static/")
+                    if (!esPermitida) {
                         Log.w("MainActivity", "Ruta bloqueada en kiosko: $path")
                         Toast.makeText(this@MainActivity, "Esta seccion no esta disponible en el cajero", Toast.LENGTH_SHORT).show()
                         // Forzar vuelta al POS.
