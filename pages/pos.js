@@ -1600,59 +1600,63 @@ export default function POS({ session }) {
                 <div className="text-xs mt-1">Tocá un producto para agregarlo</div>
               </div>
             ) : carrito.map((l, i) => (
-              <div key={i} className="bg-gray-50 border-2 border-gray-100 rounded-xl p-3 hover:border-gray-200 transition-colors">
-                <div className="flex items-start justify-between gap-2 mb-2">
+              <div key={i} className="bg-white border border-gray-200 rounded-xl p-3 hover:border-gray-300 transition-colors shadow-xs">
+                {/* Fila 1: descripcion + acciones (horizontales para no amontonar) */}
+                <div className="flex items-start justify-between gap-2 mb-3">
                   <div className="flex-1 min-w-0">
                     <div className="text-base font-bold text-gray-900 leading-tight line-clamp-2">{l.descripcion}</div>
                     {l.notas && (
-                      <div className="text-sm text-amber-800 italic font-medium mt-1.5 bg-amber-50 border border-amber-200 rounded-md px-2 py-1.5">
+                      <div className="text-sm text-amber-800 italic font-medium mt-1.5 bg-amber-50 border border-amber-200 rounded-md px-2 py-1">
                         ✏️ {l.notas}
                       </div>
                     )}
                   </div>
-                  <div className="flex flex-col gap-1 flex-shrink-0">
+                  {/* Acciones lado a lado en lugar de apiladas */}
+                  <div className="flex items-center gap-1.5 flex-shrink-0">
                     <button onClick={() => setLineaConNota({ idx: i, descripcion: l.descripcion, value: l.notas || '' })}
                       title={l.notas ? 'Editar nota' : 'Agregar nota / extras'}
-                      className={`w-11 h-11 flex items-center justify-center rounded-lg transition-colors ${
+                      className={`w-9 h-9 flex items-center justify-center rounded-lg transition-colors ${
                         l.notas
                           ? 'bg-amber-100 text-amber-700 hover:bg-amber-200'
-                          : 'bg-white border-2 border-gray-200 text-gray-500 hover:text-julia-red hover:border-julia-red/40'
+                          : 'bg-gray-50 border border-gray-200 text-ink-subtle hover:text-julia-red hover:border-julia-red/40 hover:bg-white'
                       }`}>
-                      <span className="text-xl">✏️</span>
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                      </svg>
                     </button>
                     <button onClick={() => quitarLinea(i)}
                       title="Quitar producto"
-                      className="w-11 h-11 flex items-center justify-center bg-white border-2 border-gray-200 text-gray-400 hover:text-red-500 hover:border-red-200 rounded-lg transition-colors">
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+                      className="w-9 h-9 flex items-center justify-center bg-gray-50 border border-gray-200 text-ink-subtle hover:text-red-500 hover:border-red-200 hover:bg-white rounded-lg transition-colors">
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2.2} viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
                       </svg>
                     </button>
                   </div>
                 </div>
+
+                {/* Fila 2: control de cantidad + precio unitario + subtotal */}
                 <div className="flex items-center gap-2">
-                  {/* Cantidad con +/- — solo botones, sin input editable
-                      para evitar typos del cajero (productos de panaderia son
-                      enteros: 1 pan, 1 latte, etc). */}
-                  <div className="flex items-center bg-white border-2 border-gray-200 rounded-lg overflow-hidden">
+                  {/* Stepper cohesivo — un solo grupo, divisores 1px */}
+                  <div className="flex items-center bg-white border border-gray-300 rounded-lg overflow-hidden h-11">
                     <button
                       onClick={() => setLinea(i, { cantidad: Math.max(1, Number(l.cantidad) - 1) })}
-                      className="w-12 h-12 text-gray-700 hover:bg-gray-100 active:bg-gray-200 transition-colors font-bold text-2xl">
+                      className="w-10 h-full text-gray-700 hover:bg-gray-100 active:bg-gray-200 transition-colors font-bold text-xl flex items-center justify-center">
                       −
                     </button>
-                    <div className="w-14 h-12 text-center text-lg font-bold text-gray-900 tabular-nums border-x-2 border-gray-200 flex items-center justify-center select-none">
+                    <div className="min-w-[40px] px-2 h-full text-center text-base font-bold text-gray-900 tabular-nums border-x border-gray-200 flex items-center justify-center select-none bg-gray-50">
                       {l.cantidad}
                     </div>
                     <button
                       onClick={() => setLinea(i, { cantidad: Number(l.cantidad) + 1 })}
-                      className="w-12 h-12 text-gray-700 hover:bg-gray-100 active:bg-gray-200 transition-colors font-bold text-2xl">
+                      className="w-10 h-full text-gray-700 hover:bg-gray-100 active:bg-gray-200 transition-colors font-bold text-xl flex items-center justify-center">
                       +
                     </button>
                   </div>
-                  <span className="text-sm text-gray-400 font-bold">×</span>
+                  <span className="text-sm text-ink-subtle">×</span>
                   <input type="number" step="any" min="0" value={l.precio_unitario}
                     onChange={e => setLinea(i, { precio_unitario: Number(e.target.value) || 0 })}
-                    className="flex-1 text-right text-base font-semibold px-2 py-2.5 bg-white border-2 border-gray-200 rounded-lg tabular-nums focus:outline-none focus:border-julia-red" />
-                  <span className="text-base font-bold text-gray-900 tabular-nums min-w-[90px] text-right">
+                    className="w-20 text-right text-base font-semibold px-2.5 h-11 bg-white border border-gray-300 rounded-lg tabular-nums font-mono focus:outline-none focus:border-julia-red" />
+                  <span className="flex-1 text-base font-bold text-gray-900 tabular-nums font-mono text-right">
                     {fmtQ(Number(l.cantidad) * Number(l.precio_unitario))}
                   </span>
                 </div>
