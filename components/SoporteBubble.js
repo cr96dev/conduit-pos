@@ -19,6 +19,47 @@ async function apiFetch(path, opts = {}) {
   return fetch(path, { ...opts, headers })
 }
 
+// Labels humanos para tools (las que el asistente puede invocar).
+// Cuando una respuesta del asistente incluye `tool_calls`, mostramos un
+// chip por cada una con este label.
+const LABELS_TOOL = {
+  // Read (Fase 1)
+  buscar_factura:           'Buscó factura',
+  estado_turno_actual:      'Verificó turno',
+  estado_fel_infile:        'Verificó certificador',
+  ultimos_errores_recientes:'Listó errores recientes',
+  buscar_recibo_loyverse:   'Buscó recibo Loyverse',
+  consultar_nit_rtu:        'Consultó NIT en SAT',
+  estado_impresora:         'Verificó impresora',
+  // Write (Fase 2)
+  reimprimir_factura:        'Reimprimir factura',
+  reintentar_certificar:     'Reintentar certificación',
+  actualizar_correo_receptor:'Actualizar email del receptor',
+  anular_factura:            'Anular factura',
+}
+function labelTool(name) {
+  return LABELS_TOOL[name] || name
+}
+
+// Red de seguridad: si el modelo manda markdown por error (asteriscos,
+// guiones bajos, almohadillas), lo dejamos como texto plano legible.
+// El system prompt le pide al modelo no usarlo, pero por las dudas.
+function limpiarMarkdown(text) {
+  if (typeof text !== 'string') return text
+  return text
+    // **bold** o __bold__ -> bold
+    .replace(/\*\*([^*]+)\*\*/g, '$1')
+    .replace(/__([^_]+)__/g, '$1')
+    // *italic* o _italic_ -> italic, pero respetando guiones bajos en
+    // identificadores tipo my_var (que pierdan formato no es problema).
+    .replace(/(?<!\w)\*([^*\n]+)\*(?!\w)/g, '$1')
+    .replace(/(?<!\w)_([^_\n]+)_(?!\w)/g, '$1')
+    // Headings #/##/### al inicio de linea -> quitamos los hashes
+    .replace(/^#{1,6}\s+/gm, '')
+    // backticks de inline code
+    .replace(/`([^`]+)`/g, '$1')
+}
+
 export default function SoporteBubble({ perfil, obtenerContexto }) {
   const [abierto, setAbierto] = useState(false)
   const [convId, setConvId] = useState(null)
@@ -83,6 +124,8 @@ export default function SoporteBubble({ perfil, obtenerContexto }) {
         setMensajes(m => [...m, {
           rol: 'assistant',
           contenido: j.respuesta,
+          tool_calls: j.tool_calls || [],
+          pending_actions: j.pending_actions || [],
           created_at: new Date().toISOString(),
         }])
       }
@@ -94,6 +137,113 @@ export default function SoporteBubble({ perfil, obtenerContexto }) {
       }])
     } finally {
       setEnviando(false)
+    }
+  }
+
+  /**
+   * Resuelve una accion pendiente que el agente propuso.
+   * decision: 'confirmar' | 'rechazar'
+   * Optimistic UI: marca el mensaje como resolviendose y agrega el nuevo
+   * mensaje del assistant cuando responde el endpoint.
+   */
+  async function resolverPending(actionId, decision, msgIdx) {
+    // Marcar como en-progreso visualmente (deshabilitar botones)
+    setMensajes(m => m.map((msg, i) => i !== msgIdx ? msg : {
+      ...msg,
+      _resolving: actionId,
+    }))
+    try {
+      const res = await apiFetch(`/api/soporte/acciones/${actionId}`, {
+        method: 'POST',
+        body: JSON.stringify({ decision }),
+      })
+      const j = await res.json()
+      if (!res.ok) {
+        // Marcar la pending como fallida pero seguir mostrando el mensaje
+        setMensajes(m => m.map((msg, i) => i !== msgIdx ? msg : {
+          ...msg,
+          _resolving: null,
+          pending_actions: (msg.pending_actions || []).map(pa =>
+            pa.id === actionId ? { ...pa, estado: 'error', error: j.error } : pa
+          ),
+        }))
+        return
+      }
+
+      // Si el endpoint devolvio un payload de impresion (caso reimprimir),
+      // disparamos el print fisico via el bridge JuliaPOS de la WebView.
+      // Si no hay bridge (desktop o wrapper sin instalar), salta el warning.
+      const r = j.resultado || {}
+      if (r.factura && r.items && (r.esReimpresion || r.reimpresionNum)) {
+        try {
+          if (typeof window !== 'undefined' && window.JuliaPOS && window.JuliaPOS.printTicket) {
+            const direccion = [
+              r.emisor?.direccion,
+              [r.emisor?.municipio, r.emisor?.departamento].filter(Boolean).join(', '),
+            ].filter(Boolean).join(' ')
+            const payload = {
+              merchantName: r.emisor?.nombre_comercial || 'Julia Bakery',
+              razonSocial: r.emisor?.razon_social || null,
+              direccion: direccion || null,
+              nitEmisor: r.emisor?.nit_emisor || null,
+              receptorNit: r.factura.receptor_nit,
+              receptorNombre: r.factura.receptor_nombre,
+              fecha: r.factura.fecha_certificacion
+                ? new Date(r.factura.fecha_certificacion).toLocaleString('es-GT')
+                : new Date(r.factura.fecha_emision).toLocaleString('es-GT'),
+              cajeroNombre: null,
+              metodoPago: null,
+              items: (r.items || []).map(it => ({
+                descripcion: it.descripcion,
+                cantidad: String(it.cantidad),
+                precioUnitario: Number(it.precio_unitario),
+                subtotal: Number(it.subtotal),
+              })),
+              totalGravado: Number(r.factura.total_gravado),
+              iva: Number(r.factura.iva),
+              total: Number(r.factura.total),
+              uuidSat: r.factura.uuid_sat,
+              serieSat: r.factura.serie_sat,
+              numeroSat: r.factura.numero_sat,
+              certificadorNombre: 'INFILE, S.A.',
+              certificadorNit: '12521329',
+              fechaCertificacion: r.factura.fecha_certificacion
+                ? new Date(r.factura.fecha_certificacion).toLocaleString('es-GT')
+                : null,
+              textoFooter: 'Sujeto a pago directo ISR (5111420251235387 - 01/04/2025)',
+              esReimpresion: true,
+              reimpresionNum: r.reimpresionNum || r.reimpresion_num || 1,
+            }
+            await window.JuliaPOS.printTicket(payload)
+          }
+        } catch (e) {
+          console.warn('[Soporte] print fisico fallo:', e?.message || e)
+        }
+      }
+
+      // Marcar la pending como resuelta + agregar el nuevo mensaje del assistant
+      setMensajes(m => {
+        const conNuevo = [...m]
+        if (j.mensaje) {
+          conNuevo.push({
+            rol: 'assistant',
+            contenido: j.mensaje.contenido,
+            created_at: j.mensaje.created_at || new Date().toISOString(),
+          })
+        }
+        return conNuevo.map((msg, i) => i !== msgIdx ? msg : {
+          ...msg,
+          _resolving: null,
+          pending_actions: (msg.pending_actions || []).map(pa =>
+            pa.id === actionId ? { ...pa, estado: j.estado || 'confirmada' } : pa
+          ),
+        })
+      })
+    } catch (e) {
+      setMensajes(m => m.map((msg, i) => i !== msgIdx ? msg : {
+        ...msg,
+        _resolving: null,
+      }))
     }
   }
 
@@ -167,15 +317,78 @@ export default function SoporteBubble({ perfil, obtenerContexto }) {
             ) : (
               mensajes.map((m, i) => (
                 <div key={m.id || i}
-                  className={`flex ${m.rol === 'user' ? 'justify-end' : 'justify-start'}`}>
+                  className={`flex flex-col ${m.rol === 'user' ? 'items-end' : 'items-start'}`}>
                   <div
-                    className={`max-w-[80%] px-3 py-2 rounded-2xl text-sm whitespace-pre-wrap break-words ${
+                    className={`max-w-[82%] px-3.5 py-2.5 rounded-2xl text-[14.5px] leading-relaxed whitespace-pre-wrap break-words tracking-[0.005em] ${
                       m.rol === 'user'
-                        ? 'bg-julia-red text-white rounded-br-sm'
-                        : 'bg-white border border-gray-200 text-gray-800 rounded-bl-sm'
+                        ? 'bg-julia-red text-white rounded-br-sm font-sans'
+                        : 'bg-white border border-gray-200 text-gray-800 rounded-bl-sm font-sans'
                     }`}>
-                    {m.contenido}
+                    {limpiarMarkdown(m.contenido)}
                   </div>
+                  {/* Tool calls que el asistente ejecuto para responder este mensaje */}
+                  {m.rol === 'assistant' && Array.isArray(m.tool_calls) && m.tool_calls.length > 0 && (
+                    <div className="mt-1 ml-1 flex flex-wrap gap-1">
+                      {m.tool_calls.map((tc, idx) => (
+                        <span key={idx}
+                          className={`text-[10px] px-2 py-0.5 rounded-full border ${
+                            tc.ok
+                              ? 'bg-emerald-50 border-emerald-200 text-emerald-700'
+                              : 'bg-amber-50 border-amber-200 text-amber-700'
+                          }`}
+                          title={`${tc.name} · ${tc.duracion_ms}ms · ${tc.ok ? 'OK' : 'error'}`}
+                        >
+                          {tc.ok ? '✓' : '⚠'} {labelTool(tc.name)}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                  {/* Acciones pendientes de confirmacion (Fase 2) */}
+                  {m.rol === 'assistant' && Array.isArray(m.pending_actions) && m.pending_actions.length > 0 && (
+                    <div className="mt-2 ml-1 space-y-2 w-[82%]">
+                      {m.pending_actions.map(pa => {
+                        const estado = pa.estado || 'pendiente'
+                        const resolviendo = m._resolving === pa.id
+                        return (
+                          <div key={pa.id}
+                            className={`border rounded-xl p-3 ${
+                              estado === 'confirmada' ? 'bg-emerald-50 border-emerald-200' :
+                              estado === 'rechazada' ? 'bg-gray-50 border-gray-200' :
+                              estado === 'error' ? 'bg-amber-50 border-amber-200' :
+                              'bg-blue-50 border-blue-200'
+                            }`}>
+                            <div className="text-[11px] font-medium text-gray-700 mb-1">
+                              {labelTool(pa.tool_name)}
+                            </div>
+                            <div className="text-[13px] text-gray-800 leading-snug mb-2">
+                              {pa.resumen}
+                            </div>
+                            {estado === 'pendiente' && (
+                              <div className="flex gap-2">
+                                <button
+                                  disabled={resolviendo}
+                                  onClick={() => resolverPending(pa.id, 'confirmar', i)}
+                                  className="flex-1 text-xs bg-julia-red text-white px-3 py-1.5 rounded-lg font-medium hover:bg-red-700 disabled:opacity-50"
+                                >
+                                  {resolviendo ? '…' : 'Confirmar'}
+                                </button>
+                                <button
+                                  disabled={resolviendo}
+                                  onClick={() => resolverPending(pa.id, 'rechazar', i)}
+                                  className="flex-1 text-xs bg-white border border-gray-300 text-gray-700 px-3 py-1.5 rounded-lg font-medium hover:bg-gray-50 disabled:opacity-50"
+                                >
+                                  Cancelar
+                                </button>
+                              </div>
+                            )}
+                            {estado === 'confirmada' && <div className="text-[11px] text-emerald-700">✓ Confirmada y ejecutada.</div>}
+                            {estado === 'rechazada' && <div className="text-[11px] text-gray-500">Cancelada por el usuario.</div>}
+                            {estado === 'error' && <div className="text-[11px] text-amber-700">⚠ Error al ejecutar: {pa.error || 'detalle no disponible'}</div>}
+                          </div>
+                        )
+                      })}
+                    </div>
+                  )}
                 </div>
               ))
             )}

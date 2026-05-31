@@ -41,6 +41,12 @@
     },
     "pages/api/pos/cobrar-tarjeta.js": {
       "maxDuration": 120
+    },
+    "pages/api/pos/ventas.js": {
+      "maxDuration": 60
+    },
+    "pages/api/pos/pedidos/[id]/facturar.js": {
+      "maxDuration": 60
     }
   }
 }

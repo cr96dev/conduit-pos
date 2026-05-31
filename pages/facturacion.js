@@ -42,6 +42,15 @@ const TIPOS_DOC = {
   NCRE: 'Nota de crédito',
 }
 
+// Motivos pre-canned para reimprimir una factura. La opcion 'otro' deja
+// escribir texto libre.
+const MOTIVOS_REIMPRIMIR = {
+  cliente_perdio: 'Cliente perdió el ticket',
+  no_salio:      'El ticket no salió bien (papel/impresora)',
+  duplicado:     'Cliente pidió duplicado',
+  reclamo:       'Reclamo / aclaración con SAT',
+}
+
 // ============================================================================
 // Pagina
 // ============================================================================
@@ -376,6 +385,10 @@ function ModalDetalleFactura({ id, esAdmin, onClose, onChanged }) {
   const [manualForm, setManualForm] = useState({ uuid_sat: '', serie_sat: '', numero_sat: '' })
   const [motivoAnular, setMotivoAnular] = useState('')
   const [mostrarAnular, setMostrarAnular] = useState(false)
+  const [mostrarReimprimir, setMostrarReimprimir] = useState(false)
+  const [motivoReimprimir, setMotivoReimprimir] = useState('cliente_perdio')
+  const [motivoReimprimirOtro, setMotivoReimprimirOtro] = useState('')
+  const [reimprimirInfo, setReimprimirInfo] = useState(null)  // {ok, num, when} feedback ultimo evento
 
   useEffect(() => { cargar() }, [id])
 
@@ -420,6 +433,101 @@ function ModalDetalleFactura({ id, esAdmin, onClose, onChanged }) {
     setAccionando(false)
     if (!res.ok) { setErr(json.error || 'Error'); return }
     onChanged?.(); onClose()
+  }
+
+  // Reimprimir factura certificada. Llama al endpoint que devuelve la
+  // data + audit, despues arma el TicketPayload y se lo pasa al bridge
+  // del wrapper Sunmi (window.JuliaPOS.printTicket). Si no hay bridge
+  // (desktop / preview en browser), avisa al usuario que abra la pagina
+  // desde el Sunmi para que imprima.
+  async function reimprimir() {
+    const motivoFinal = motivoReimprimir === 'otro'
+      ? motivoReimprimirOtro.trim()
+      : MOTIVOS_REIMPRIMIR[motivoReimprimir] || motivoReimprimir
+    if (!motivoFinal) { setErr('Especifica el motivo'); return }
+
+    setAccionando(true); setErr(null); setReimprimirInfo(null)
+
+    const res = await apiFetch(`/api/fel/facturas/${id}/reimprimir`, {
+      method: 'POST',
+      body: JSON.stringify({ motivo: motivoFinal }),
+    })
+    const json = await res.json()
+    if (!res.ok || !json.ok) {
+      setAccionando(false)
+      setErr(json.error || 'No se pudo registrar la reimpresion')
+      return
+    }
+
+    // Armar TicketPayload (mismo shape que /pos.js — ver pages/pos.js).
+    const fac = json.factura
+    const em = json.emisor || {}
+    const direccion = [
+      em.direccion,
+      [em.municipio, em.departamento].filter(Boolean).join(', '),
+    ].filter(Boolean).join(' ')
+
+    const ticketPayload = {
+      // EMISOR
+      merchantName: em.nombre_comercial || 'Julia Bakery',
+      razonSocial: em.razon_social || null,
+      direccion: direccion || null,
+      nitEmisor: em.nit_emisor || null,
+      // RECEPTOR
+      receptorNit: fac.receptor_nit,
+      receptorNombre: fac.receptor_nombre,
+      fecha: fac.fecha_certificacion
+        ? new Date(fac.fecha_certificacion).toLocaleString('es-GT')
+        : new Date(fac.fecha_emision).toLocaleString('es-GT'),
+      cajeroNombre: null,                              // no aplica en reimpresion
+      metodoPago: null,
+      // ITEMS + TOTALES
+      items: (json.items || []).map(it => ({
+        descripcion: it.descripcion,
+        cantidad: String(it.cantidad),
+        precioUnitario: Number(it.precio_unitario),
+        subtotal: Number(it.subtotal),
+      })),
+      totalGravado: Number(fac.total_gravado),
+      iva: Number(fac.iva),
+      total: Number(fac.total),
+      // CERTIFICADOR (Infile)
+      uuidSat: fac.uuid_sat,
+      serieSat: fac.serie_sat,
+      numeroSat: fac.numero_sat,
+      certificadorNombre: 'INFILE, S.A.',
+      certificadorNit: '12521329',
+      fechaCertificacion: fac.fecha_certificacion
+        ? new Date(fac.fecha_certificacion).toLocaleString('es-GT')
+        : null,
+      textoFooter: 'Sujeto a pago directo ISR',
+      // MARCAR COMO REIMPRESION (banner en el ticket)
+      esReimpresion: true,
+      reimpresionNum: json.reimpresionNum || 1,
+    }
+
+    let printResult = { ok: false, message: 'sin_bridge' }
+    try {
+      if (typeof window !== 'undefined' && window.JuliaPOS && window.JuliaPOS.printTicket) {
+        const r = await window.JuliaPOS.printTicket(ticketPayload)
+        printResult = { ok: !!r?.ok, message: r?.error_message || (r?.ok ? 'impreso' : 'fallo') }
+      } else {
+        printResult = { ok: false, message: 'no_wrapper' }  // no esta en Sunmi
+      }
+    } catch (e) {
+      printResult = { ok: false, message: e?.message || 'exception' }
+    }
+
+    setAccionando(false)
+    setMostrarReimprimir(false)
+    setMotivoReimprimirOtro('')
+    setReimprimirInfo({
+      ok: printResult.ok,
+      num: json.reimpresionNum,
+      when: new Date().toLocaleTimeString('es-GT'),
+      message: printResult.message,
+    })
+    onChanged?.()
   }
 
   if (!f) return <ModalShell titulo="Factura" onClose={onClose}><div className="text-sm text-gray-400">{err || 'Cargando…'}</div></ModalShell>
@@ -479,48 +587,108 @@ function ModalDetalleFactura({ id, esAdmin, onClose, onChanged }) {
         {f.motivo_anulacion && <div className="text-xs text-red-700 bg-red-50 border border-red-100 rounded-lg px-3 py-2"><span className="font-medium">Anulada:</span> {f.motivo_anulacion}</div>}
         {err && <div className="bg-red-50 border border-red-100 rounded-lg px-3 py-2 text-xs text-red-700">{err}</div>}
 
-        {esAdmin && (
-          <div className="pt-3 border-t border-gray-100 space-y-2">
-            {(f.estado === 'borrador' || f.estado === 'error') && (
+        <div className="pt-3 border-t border-gray-100 space-y-2">
+          {esAdmin && (f.estado === 'borrador' || f.estado === 'error') && (
+            <>
+              {modoManual ? (
+                <div className="bg-gray-50 rounded-lg p-3 space-y-2">
+                  <div className="text-xs text-gray-600 font-medium">Certificación manual (sin llamar a Digifact)</div>
+                  <div className="grid grid-cols-3 gap-2">
+                    <input type="text" placeholder="UUID SAT" value={manualForm.uuid_sat} onChange={e => setManualForm({...manualForm, uuid_sat: e.target.value})} className="input col-span-3 font-mono text-xs" />
+                    <input type="text" placeholder="Serie" value={manualForm.serie_sat} onChange={e => setManualForm({...manualForm, serie_sat: e.target.value})} className="input" />
+                    <input type="text" placeholder="Número" value={manualForm.numero_sat} onChange={e => setManualForm({...manualForm, numero_sat: e.target.value})} className="input col-span-2" />
+                  </div>
+                </div>
+              ) : null}
+              <div className="flex flex-wrap gap-2 justify-end">
+                {f.estado === 'borrador' && <button onClick={borrar} disabled={accionando} className="text-xs px-3 py-2 text-red-600 hover:bg-red-50 rounded-lg">Borrar</button>}
+                <button onClick={() => setModoManual(!modoManual)} className="text-xs px-3 py-2 text-gray-600 hover:bg-gray-100 rounded-lg">
+                  {modoManual ? 'Cancelar manual' : 'Certificar manual'}
+                </button>
+                <button onClick={certificar} disabled={accionando} className="btn-primario">
+                  {accionando ? '…' : (modoManual ? 'Guardar certificación' : 'Certificar con Digifact')}
+                </button>
+              </div>
+            </>
+          )}
+          {f.estado === 'certificada' && (
               <>
-                {modoManual ? (
-                  <div className="bg-gray-50 rounded-lg p-3 space-y-2">
-                    <div className="text-xs text-gray-600 font-medium">Certificación manual (sin llamar a Digifact)</div>
-                    <div className="grid grid-cols-3 gap-2">
-                      <input type="text" placeholder="UUID SAT" value={manualForm.uuid_sat} onChange={e => setManualForm({...manualForm, uuid_sat: e.target.value})} className="input col-span-3 font-mono text-xs" />
-                      <input type="text" placeholder="Serie" value={manualForm.serie_sat} onChange={e => setManualForm({...manualForm, serie_sat: e.target.value})} className="input" />
-                      <input type="text" placeholder="Número" value={manualForm.numero_sat} onChange={e => setManualForm({...manualForm, numero_sat: e.target.value})} className="input col-span-2" />
+                {/* Feedback del ultimo intento de reimpresion */}
+                {reimprimirInfo && (
+                  <div className={`text-xs rounded-lg px-3 py-2 ${reimprimirInfo.ok ? 'bg-green-50 border border-green-100 text-green-800' : 'bg-amber-50 border border-amber-100 text-amber-800'}`}>
+                    {reimprimirInfo.ok
+                      ? `Reimpresión N°${reimprimirInfo.num} disparada a la impresora (${reimprimirInfo.when}).`
+                      : `Reimpresión N°${reimprimirInfo.num} registrada en el sistema, pero la impresora no respondió (${reimprimirInfo.message}). Abrí esta página desde el Sunmi para imprimir.`}
+                  </div>
+                )}
+
+                {/* Formulario reimprimir */}
+                {mostrarReimprimir ? (
+                  <div className="bg-blue-50 border border-blue-100 rounded-lg p-3 space-y-2">
+                    <div className="text-xs text-blue-900 font-medium">Reimprimir factura certificada</div>
+                    <div className="text-[11px] text-blue-700">
+                      Se imprime una copia con la leyenda "REIMPRESIÓN N°X".
+                      No se vuelve a certificar ante SAT — reusa el mismo UUID original.
+                    </div>
+                    <select
+                      value={motivoReimprimir}
+                      onChange={e => setMotivoReimprimir(e.target.value)}
+                      className="input text-xs"
+                    >
+                      {Object.entries(MOTIVOS_REIMPRIMIR).map(([k, v]) => (
+                        <option key={k} value={k}>{v}</option>
+                      ))}
+                      <option value="otro">Otro (especificar)</option>
+                    </select>
+                    {motivoReimprimir === 'otro' && (
+                      <input
+                        type="text"
+                        placeholder="Motivo..."
+                        maxLength={200}
+                        value={motivoReimprimirOtro}
+                        onChange={e => setMotivoReimprimirOtro(e.target.value)}
+                        className="input text-xs"
+                        autoFocus
+                      />
+                    )}
+                    <div className="flex gap-2 justify-end">
+                      <button
+                        onClick={() => { setMostrarReimprimir(false); setMotivoReimprimirOtro('') }}
+                        className="text-xs px-3 py-2 text-gray-600 hover:bg-white rounded-lg"
+                      >
+                        Cancelar
+                      </button>
+                      <button onClick={reimprimir} disabled={accionando} className="btn-primario">
+                        {accionando ? '…' : 'Reimprimir'}
+                      </button>
                     </div>
                   </div>
-                ) : null}
-                <div className="flex flex-wrap gap-2 justify-end">
-                  {f.estado === 'borrador' && <button onClick={borrar} disabled={accionando} className="text-xs px-3 py-2 text-red-600 hover:bg-red-50 rounded-lg">Borrar</button>}
-                  <button onClick={() => setModoManual(!modoManual)} className="text-xs px-3 py-2 text-gray-600 hover:bg-gray-100 rounded-lg">
-                    {modoManual ? 'Cancelar manual' : 'Certificar manual'}
-                  </button>
-                  <button onClick={certificar} disabled={accionando} className="btn-primario">
-                    {accionando ? '…' : (modoManual ? 'Guardar certificación' : 'Certificar con Digifact')}
-                  </button>
-                </div>
+                ) : !mostrarAnular ? (
+                  <div className="flex justify-end gap-2">
+                    <button
+                      onClick={() => setMostrarReimprimir(true)}
+                      className="text-xs px-3 py-2 text-blue-600 hover:bg-blue-50 rounded-lg"
+                    >
+                      Reimprimir
+                    </button>
+                    {esAdmin && (
+                      <button onClick={() => setMostrarAnular(true)} className="text-xs px-3 py-2 text-red-600 hover:bg-red-50 rounded-lg">
+                        Anular factura
+                      </button>
+                    )}
+                  </div>
+                ) : (
+                  <div className="flex gap-2 items-end">
+                    <Campo label="Motivo de anulación" required>
+                      <input type="text" value={motivoAnular} onChange={e => setMotivoAnular(e.target.value)} className="input" autoFocus />
+                    </Campo>
+                    <button onClick={() => { setMostrarAnular(false); setMotivoAnular('') }} className="btn-secundario">Cancelar</button>
+                    <button onClick={anular} disabled={accionando} className="btn-primario">{accionando ? '...' : 'Anular'}</button>
+                  </div>
+                )}
               </>
             )}
-            {f.estado === 'certificada' && (
-              !mostrarAnular ? (
-                <div className="flex justify-end">
-                  <button onClick={() => setMostrarAnular(true)} className="text-xs px-3 py-2 text-red-600 hover:bg-red-50 rounded-lg">Anular factura</button>
-                </div>
-              ) : (
-                <div className="flex gap-2 items-end">
-                  <Campo label="Motivo de anulación" required>
-                    <input type="text" value={motivoAnular} onChange={e => setMotivoAnular(e.target.value)} className="input" autoFocus />
-                  </Campo>
-                  <button onClick={() => { setMostrarAnular(false); setMotivoAnular('') }} className="btn-secundario">Cancelar</button>
-                  <button onClick={anular} disabled={accionando} className="btn-primario">{accionando ? '...' : 'Anular'}</button>
-                </div>
-              )
-            )}
-          </div>
-        )}
+        </div>
       </div>
     </ModalShell>
   )

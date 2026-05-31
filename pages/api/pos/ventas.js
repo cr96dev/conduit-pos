@@ -67,7 +67,7 @@ export default async function handler(req, res) {
   }
 
   const body = req.body || {}
-  const { items, receptor = {}, metodo_pago, notas, frases, neonet_resultado } = body
+  const { items, receptor = {}, metodo_pago, notas, frases, neonet_resultado, pagos } = body
 
   // ===== Validación =====
   if (!Array.isArray(items) || items.length === 0) {
@@ -78,12 +78,43 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: 'metodo_pago invalido (efectivo|tarjeta|transferencia|pedidos_ya|otro)' })
   }
 
+  // Split payments (opcional). Si pagos[] viene con >=1 elemento, validamos
+  // que la suma cuadre con el total de la venta (calculado mas abajo). Si
+  // pagos.length > 1, en la factura quedara metodo_pago='mixto' y los
+  // detalles se insertan en facturas_fel_pagos. Si pagos.length === 1, se
+  // ignora pagos[] y se respeta el comportamiento legacy (metodo_pago plano).
+  let pagosNorm = null
+  if (Array.isArray(pagos) && pagos.length > 0) {
+    pagosNorm = []
+    for (const [i, p] of pagos.entries()) {
+      if (!METODOS.has(p.metodo)) {
+        return res.status(400).json({ error: `pago ${i + 1}: metodo invalido` })
+      }
+      const monto = Number(p.monto)
+      if (!Number.isFinite(monto) || monto <= 0) {
+        return res.status(400).json({ error: `pago ${i + 1}: monto debe ser > 0` })
+      }
+      pagosNorm.push({
+        metodo: p.metodo,
+        monto: round2(monto),
+        referencia: p.referencia ? String(p.referencia).slice(0, 200) : null,
+        notas: p.notas ? String(p.notas).slice(0, 500) : null,
+      })
+    }
+  }
+
   // ===== Validación Neonet si metodo_pago = tarjeta =====
   // El frontend del POS DEBE haber capturado la autorización via Intent
   // (Sunmi prod) o mock (desarrollo) antes de llamarnos. Acá solo validamos
   // y persistimos.
+  //
+  // Modo "tarjeta externa" (env TARJETA_INTEGRADA != 'true'): el cajero pasó
+  // la tarjeta en un lector aparte (ej. BAC PAX standalone) y solo nos
+  // confirma "ya cobré" — no esperamos neonet_resultado. La factura sale
+  // con metodo_pago='tarjeta' pero sin auth_code interno.
+  const tarjetaIntegrada = String(process.env.TARJETA_INTEGRADA || 'false').toLowerCase() === 'true'
   let neonetParsed = null
-  if (metodo_pago === 'tarjeta') {
+  if (metodo_pago === 'tarjeta' && tarjetaIntegrada) {
     if (!neonet_resultado || typeof neonet_resultado !== 'object') {
       return res.status(400).json({ error: 'tarjeta requiere neonet_resultado del bridge NeoPOS' })
     }
@@ -211,6 +242,25 @@ export default async function handler(req, res) {
   })
   const totalFinal = round2(itemsNorm.reduce((s, it) => s + it.subtotal, 0))
 
+  // Si hay split payments, validar que la suma de pagos cuadre con el total.
+  // Tolerancia de Q0.01 por errores de redondeo. Si pagos.length === 1
+  // colapsamos a metodo_pago plano (no necesita fila en facturas_fel_pagos).
+  let metodoPagoFinal = metodo_pago
+  if (pagosNorm && pagosNorm.length > 0) {
+    const sumaPagos = round2(pagosNorm.reduce((s, p) => s + p.monto, 0))
+    if (Math.abs(sumaPagos - totalFinal) > 0.01) {
+      return res.status(400).json({
+        error: `Suma de pagos (Q${sumaPagos.toFixed(2)}) no coincide con total de venta (Q${totalFinal.toFixed(2)})`,
+      })
+    }
+    if (pagosNorm.length > 1) {
+      metodoPagoFinal = 'mixto'  // multiple = mixto en facturas_fel; detalle en facturas_fel_pagos
+    } else {
+      // 1 solo pago → respetamos su metodo (override del metodo_pago top-level)
+      metodoPagoFinal = pagosNorm[0].metodo
+    }
+  }
+
   // ===== 1. Crear factura en borrador =====
   const { data: facturaBorrador, error: insErr } = await auth.admin
     .from('facturas_fel')
@@ -226,7 +276,7 @@ export default async function handler(req, res) {
       total_exento: 0,
       iva: round2(ivaTotal),
       total: totalFinal,
-      metodo_pago,
+      metodo_pago: metodoPagoFinal,
       estado: 'borrador',
       origen_tipo: 'pos_propio',
       turno_id: turnoId,
@@ -321,6 +371,30 @@ export default async function handler(req, res) {
       .eq('id', neonetTransaccionId)
   }
 
+  // ===== 3c. Si split payment: persistir desglose en facturas_fel_pagos =====
+  // Solo cuando hay >1 pago (el caso de 1 solo ya quedo en facturas_fel.metodo_pago).
+  // Si esto falla, NO abortamos — la factura ya esta certificada. Se loggea
+  // para que admin pueda completar el desglose manualmente.
+  let pagosInsertados = null
+  if (pagosNorm && pagosNorm.length > 1) {
+    const filasPagos = pagosNorm.map(p => ({
+      factura_id: facturaCert.id,
+      metodo: p.metodo,
+      monto: p.monto,
+      referencia: p.referencia,
+      notas: p.notas,
+      created_by: auth.user.id,
+    }))
+    const { error: errPagos } = await auth.admin
+      .from('facturas_fel_pagos').insert(filasPagos)
+    if (errPagos) {
+      console.error('[pos/ventas] Fallo insertar facturas_fel_pagos:', errPagos.message)
+      pagosInsertados = { ok: false, error: errPagos.message }
+    } else {
+      pagosInsertados = { ok: true, cantidad: filasPagos.length }
+    }
+  }
+
   // ===== 4. Descuento PT (atomico via RPC) =====
   const descuento = { pt: null, insumos: null }
   try {
@@ -411,6 +485,8 @@ export default async function handler(req, res) {
     descuento,
     asiento,
     comanda,
+    // Solo si fue split payment (>1 pago):
+    pagos: pagosInsertados,
     // Solo si la venta fue con tarjeta:
     neonet: neonetParsed ? {
       transaccion_id: neonetTransaccionId,
