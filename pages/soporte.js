@@ -85,7 +85,7 @@ export default function SoporteAdmin({ session }) {
       <div className="p-4 md:p-8 max-w-7xl mx-auto">
         <div className="flex items-center justify-between mb-5">
           <div>
-            <h1 className="text-xl font-semibold text-gray-900">Soporte técnico</h1>
+            <h1 className="text-xl font-bold text-gray-900">Soporte técnico</h1>
             <p className="text-xs text-gray-400">
               Conversaciones de los cajeros con el asistente. Detectá problemas recurrentes
               y resolvelas si requieren intervención manual.
@@ -109,7 +109,7 @@ export default function SoporteAdmin({ session }) {
 
         <div className="grid grid-cols-1 lg:grid-cols-[400px_1fr] gap-4">
           {/* Lista */}
-          <div className="bg-white border border-gray-100 rounded-xl overflow-hidden">
+          <div className="card-julia overflow-hidden">
             {cargando ? (
               <div className="p-8 text-center text-xs text-gray-400">Cargando...</div>
             ) : conversaciones.length === 0 ? (
@@ -146,7 +146,7 @@ export default function SoporteAdmin({ session }) {
           </div>
 
           {/* Detalle */}
-          <div className="bg-white border border-gray-100 rounded-xl min-h-[400px] flex flex-col">
+          <div className="card-julia min-h-[400px] flex flex-col">
             {!seleccionada ? (
               <div className="flex-1 flex items-center justify-center text-xs text-gray-400 p-8 text-center">
                 Tocá una conversación para ver el historial completo.

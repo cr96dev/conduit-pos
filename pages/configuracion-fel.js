@@ -124,7 +124,7 @@ export default function ConfiguracionFEL({ session }) {
       <Head><title>Configuración FEL · Julia Bakery</title></Head>
       <div className="px-4 md:px-10 py-7 max-w-4xl mx-auto">
         <div className="mb-5">
-          <h1 className="text-2xl font-semibold text-gray-900 tracking-tight">Configuración FEL</h1>
+          <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Configuración FEL</h1>
           <p className="text-sm text-gray-500 mt-1">
             Datos del emisor y credenciales del certificador <strong>Infile / FEEL</strong>.
             Las llaves se guardan cifradas en la base; no aparecen en el código fuente.
@@ -254,7 +254,7 @@ export default function ConfiguracionFEL({ session }) {
 
         {/* PRUEBA / HEALTH CHECK */}
         {esAdmin && hayCredsInfile && (
-          <div className="mt-8 bg-white border border-gray-100 rounded-2xl shadow-sm p-5">
+          <div className="mt-8 card-julia p-5">
             <h2 className="text-base font-medium text-gray-900 mb-2">Prueba de conexión Infile</h2>
             <p className="text-xs text-gray-500 mb-3">
               Llama a <code>/api/fel/health-check</code> que valida config + intenta emitir una factura de prueba
@@ -278,7 +278,7 @@ export default function ConfiguracionFEL({ session }) {
 
 function Seccion({ titulo, subtitulo, children }) {
   return (
-    <div className="bg-white border border-gray-100 rounded-2xl shadow-sm p-5">
+    <div className="card-julia p-5">
       <div className="mb-4">
         <h2 className="text-base font-medium text-gray-900">{titulo}</h2>
         {subtitulo && <p className="text-xs text-gray-500 mt-1">{subtitulo}</p>}

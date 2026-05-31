@@ -189,11 +189,11 @@ export default function Produccion({ session }) {
     <Layout perfil={perfil}>
       <div className="px-4 md:px-10 py-7 max-w-7xl mx-auto">
         <div className="flex items-baseline justify-between mb-5">
-          <h1 className="text-2xl font-semibold text-gray-900 tracking-tight">Planificación de producción</h1>
+          <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Planificación de producción</h1>
         </div>
 
         {/* Header card: fecha + estado del plan */}
-        <div className="bg-white border border-gray-100 rounded-2xl p-5 mb-6 shadow-sm">
+        <div className="card-julia p-5 mb-6">
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div>
               <div className="text-xs uppercase tracking-wider text-gray-400 font-medium">Plan del día</div>
@@ -263,7 +263,7 @@ export default function Produccion({ session }) {
         )}
 
         {loadingPlan && (
-          <div className="bg-white rounded-2xl border border-gray-100 p-5">
+          <div className="card-julia p-5">
             <SkeletonRow /><SkeletonRow /><SkeletonRow />
           </div>
         )}
@@ -384,7 +384,7 @@ function PanelPlan({ plan, recetas, editable, esAdmin, fecha, onGuardarLineas, o
     <div className="grid grid-cols-1 lg:grid-cols-5 gap-5">
       {/* Lineas del plan */}
       <div className="lg:col-span-3">
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+        <div className="card-julia overflow-hidden">
           <div className="px-5 py-3.5 border-b border-gray-100 flex items-center justify-between">
             <h2 className="text-sm font-medium text-gray-900">Productos a producir</h2>
             <div className="flex gap-2 items-center">
@@ -543,7 +543,7 @@ function PanelRequerimientos({ requerimientos, resumen, onVerCompras }) {
   const conFaltante = (requerimientos || []).filter(r => r.faltante > 0)
 
   return (
-    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden sticky top-4">
+    <div className="card-julia overflow-hidden sticky top-4">
       <div className="px-5 py-3.5 border-b border-gray-100">
         <h2 className="text-sm font-medium text-gray-900">Insumos requeridos</h2>
         <div className="text-xs text-gray-400 mt-0.5">Calculado contra stock actual de insumos</div>

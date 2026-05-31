@@ -51,7 +51,7 @@ export default function IGSS({ session }) {
   return (
     <Layout perfil={perfil}>
       <div className="px-4 md:px-8 py-6 max-w-7xl mx-auto">
-        <h1 className="text-xl font-semibold text-gray-900 mb-4">IGSS</h1>
+        <h1 className="text-xl font-bold text-gray-900 mb-4">IGSS</h1>
 
         <div className="flex gap-1 border-b border-gray-200 mb-5">
           <TabBtn active={tab === 'resumen'}     onClick={() => setTab('resumen')}>Mes actual</TabBtn>
@@ -177,7 +177,7 @@ function TabResumen({ esAdmin }) {
           <ReciboDR182 datos={preview} config={config} />
 
           {/* Tabla empleados */}
-          <div className="mt-6 bg-white border border-gray-100 rounded-xl overflow-x-auto">
+          <div className="mt-6 card-julia overflow-x-auto">
             <table className="w-full text-xs">
               <thead className="bg-gray-50">
                 <tr>
@@ -248,7 +248,7 @@ function ReciboDR182({ datos, config }) {
     </tr>
   )
   return (
-    <div className="bg-white border border-gray-200 rounded-xl overflow-hidden text-xs">
+    <div className="card-julia border-gray-200 overflow-hidden text-xs">
       <div className="bg-gray-50 border-b border-gray-200 px-6 py-3 text-center">
         <div className="text-sm font-bold text-gray-800">INSTITUTO GUATEMALTECO DE SEGURIDAD SOCIAL</div>
         <div className="text-xs text-gray-600 mt-0.5">RECIBO DE CUOTAS DE PATRONOS Y DE TRABAJADORES — IMPUESTO IRTRA Y TASA INTECAP</div>
@@ -367,7 +367,7 @@ function TabHistorico({ esAdmin }) {
   return (
     <div>
       <div className="text-xs text-gray-400 mb-2">{items.length} declaraciones</div>
-      <div className="bg-white border border-gray-100 rounded-xl overflow-hidden">
+      <div className="card-julia overflow-hidden">
         <table className="w-full text-sm">
           <thead className="bg-gray-50">
             <tr>

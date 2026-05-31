@@ -98,7 +98,7 @@ export default function Recetas({ session }) {
     <Layout perfil={perfil}>
       <div className="px-4 md:px-8 py-6 max-w-6xl mx-auto">
         <div className="flex flex-wrap items-baseline justify-between gap-3 mb-4">
-          <h1 className="text-xl font-semibold text-gray-900">Recetas (productos compuestos)</h1>
+          <h1 className="text-xl font-bold text-gray-900">Recetas (productos compuestos)</h1>
           {esAdmin && (
             <div className="flex gap-2">
               <button onClick={recalcular} disabled={recalculando} className="btn-secundario">
@@ -133,7 +133,7 @@ export default function Recetas({ session }) {
 
         {err && <div className="bg-red-50 border border-red-100 rounded-lg px-3 py-2 text-xs text-red-700 mb-3">{err}</div>}
 
-        <div className="bg-white border border-gray-100 rounded-xl overflow-hidden">
+        <div className="card-julia overflow-hidden">
           <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="bg-gray-50">

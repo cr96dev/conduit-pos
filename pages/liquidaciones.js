@@ -78,18 +78,18 @@ export default function Liquidaciones({ session }) {
     <Layout perfil={perfil}>
       <div className="px-4 md:px-8 py-6 max-w-6xl mx-auto">
         <div className="flex flex-wrap items-baseline justify-between gap-3 mb-4">
-          <h1 className="text-xl font-semibold text-gray-900">Liquidaciones</h1>
+          <h1 className="text-xl font-bold text-gray-900">Liquidaciones</h1>
           {esAdmin && (
             <button onClick={() => setModal({ tipo: 'elegir' })} className="btn-primario">+ Nueva liquidación</button>
           )}
         </div>
 
         <div className="grid grid-cols-2 gap-3 mb-5">
-          <div className="bg-white border border-gray-100 rounded-xl p-3">
+          <div className="card-julia p-3">
             <div className="text-xs uppercase tracking-wide text-gray-400">Liquidaciones registradas</div>
             <div className="text-2xl font-semibold mt-1">{stats.cant}</div>
           </div>
-          <div className="bg-white border border-gray-100 rounded-xl p-3">
+          <div className="card-julia p-3">
             <div className="text-xs uppercase tracking-wide text-gray-400">Total pagado neto</div>
             <div className="text-2xl font-semibold mt-1 tabular-nums">{fmt(stats.neto)}</div>
           </div>
@@ -97,7 +97,7 @@ export default function Liquidaciones({ session }) {
 
         {err && <div className="bg-red-50 border border-red-100 rounded-lg px-3 py-2 text-xs text-red-700 mb-3">{err}</div>}
 
-        <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
+        <div className="card-julia overflow-hidden">
           <table className="w-full text-sm">
             <thead className="bg-gray-50">
               <tr>

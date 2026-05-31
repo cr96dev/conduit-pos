@@ -63,7 +63,7 @@ export default function Contabilidad({ session }) {
   return (
     <Layout perfil={perfil}>
       <div className="px-4 md:px-8 py-6 max-w-7xl mx-auto">
-        <h1 className="text-xl font-semibold text-gray-900 mb-4">Contabilidad</h1>
+        <h1 className="text-xl font-bold text-gray-900 mb-4">Contabilidad</h1>
 
         <div className="flex gap-1 border-b border-gray-200 mb-5 overflow-x-auto">
           <TabBtn active={tab === 'asientos'} onClick={() => setTab('asientos')}>Asientos</TabBtn>
@@ -157,7 +157,7 @@ function TabAsientos({ esAdmin }) {
 
       {err && <div className="bg-red-50 border border-red-100 rounded-lg px-3 py-2 text-xs text-red-700 mb-3">{err}</div>}
 
-      <div className="bg-white border border-gray-100 rounded-xl overflow-hidden">
+      <div className="card-julia overflow-hidden">
         <table className="w-full text-sm">
           <thead className="bg-gray-50">
             <tr>
@@ -526,7 +526,7 @@ function TabCuentas({ esAdmin }) {
         {esAdmin && <button onClick={() => setModal({ tipo: 'nueva' })} className="btn-primario">+ Nueva cuenta</button>}
       </div>
 
-      <div className="bg-white border border-gray-100 rounded-xl overflow-hidden">
+      <div className="card-julia overflow-hidden">
         <table className="w-full text-sm">
           <thead className="bg-gray-50">
             <tr>
@@ -703,7 +703,7 @@ function TabLibroMayor() {
       ) : loading || !data ? (
         <div className="text-sm text-gray-400 py-10 text-center">Cargando…</div>
       ) : (
-        <div className="bg-white border border-gray-100 rounded-xl overflow-hidden">
+        <div className="card-julia overflow-hidden">
           <div className="px-4 py-3 bg-gray-50 border-b border-gray-100 flex flex-wrap justify-between gap-3 text-sm">
             <div>
               <span className="text-gray-400 font-mono">{data.cuenta.codigo}</span>
@@ -787,7 +787,7 @@ function TabBalance() {
       {loading || !data ? (
         <div className="text-sm text-gray-400 py-10 text-center">Cargando…</div>
       ) : (
-        <div className="bg-white border border-gray-100 rounded-xl overflow-hidden">
+        <div className="card-julia overflow-hidden">
           <table className="w-full text-sm">
             <thead className="bg-gray-50">
               <tr>
@@ -892,7 +892,7 @@ function TabConfigMappings({ esAdmin }) {
       <input type="text" placeholder="Buscar mapping…" value={busqueda} onChange={e => setBusqueda(e.target.value)}
         className="input max-w-md mb-3" />
 
-      <div className="bg-white border border-gray-100 rounded-xl overflow-hidden">
+      <div className="card-julia overflow-hidden">
         <table className="w-full text-sm">
           <thead className="bg-gray-50">
             <tr>

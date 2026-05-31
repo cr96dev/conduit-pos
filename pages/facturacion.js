@@ -75,7 +75,7 @@ export default function Facturacion({ session }) {
   return (
     <Layout perfil={perfil}>
       <div className="px-4 md:px-8 py-6 max-w-7xl mx-auto">
-        <h1 className="text-xl font-semibold text-gray-900 mb-4">Facturación (FEL)</h1>
+        <h1 className="text-xl font-bold text-gray-900 mb-4">Facturación (FEL)</h1>
 
         <div className="flex gap-1 border-b border-gray-200 mb-5">
           <TabBtn active={tab === 'facturas'} onClick={() => setTab('facturas')}>Facturas</TabBtn>
@@ -138,7 +138,7 @@ function TabFacturas({ esAdmin }) {
 
       {err && <div className="bg-red-50 border border-red-100 rounded-lg px-3 py-2 text-xs text-red-700 mb-3">{err}</div>}
 
-      <div className="bg-white border border-gray-100 rounded-xl overflow-hidden">
+      <div className="card-julia overflow-hidden">
         <table className="w-full text-sm">
           <thead className="bg-gray-50">
             <tr>
