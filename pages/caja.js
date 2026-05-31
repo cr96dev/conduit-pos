@@ -77,7 +77,7 @@ export default function Caja({ session }) {
     <Layout perfil={perfil}>
       <div className="px-4 md:px-8 py-6 max-w-6xl mx-auto">
         <div className="flex flex-wrap items-baseline justify-between gap-3 mb-4">
-          <h1 className="text-xl font-semibold text-gray-900">Caja / Cierre diario</h1>
+          <h1 className="text-xl font-bold text-gray-900">Caja / Cierre diario</h1>
           {esAdmin && (
             <button onClick={() => setModal({ tipo: 'crear' })}
               className="px-4 py-2 bg-julia-red text-white text-sm rounded-lg hover:bg-red-900">
@@ -97,7 +97,7 @@ export default function Caja({ session }) {
 
         {err && <div className="bg-red-50 border border-red-100 rounded-lg px-3 py-2 text-xs text-red-700 mb-3">{err}</div>}
 
-        <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
+        <div className="card-julia overflow-hidden">
           <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="bg-gray-50">

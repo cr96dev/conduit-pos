@@ -82,7 +82,7 @@ export default function Reportes({ session }) {
         </div>
 
         {/* Header: rango + presets */}
-        <div className="bg-white border border-gray-100 rounded-2xl p-5 mb-5 shadow-sm no-print">
+        <div className="card-julia p-5 mb-5 shadow-sm no-print">
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div className="flex items-center gap-3 flex-wrap">
               <div className="flex items-center gap-2">
@@ -318,7 +318,7 @@ function TabPnL({ desde, hasta, onDrillCuenta, setTab }) {
 
       <PrintHeader titulo="Estado de Resultados" desde={desde} hasta={hasta} />
 
-      <div className="bg-white border border-gray-100 rounded-2xl shadow-sm overflow-hidden print-shadow">
+      <div className="card-julia shadow-sm overflow-hidden print-shadow">
         <table className="w-full text-sm">
           <tbody>
             <PnLSeccion titulo="INGRESOS" />
@@ -379,7 +379,7 @@ function TabPnL({ desde, hasta, onDrillCuenta, setTab }) {
 function DrillCuentasTable({ rows, onClick }) {
   if (!rows || rows.length === 0) return <div className="text-xs text-gray-400 py-4">Sin datos</div>
   return (
-    <div className="bg-white border border-gray-100 rounded-xl shadow-sm overflow-hidden print-shadow">
+    <div className="card-julia shadow-sm overflow-hidden print-shadow">
       <table className="w-full text-sm">
         <thead className="bg-gray-50/80 border-b border-gray-100">
           <tr>
@@ -685,7 +685,7 @@ function SimpleTable({ columns, rows, maxRows, onRowClick }) {
   const trim = maxRows && rows.length > maxRows
   const visibles = trim ? rows.slice(0, maxRows) : rows
   return (
-    <div className="bg-white border border-gray-100 rounded-xl shadow-sm overflow-hidden print-shadow">
+    <div className="card-julia shadow-sm overflow-hidden print-shadow">
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead className="bg-gray-50/80 border-b border-gray-100">
@@ -727,7 +727,7 @@ function SimpleBars({ data }) {
   if (!data || data.length === 0) return <div className="text-xs text-gray-400 py-4">Sin datos</div>
   const max = Math.max(...data.map(d => Math.abs(d.value || 0)))
   return (
-    <div className="bg-white border border-gray-100 rounded-xl p-4 print-shadow shadow-sm">
+    <div className="card-julia p-4 print-shadow shadow-sm">
       <div className="flex items-end gap-1 h-32 overflow-x-auto">
         {data.map((d, i) => {
           const h = max > 0 ? (Math.abs(d.value) / max) * 100 : 0
@@ -749,7 +749,7 @@ function SimpleBars({ data }) {
 
 function Loading() {
   return (
-    <div className="bg-white border border-gray-100 rounded-2xl p-5 shadow-sm">
+    <div className="card-julia p-5 shadow-sm">
       <SkeletonRow /><SkeletonRow /><SkeletonRow /><SkeletonRow />
     </div>
   )
@@ -883,7 +883,7 @@ const C_TONE_PATRIMONIO = 'border-emerald-200 bg-emerald-50/40 text-emerald-900'
 
 function BGGrupo({ titulo, cuentas, total, colorTotal, subtotalLabel, subtotal, onDrillCuenta }) {
   return (
-    <div className="bg-white border border-gray-100 rounded-2xl shadow-sm overflow-hidden print-shadow">
+    <div className="card-julia shadow-sm overflow-hidden print-shadow">
       <div className="px-5 py-3 border-b border-gray-100 bg-gray-50/80">
         <h3 className="text-xs uppercase tracking-wider text-gray-600 font-semibold">{titulo}</h3>
       </div>
@@ -973,7 +973,7 @@ function TabFlujoCaja({ desde, hasta }) {
       </div>
 
       {data.dias.length === 0 ? (
-        <div className="bg-white border border-gray-100 rounded-xl p-8 text-center text-sm text-gray-400">
+        <div className="card-julia p-8 text-center text-sm text-gray-400">
           Sin cierres de caja registrados en el rango.
         </div>
       ) : (

@@ -90,7 +90,7 @@ export default function Productos({ session }) {
     <Layout perfil={perfil || { email: session?.user?.email }}>
       <div className="px-4 md:px-8 py-6 max-w-6xl mx-auto">
         <div className="flex items-baseline justify-between mb-4">
-          <h1 className="text-xl font-semibold text-gray-900">Productos y categorías</h1>
+          <h1 className="text-xl font-bold text-gray-900">Productos y categorías</h1>
           <span className="text-xs text-gray-400">
             {tab === 'productos' ? `${items.length} productos` : `${categorias.length} categorías`}
           </span>
@@ -126,7 +126,7 @@ export default function Productos({ session }) {
               className="w-full md:w-80 px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-julia-red mb-4"
             />
 
-            <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
+            <div className="card-julia overflow-hidden">
               <table className="w-full text-sm">
                 <thead className="bg-gray-50">
                   <tr>
@@ -170,7 +170,7 @@ export default function Productos({ session }) {
               {!esAdmin && <div className="mt-1 italic">Solo admin puede modificar.</div>}
             </div>
 
-            <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
+            <div className="card-julia overflow-hidden">
               <table className="w-full text-sm">
                 <thead className="bg-gray-50">
                   <tr>

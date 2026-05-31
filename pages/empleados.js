@@ -45,7 +45,7 @@ export default function Empleados({ session }) {
   return (
     <Layout perfil={perfil}>
       <div className="px-4 md:px-8 py-6 max-w-6xl mx-auto">
-        <h1 className="text-xl font-semibold text-gray-900 mb-4">Empleados</h1>
+        <h1 className="text-xl font-bold text-gray-900 mb-4">Empleados</h1>
 
         <div className="flex gap-1 border-b border-gray-200 mb-5">
           <TabBtn active={tab === 'personal'} onClick={() => setTab('personal')}>Personal</TabBtn>
@@ -129,7 +129,7 @@ function TabPersonal({ esAdmin }) {
 
       {err && <div className="bg-red-50 border border-red-100 rounded-lg px-3 py-2 text-xs text-red-700 mb-3">{err}</div>}
 
-      <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
+      <div className="card-julia overflow-hidden">
         <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead className="bg-gray-50">
@@ -212,7 +212,7 @@ Juan Perez,1234567890101,Maestro panadero,panaderia,5500,2023-06-01,transferenci
 
 function KpiBox({ label, value }) {
   return (
-    <div className="bg-white border border-gray-100 rounded-xl p-3">
+    <div className="card-julia p-3">
       <div className="text-xs uppercase tracking-wide text-gray-400">{label}</div>
       <div className="text-lg font-semibold text-gray-800 mt-1 tabular-nums">{value}</div>
     </div>
@@ -406,7 +406,7 @@ function TabCajeros() {
       <div className="text-xs text-gray-400 mb-2">
         Usuarios registrados en Loyverse POS. Se sincronizan automáticamente.
       </div>
-      <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
+      <div className="card-julia overflow-hidden">
         <table className="w-full text-sm">
           <thead className="bg-gray-50">
             <tr>

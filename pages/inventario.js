@@ -79,7 +79,7 @@ export default function Inventario({ session }) {
     <Layout perfil={perfil}>
       <div className="px-4 md:px-10 py-7 max-w-7xl mx-auto">
         <div className="flex items-baseline justify-between mb-5">
-          <h1 className="text-2xl font-semibold text-gray-900 tracking-tight">Inventario</h1>
+          <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Inventario</h1>
         </div>
 
         <div className="flex gap-1 border-b border-gray-200 mb-6">
@@ -271,7 +271,7 @@ function TabTerminados({ esAdmin }) {
   return (
     <div>
       {/* Encabezado: fecha + KPIs */}
-      <div className="bg-white border border-gray-100 rounded-2xl p-5 mb-6 shadow-sm">
+      <div className="card-julia p-5 mb-6">
         <div className="flex flex-wrap items-center justify-between gap-4 mb-5">
           <div>
             <div className="text-xs uppercase tracking-wider text-gray-400 font-medium">Conteo del día</div>
@@ -373,9 +373,9 @@ function TabTerminados({ esAdmin }) {
           scroll horizontal y la columna Inicial se ocultaba a la derecha. */}
       <div className="md:hidden space-y-2 mb-3">
         {loading ? (
-          <>{[1, 2, 3].map(i => <div key={i} className="bg-white rounded-xl border border-gray-100 p-4"><SkeletonRow /></div>)}</>
+          <>{[1, 2, 3].map(i => <div key={i} className="card-julia p-4"><SkeletonRow /></div>)}</>
         ) : filtradas.length === 0 ? (
-          <div className="bg-white rounded-xl border border-gray-100 p-6 text-center text-xs text-gray-400">
+          <div className="card-julia p-6 text-center text-xs text-gray-400">
             {data.filas.length === 0 ? (
               'No hay productos sincronizados desde Loyverse.'
             ) : (
@@ -416,7 +416,7 @@ function TabTerminados({ esAdmin }) {
       </div>
 
       {/* Vista DESKTOP: tabla (≥ md) */}
-      <div className="hidden md:block bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm">
+      <div className="hidden md:block card-julia overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="bg-gray-50/80 border-b border-gray-100">
@@ -661,7 +661,7 @@ function CardProductoMobile({ fila, esAdmin, estadoSave, onChange }) {
     : 'bg-gray-100 text-gray-600'
 
   return (
-    <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-3">
+    <div className="card-julia p-3">
       {/* Header: nombre + meta */}
       <div className="flex items-start justify-between gap-2 mb-2">
         <div className="min-w-0 flex-1">
@@ -882,7 +882,7 @@ function TabInsumos({ esAdmin }) {
       )}
 
       {/* Tabla */}
-      <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
+      <div className="card-julia overflow-hidden">
         <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead className="bg-gray-50">
@@ -1546,7 +1546,7 @@ function TabHistoricoMermas() {
   return (
     <div>
       {/* Header + period selector */}
-      <div className="bg-white border border-gray-100 rounded-2xl p-5 mb-6 shadow-sm">
+      <div className="card-julia p-5 mb-6">
         <div className="flex flex-wrap items-center justify-between gap-4 mb-5">
           <div>
             <div className="text-xs uppercase tracking-wider text-gray-400 font-medium">Histórico de mermas</div>
@@ -1613,7 +1613,7 @@ function TabHistoricoMermas() {
       )}
 
       {/* Tabla ranking */}
-      <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm">
+      <div className="card-julia overflow-hidden">
         <div className="px-5 py-3 border-b border-gray-100 flex items-baseline justify-between">
           <h2 className="text-sm font-medium text-gray-900">Top productos con más merma</h2>
           <span className="text-xs text-gray-400">{data.ranking.length} producto{data.ranking.length === 1 ? '' : 's'}</span>

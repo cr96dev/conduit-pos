@@ -98,7 +98,7 @@ export default function CajerosAdmin({ session }) {
       <div className="p-4 md:p-8 max-w-6xl mx-auto">
         <div className="flex items-center justify-between mb-5">
           <div>
-            <h1 className="text-xl font-semibold text-gray-900">Cajeros y turnos</h1>
+            <h1 className="text-xl font-bold text-gray-900">Cajeros y turnos</h1>
             <p className="text-xs text-gray-400">Gestión de cuentas de cajero, PINs y aperturas/cierres de caja.</p>
           </div>
           <button onClick={() => setCreando(true)}
@@ -128,7 +128,7 @@ export default function CajerosAdmin({ session }) {
         {cargando ? (
           <div className="text-sm text-gray-400 py-12 text-center">Cargando...</div>
         ) : tab === 'cajeros' ? (
-          <div className="bg-white border border-gray-100 rounded-xl overflow-hidden">
+          <div className="card-julia overflow-hidden">
             {cajeros.length === 0 ? (
               <div className="py-12 px-6 text-center text-sm text-gray-400">
                 No hay cajeros registrados. Crea uno con el botón "+ Nuevo cajero".
@@ -174,7 +174,7 @@ export default function CajerosAdmin({ session }) {
             )}
           </div>
         ) : (
-          <div className="bg-white border border-gray-100 rounded-xl overflow-hidden">
+          <div className="card-julia overflow-hidden">
             {turnos.length === 0 ? (
               <div className="py-12 px-6 text-center text-sm text-gray-400">No hay turnos registrados.</div>
             ) : (

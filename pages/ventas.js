@@ -47,7 +47,7 @@ export default function Ventas({ session }) {
   return (
     <Layout perfil={{ email: session?.user?.email }}>
       <div className="px-4 md:px-8 py-6 max-w-6xl mx-auto">
-        <h1 className="text-xl font-semibold text-gray-900 mb-4">Ventas</h1>
+        <h1 className="text-xl font-bold text-gray-900 mb-4">Ventas</h1>
 
         <div className="flex items-center gap-2 mb-4">
           {[['hoy','Hoy'],['semana','7 días'],['mes','30 días']].map(([k,l]) => (
@@ -59,21 +59,21 @@ export default function Ventas({ session }) {
         </div>
 
         <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">
-          <div className="bg-white rounded-xl border border-gray-100 p-4">
+          <div className="card-julia p-4">
             <div className="text-xs text-gray-400 mb-1">Ventas (neto)</div>
-            <div className="text-xl font-semibold text-gray-900">{fmtQ(totalVentas - totalRefunds)}</div>
+            <div className="text-xl font-bold text-gray-900">{fmtQ(totalVentas - totalRefunds)}</div>
           </div>
-          <div className="bg-white rounded-xl border border-gray-100 p-4">
+          <div className="card-julia p-4">
             <div className="text-xs text-gray-400 mb-1">Recibos</div>
-            <div className="text-xl font-semibold text-gray-900">{receipts.filter(r => r.receipt_type === 'SALE').length}</div>
+            <div className="text-xl font-bold text-gray-900">{receipts.filter(r => r.receipt_type === 'SALE').length}</div>
           </div>
-          <div className="bg-white rounded-xl border border-gray-100 p-4">
+          <div className="card-julia p-4">
             <div className="text-xs text-gray-400 mb-1">Devoluciones</div>
             <div className="text-xl font-semibold text-red-600">{fmtQ(totalRefunds)}</div>
           </div>
         </div>
 
-        <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
+        <div className="card-julia overflow-hidden">
           <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="bg-gray-50">

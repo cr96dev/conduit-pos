@@ -62,7 +62,7 @@ export default function Compras({ session }) {
   return (
     <Layout perfil={perfil}>
       <div className="px-4 md:px-8 py-6 max-w-7xl mx-auto">
-        <h1 className="text-xl font-semibold text-gray-900 mb-4">Compras</h1>
+        <h1 className="text-xl font-bold text-gray-900 mb-4">Compras</h1>
 
         <div className="flex gap-1 border-b border-gray-200 mb-5">
           <TabBtn active={tab === 'compras'}     onClick={() => setTab('compras')}>Órdenes</TabBtn>
@@ -194,7 +194,7 @@ function TabCompras({ esAdmin }) {
       {err && <div className="bg-red-50 border border-red-100 rounded-lg px-3 py-2 text-xs text-red-700 mb-3">{err}</div>}
 
       {/* Tabla */}
-      <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
+      <div className="card-julia overflow-hidden">
         <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead className="bg-gray-50">
@@ -811,7 +811,7 @@ function TabProveedores({ esAdmin }) {
         )}
       </div>
 
-      <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
+      <div className="card-julia overflow-hidden">
         <table className="w-full text-sm">
           <thead className="bg-gray-50">
             <tr>

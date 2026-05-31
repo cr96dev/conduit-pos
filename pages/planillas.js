@@ -95,7 +95,7 @@ function VistaLista({ esAdmin, onAbrir }) {
   return (
     <div>
       <div className="flex flex-wrap items-baseline justify-between gap-3 mb-4">
-        <h1 className="text-xl font-semibold text-gray-900">Planillas</h1>
+        <h1 className="text-xl font-bold text-gray-900">Planillas</h1>
         {esAdmin && (
           <button onClick={() => setModalNueva(true)} className="btn-primario">+ Nueva quincena</button>
         )}
@@ -103,7 +103,7 @@ function VistaLista({ esAdmin, onAbrir }) {
 
       {err && <div className="bg-red-50 border border-red-100 rounded-lg px-3 py-2 text-xs text-red-700 mb-3">{err}</div>}
 
-      <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
+      <div className="card-julia overflow-hidden">
         <table className="w-full text-sm">
           <thead className="bg-gray-50">
             <tr>
@@ -334,7 +334,7 @@ function VistaDetalle({ planillaId, esAdmin, onVolver }) {
       <div className="flex items-center gap-3 mb-4">
         <button onClick={onVolver} className="text-sm text-gray-500 hover:text-julia-red">← Volver</button>
         <div className="flex-1">
-          <h1 className="text-xl font-semibold text-gray-900">{data.periodo}</h1>
+          <h1 className="text-xl font-bold text-gray-900">{data.periodo}</h1>
           <div className="text-xs text-gray-500">{formatFecha(data.fecha_inicio)} – {formatFecha(data.fecha_fin)}</div>
         </div>
         <span className={`text-[10px] uppercase tracking-wide px-2 py-1 rounded ${est.cls}`}>{est.label}</span>
@@ -381,7 +381,7 @@ function VistaDetalle({ planillaId, esAdmin, onVolver }) {
       </div>
 
       {/* Tabla */}
-      <div className="bg-white rounded-xl border border-gray-100 overflow-x-auto">
+      <div className="card-julia overflow-x-auto">
         <table className="w-full text-xs">
           <thead className="bg-gray-50">
             <tr>
@@ -544,7 +544,7 @@ function CeldaEdit({ valor, edit, onChange, tone }) {
 
 function KpiBox({ label, value, bold }) {
   return (
-    <div className="bg-white border border-gray-100 rounded-xl p-2">
+    <div className="card-julia p-2">
       <div className="text-[10px] uppercase tracking-wide text-gray-400">{label}</div>
       <div className={`mt-1 tabular-nums ${bold ? 'text-base font-semibold text-gray-900' : 'text-sm text-gray-700'}`}>{value}</div>
     </div>
