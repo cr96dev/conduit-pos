@@ -7,19 +7,52 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        // Manual de marca Julia Bakery
+        // Manual de marca Julia Bakery — acento principal
         julia: {
-          red:   '#C62127',  // rojo carmesi principal
-          cream: '#EFDEB3',  // crema/marfil
+          red:      '#C62127',
+          'red-dk': '#9F1A1F',
+          cream:    '#EFDEB3',
+        },
+        // Escala de superficies (mapeadas a CSS vars via globals.css)
+        surface: {
+          DEFAULT: 'var(--surface)',
+          2: 'var(--surface-2)',
+          3: 'var(--surface-3)',
+        },
+        ink: {
+          DEFAULT:  'var(--ink)',
+          muted:    'var(--ink-muted)',
+          subtle:   'var(--ink-subtle)',
+          disabled: 'var(--ink-disabled)',
         },
       },
       fontFamily: {
-        // Body: Inter (sans-serif tecnica/sobria) para UI/POS/operacion.
         body:    ['"Inter"', 'system-ui', '-apple-system', 'Segoe UI', 'Roboto', 'sans-serif'],
-        // Display: Cinzel SOLO para .font-display (branding, marketing).
         display: ['"Cinzel"', 'Georgia', 'serif'],
-        // Sans alias por si algun componente usa explicitamente font-sans.
         sans:    ['"Inter"', 'system-ui', '-apple-system', 'Segoe UI', 'Roboto', 'sans-serif'],
+        mono:    ['"IBM Plex Mono"', '"JetBrains Mono"', 'Menlo', 'monospace'],
+      },
+      boxShadow: {
+        xs: 'var(--shadow-xs)',
+        sm: 'var(--shadow-sm)',
+        md: 'var(--shadow-md)',
+        lg: 'var(--shadow-lg)',
+        modal: 'var(--shadow-modal)',
+      },
+      borderRadius: {
+        // Standard del sistema
+        DEFAULT: '10px',
+        sm: '6px',
+        md: '10px',
+        lg: '14px',
+        xl: '18px',
+      },
+      fontSize: {
+        // Scale custom: tech-leaning, base 14px
+        '2xs': ['0.6875rem', { lineHeight: '1rem', letterSpacing: '0.02em' }],
+      },
+      transitionTimingFunction: {
+        'out-soft': 'cubic-bezier(0.16, 1, 0.3, 1)',
       },
     },
   },

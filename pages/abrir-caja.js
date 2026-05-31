@@ -25,7 +25,6 @@ export default function AbrirCaja({ session }) {
     if (!session) { router.push('/cajero-login'); return }
     supabase.from('perfiles').select('id, nombre_completo, rol').eq('id', session.user.id).single()
       .then(({ data }) => setPerfil(data))
-    // Si ya hay turno abierto, redirigir al POS.
     apiFetch('/api/turnos/actual').then(r => r.json()).then(j => {
       if (j?.turno) router.replace('/pos')
     })
@@ -55,38 +54,55 @@ export default function AbrirCaja({ session }) {
   return (
     <>
       <Head><title>Abrir caja · Julia Bakery</title></Head>
-      <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-6">
-        <div className="bg-white border border-gray-100 rounded-2xl shadow-sm p-6 w-full max-w-sm">
-          <div className="flex items-center justify-between mb-5">
-            <div>
-              <h1 className="text-lg font-semibold text-gray-900">Abrir caja</h1>
-              <p className="text-xs text-gray-400">{perfil?.nombre_completo || 'Cajero'}</p>
+      <div className="min-h-screen bg-surface-2 flex flex-col items-center justify-center p-6">
+        <div className="card-julia shadow-md p-6 w-full max-w-sm animate-slide-up">
+          {/* Header */}
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-julia-red/10 text-julia-red flex items-center justify-center">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M3 10h18M7 15h.01M11 15h2M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                </svg>
+              </div>
+              <div>
+                <h1 className="text-lg font-bold text-gray-900 leading-tight">Abrir caja</h1>
+                <p className="text-sm text-ink-subtle leading-tight">{perfil?.nombre_completo || 'Cajero'}</p>
+              </div>
             </div>
-            <button onClick={logout} className="text-xs text-gray-400 hover:text-julia-red">Salir</button>
+            <button onClick={logout}
+              className="text-2xs text-ink-subtle hover:text-julia-red font-medium uppercase tracking-wider transition-colors">
+              Salir
+            </button>
           </div>
 
           <form onSubmit={abrir} className="space-y-4">
             <div>
-              <label className="block text-xs text-gray-500 mb-1">Monto inicial en efectivo (Q)</label>
-              <input
-                type="number" step="any" min="0" value={monto}
-                onChange={e => setMonto(e.target.value)} autoFocus required
-                inputMode="decimal"
-                className="w-full text-2xl text-right tabular-nums px-3 py-3 border border-gray-200 rounded-lg focus:outline-none focus:border-julia-red"
-                placeholder="0.00" />
+              <label className="label-tech block mb-1.5">Monto inicial en efectivo</label>
+              <div className="relative">
+                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-ink-subtle font-mono text-base">Q</span>
+                <input
+                  type="number" step="any" min="0" value={monto}
+                  onChange={e => setMonto(e.target.value)} autoFocus required
+                  inputMode="decimal"
+                  className="input pl-10 text-2xl font-bold text-right tabular-nums py-4 font-mono"
+                  placeholder="0.00" />
+              </div>
             </div>
             <div>
-              <label className="block text-xs text-gray-500 mb-1">Observación (opcional)</label>
+              <label className="label-tech block mb-1.5">Observación (opcional)</label>
               <textarea
                 value={obs} onChange={e => setObs(e.target.value)} rows={2}
-                className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-julia-red"
+                className="input resize-none"
                 placeholder="Notas de apertura..." />
             </div>
             {error && (
-              <div className="bg-red-50 border border-red-100 rounded-lg px-3 py-2 text-xs text-red-700">{error}</div>
+              <div className="rounded-lg px-3 py-2.5 text-sm font-medium"
+                style={{ background: 'var(--danger-soft)', color: 'var(--danger)' }}>
+                {error}
+              </div>
             )}
             <button type="submit" disabled={enviando}
-              className="w-full py-3 bg-julia-red text-white font-medium rounded-lg disabled:opacity-50 hover:bg-red-700">
+              className="btn-primario w-full justify-center py-3.5 text-base">
               {enviando ? 'Abriendo...' : 'Abrir caja y entrar al POS'}
             </button>
           </form>

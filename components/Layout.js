@@ -78,53 +78,54 @@ function ModalCambioContrasena({ onClose }) {
   }
 
   return (
-    <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={onClose}>
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm" onClick={e => e.stopPropagation()}>
+    <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4 backdrop-blur-sm" onClick={onClose}>
+      <div className="bg-white rounded-xl shadow-modal w-full max-w-sm animate-slide-up" onClick={e => e.stopPropagation()}>
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
-          <h2 className="text-base font-semibold text-gray-900">Cambiar contraseña</h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-xl">✕</button>
+          <h2 className="text-base font-bold text-gray-900">Cambiar contraseña</h2>
+          <button onClick={onClose} className="text-ink-subtle hover:text-ink w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-50">
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
         </div>
 
         {exito ? (
           <div className="px-6 py-8 text-center">
-            <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-3">
-              <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+            <div className="w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3" style={{ background: 'var(--success-soft)' }}>
+              <svg className="w-6 h-6" fill="none" stroke="var(--success)" strokeWidth={2.5} viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
               </svg>
             </div>
-            <div className="text-sm font-medium text-gray-900 mb-1">Contraseña actualizada</div>
-            <div className="text-xs text-gray-400 mb-4">Tu contraseña fue cambiada exitosamente.</div>
-            <button onClick={onClose} className="text-sm px-4 py-2 bg-julia-red text-white rounded-lg hover:bg-red-900">
+            <div className="text-sm font-bold text-gray-900 mb-1">Contraseña actualizada</div>
+            <div className="text-xs text-ink-subtle mb-5">Tu contraseña fue cambiada exitosamente.</div>
+            <button onClick={onClose} className="btn-primario w-full justify-center">
               Cerrar
             </button>
           </div>
         ) : (
           <form onSubmit={handleGuardar} className="px-6 py-5 space-y-4">
             <div>
-              <label className="text-xs text-gray-500 block mb-1">Contraseña actual</label>
-              <input type="password" value={actual} onChange={e => setActual(e.target.value)} required
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-julia-red" />
+              <label className="label-tech block mb-1.5">Contraseña actual</label>
+              <input type="password" value={actual} onChange={e => setActual(e.target.value)} required className="input" />
             </div>
             <div>
-              <label className="text-xs text-gray-500 block mb-1">Nueva contraseña</label>
-              <input type="password" value={nueva} onChange={e => setNueva(e.target.value)} required
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-julia-red" />
+              <label className="label-tech block mb-1.5">Nueva contraseña</label>
+              <input type="password" value={nueva} onChange={e => setNueva(e.target.value)} required className="input" />
             </div>
             <div>
-              <label className="text-xs text-gray-500 block mb-1">Confirmar nueva contraseña</label>
-              <input type="password" value={confirmar} onChange={e => setConfirmar(e.target.value)} required
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-julia-red" />
+              <label className="label-tech block mb-1.5">Confirmar nueva contraseña</label>
+              <input type="password" value={confirmar} onChange={e => setConfirmar(e.target.value)} required className="input" />
             </div>
             {error && (
-              <div className="bg-red-50 border border-red-100 rounded-lg px-3 py-2 text-xs text-red-700">{error}</div>
+              <div className="rounded-lg px-3 py-2.5 text-xs font-medium" style={{ background: 'var(--danger-soft)', color: 'var(--danger)' }}>
+                {error}
+              </div>
             )}
             <div className="flex justify-end gap-2 pt-1">
-              <button type="button" onClick={onClose}
-                className="text-sm px-4 py-2 border border-gray-200 rounded-lg hover:bg-gray-50 text-gray-600">
+              <button type="button" onClick={onClose} className="btn-secundario">
                 Cancelar
               </button>
-              <button type="submit" disabled={guardando}
-                className="text-sm px-5 py-2 bg-julia-red text-white rounded-lg hover:bg-red-900 disabled:opacity-50 flex items-center gap-2">
+              <button type="submit" disabled={guardando} className="btn-primario">
                 {guardando && <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>}
                 {guardando ? 'Guardando...' : 'Cambiar contraseña'}
               </button>
@@ -161,57 +162,85 @@ export default function Layout({ children, perfil }) {
     router.push('/')
   }
 
-  const activeColor = 'bg-julia-cream/40 text-julia-red'
-
   return (
-    <div className="flex min-h-screen bg-gray-50">
+    <div className="flex min-h-screen bg-surface-2">
 
       {modalContrasena && <ModalCambioContrasena onClose={() => setModalContrasena(false)} />}
 
-      {/* Sidebar desktop */}
-      <aside className="hidden md:flex w-56 bg-white border-r border-gray-100 flex-col flex-shrink-0">
-        <div className="px-4 py-5 border-b border-gray-100 flex flex-col items-center">
-          <button onClick={() => router.push('/dashboard')} className="w-full">
-            <img src="/logo.png" alt="Julia Bakery" className="w-full object-contain mb-1" style={{ height: '80px' }} />
+      {/* Sidebar desktop — slim + tech */}
+      <aside className="hidden md:flex w-60 bg-white border-r border-gray-100 flex-col flex-shrink-0">
+        {/* Brand */}
+        <div className="px-5 py-4 border-b border-gray-100">
+          <button onClick={() => router.push('/dashboard')} className="w-full flex items-center gap-2.5 group">
+            <img src="/logo.png" alt="" className="h-9 w-auto object-contain flex-shrink-0" />
+            <div className="text-left flex-1 min-w-0">
+              <div className="text-sm font-bold text-gray-900 leading-tight truncate">Julia Bakery</div>
+              <div className="text-2xs text-ink-subtle font-medium uppercase tracking-wider leading-tight">Operación</div>
+            </div>
           </button>
-          <div className="text-xs text-gray-400 text-center truncate w-full mt-1">
-            Panaderia
-          </div>
         </div>
 
-        <nav className="flex-1 py-3 space-y-0.5 px-2 overflow-y-auto">
+        {/* Nav */}
+        <nav className="flex-1 py-3 space-y-0.5 px-2.5 overflow-y-auto">
           {navItems.map(item => {
             const active = router.pathname === item.href
             return (
               <button key={item.href} onClick={() => router.push(item.href)}
-                className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors ${
-                  active ? `${activeColor} font-medium` : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                className={`group relative w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
+                  active
+                    ? 'bg-julia-red/[0.07] text-julia-red'
+                    : 'text-ink-muted hover:bg-gray-50 hover:text-gray-900'
                 }`}>
-                <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
+                {/* Indicador active: barra vertical roja sutil */}
+                {active && (
+                  <span className="absolute left-0 top-2 bottom-2 w-0.5 rounded-r-full bg-julia-red" />
+                )}
+                <svg className={`w-4 h-4 flex-shrink-0 transition-colors ${active ? 'text-julia-red' : 'text-ink-subtle group-hover:text-ink-muted'}`}
+                  fill="none" stroke="currentColor" strokeWidth={1.75} viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" d={item.icon} />
                 </svg>
-                {item.label}
+                <span className="truncate">{item.label}</span>
               </button>
             )
           })}
         </nav>
 
-        <div className="px-4 py-3 border-t border-gray-100">
+        {/* Footer: user + dark + acciones */}
+        <div className="px-3 py-3 border-t border-gray-100 space-y-2">
+          {/* Toggle modo noche — switch tech */}
           <button onClick={toggleDark}
-            className="w-full flex items-center justify-between px-2 py-1.5 rounded-lg hover:bg-gray-50 mb-2 transition-colors">
-            <span className="text-xs text-gray-500">{darkMode ? 'Modo dia' : 'Modo noche'}</span>
-            <div className={`w-8 h-4 rounded-full transition-colors relative ${darkMode ? 'bg-julia-red' : 'bg-gray-200'}`}>
-              <div className={`absolute top-0.5 w-3 h-3 bg-white rounded-full transition-transform shadow-sm ${darkMode ? 'translate-x-4' : 'translate-x-0.5'}`}></div>
+            className="w-full flex items-center justify-between px-2.5 py-2 rounded-lg hover:bg-gray-50 transition-colors group">
+            <span className="flex items-center gap-2 text-xs font-medium text-ink-subtle group-hover:text-ink-muted">
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={1.75} viewBox="0 0 24 24">
+                {darkMode
+                  ? <path strokeLinecap="round" strokeLinejoin="round" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+                  : <path strokeLinecap="round" strokeLinejoin="round" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />}
+              </svg>
+              {darkMode ? 'Modo día' : 'Modo noche'}
+            </span>
+            <div className={`w-7 h-4 rounded-full transition-colors relative ${darkMode ? 'bg-julia-red' : 'bg-gray-200'}`}>
+              <div className={`absolute top-0.5 w-3 h-3 bg-white rounded-full transition-transform shadow-xs ${darkMode ? 'translate-x-3.5' : 'translate-x-0.5'}`}></div>
             </div>
           </button>
-          <div className="text-xs text-gray-500 truncate mb-1">{perfil?.nombre_completo || perfil?.email || ''}</div>
-          <div className="flex items-center justify-between">
+
+          {/* Perfil */}
+          <div className="px-2.5 py-2 rounded-lg bg-gray-50">
+            <div className="text-xs font-semibold text-gray-900 truncate">{perfil?.nombre_completo || 'Usuario'}</div>
+            <div className="text-2xs text-ink-subtle truncate font-mono">{perfil?.email || ''}</div>
+          </div>
+
+          {/* Acciones */}
+          <div className="flex items-center justify-between gap-2 px-1">
             <button onClick={() => setModalContrasena(true)}
-              className="text-xs text-gray-400 hover:text-julia-red transition-colors">
-              Cambiar contraseña
+              className="text-2xs text-ink-subtle hover:text-julia-red transition-colors font-medium uppercase tracking-wider">
+              Contraseña
             </button>
-            <button onClick={logout} className="text-xs text-gray-400 hover:text-red-500 transition-colors">
-              Cerrar sesion
+            <button onClick={logout}
+              className="text-2xs text-ink-subtle hover:text-red-500 transition-colors font-medium uppercase tracking-wider flex items-center gap-1">
+              <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+              </svg>
+              Salir
             </button>
           </div>
         </div>
@@ -220,25 +249,24 @@ export default function Layout({ children, perfil }) {
       {/* Main */}
       <div className="flex-1 flex flex-col min-w-0">
 
-        {/* Topbar movil */}
-        <div className="md:hidden bg-white border-b border-gray-100 px-4 py-3 flex items-center justify-between sticky top-0 z-10">
-          <button onClick={() => router.push('/dashboard')}>
-            <img src="/logo.png" alt="Julia Bakery" style={{ height: '32px' }} />
+        {/* Topbar movil — slim tech */}
+        <div className="md:hidden bg-white border-b border-gray-100 px-4 py-3 flex items-center justify-between sticky top-0 z-10 backdrop-blur-sm bg-white/95">
+          <button onClick={() => router.push('/dashboard')} className="flex items-center gap-2">
+            <img src="/logo.png" alt="" className="h-7 w-auto" />
+            <span className="text-sm font-bold text-gray-900">Julia Bakery</span>
           </button>
-          <div className="flex items-center gap-2">
-            <button onClick={toggleDark} className="p-2 rounded-lg hover:bg-gray-50">
-              {darkMode ? (
-                <svg className="w-4 h-4 text-yellow-500" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M12 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm0 15a5 5 0 100-10 5 5 0 000 10zm7-5a1 1 0 011-1h1a1 1 0 110 2h-1a1 1 0 01-1-1zM4 12a1 1 0 01-1 1H2a1 1 0 110-2h1a1 1 0 011 1zm14.95 5.536a1 1 0 010 1.414l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 0zm-12.9 0a1 1 0 011.414 0l.707.707a1 1 0 01-1.414 1.414l-.707-.707a1 1 0 010-1.414zm12.9-14.072a1 1 0 011.414 1.414l-.707.707a1 1 0 01-1.414-1.414l.707-.707zM6.05 5.05a1 1 0 010 1.414l-.707.707A1 1 0 013.93 5.757l.707-.707A1 1 0 016.05 5.05zM12 20a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1z"/>
-                </svg>
-              ) : (
-                <svg className="w-4 h-4 text-gray-600" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/>
-                </svg>
-              )}
+          <div className="flex items-center gap-1">
+            <button onClick={toggleDark} className="p-2 rounded-lg hover:bg-gray-50 text-ink-muted hover:text-ink"
+              aria-label={darkMode ? 'Modo día' : 'Modo noche'}>
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={1.75} viewBox="0 0 24 24">
+                {darkMode
+                  ? <path strokeLinecap="round" strokeLinejoin="round" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+                  : <path strokeLinecap="round" strokeLinejoin="round" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />}
+              </svg>
             </button>
-            <button onClick={() => setMenuAbierto(!menuAbierto)} className="p-2 rounded-lg hover:bg-gray-50">
-              <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
+            <button onClick={() => setMenuAbierto(!menuAbierto)} className="p-2 rounded-lg hover:bg-gray-50 text-ink-muted hover:text-ink"
+              aria-label={menuAbierto ? 'Cerrar menú' : 'Abrir menú'}>
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={1.75} viewBox="0 0 24 24">
                 {menuAbierto
                   ? <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
                   : <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
@@ -250,16 +278,19 @@ export default function Layout({ children, perfil }) {
 
         {/* Menu desplegable movil */}
         {menuAbierto && (
-          <div className="md:hidden bg-white border-b border-gray-100 px-2 py-2 z-10">
+          <div className="md:hidden bg-white border-b border-gray-100 px-2 py-2 z-10 animate-slide-up">
             {navItems.map(item => {
               const active = router.pathname === item.href
               return (
                 <button key={item.href}
                   onClick={() => { router.push(item.href); setMenuAbierto(false) }}
-                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm transition-colors ${
-                    active ? `${activeColor} font-medium` : 'text-gray-600 hover:bg-gray-50'
+                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors ${
+                    active
+                      ? 'bg-julia-red/[0.07] text-julia-red'
+                      : 'text-ink-muted hover:bg-gray-50 hover:text-gray-900'
                   }`}>
-                  <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
+                  <svg className={`w-5 h-5 flex-shrink-0 ${active ? 'text-julia-red' : 'text-ink-subtle'}`}
+                    fill="none" stroke="currentColor" strokeWidth={1.75} viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" d={item.icon} />
                   </svg>
                   {item.label}
@@ -268,37 +299,47 @@ export default function Layout({ children, perfil }) {
             })}
             <div className="border-t border-gray-100 mt-2 pt-2 px-4 flex items-center justify-between">
               <div>
-                <div className="text-xs text-gray-400 mb-1">{perfil?.nombre_completo || perfil?.email || ''}</div>
+                <div className="text-xs font-semibold text-gray-900 truncate">{perfil?.nombre_completo || 'Usuario'}</div>
+                <div className="text-2xs text-ink-subtle font-mono mt-0.5">{perfil?.email || ''}</div>
                 <button onClick={() => { setModalContrasena(true); setMenuAbierto(false) }}
-                  className="text-xs text-julia-red hover:text-julia-red">
+                  className="mt-1 text-2xs text-julia-red font-medium uppercase tracking-wider">
                   Cambiar contraseña
                 </button>
               </div>
-              <button onClick={logout} className="text-xs text-red-400 hover:text-red-600">Cerrar sesion</button>
+              <button onClick={logout}
+                className="text-2xs text-ink-subtle hover:text-red-500 font-medium uppercase tracking-wider flex items-center gap-1">
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                </svg>
+                Salir
+              </button>
             </div>
           </div>
         )}
 
         {/* Contenido */}
-        <main className="flex-1 min-w-0 pb-20">
+        <main className="flex-1 min-w-0 pb-20 md:pb-0">
           {children}
         </main>
 
-        {/* Barra inferior movil */}
-        <nav className="md:hidden bg-white border-t border-gray-100 fixed bottom-0 left-0 right-0 z-10">
+        {/* Barra inferior movil — slim */}
+        <nav className="md:hidden bg-white border-t border-gray-100 fixed bottom-0 left-0 right-0 z-10 backdrop-blur-sm bg-white/95">
           <div className="grid grid-cols-6 px-0.5">
             {bottomNavItems.map(item => {
               const active = router.pathname === item.href
               return (
                 <button key={item.href}
                   onClick={() => { router.push(item.href); setMenuAbierto(false) }}
-                  className={`flex flex-col items-center py-2 px-0.5 transition-colors ${
-                    active ? 'text-julia-red' : 'text-gray-400'
+                  className={`flex flex-col items-center py-2 px-0.5 transition-colors relative ${
+                    active ? 'text-julia-red' : 'text-ink-subtle'
                   }`}>
-                  <svg className="w-5 h-5 mb-0.5" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
+                  {active && (
+                    <span className="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-0.5 rounded-b-full bg-julia-red" />
+                  )}
+                  <svg className="w-5 h-5 mb-0.5" fill="none" stroke="currentColor" strokeWidth={1.75} viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" d={item.icon} />
                   </svg>
-                  <span className="text-xs leading-tight">{item.label}</span>
+                  <span className="text-2xs font-medium leading-tight">{item.label}</span>
                 </button>
               )
             })}
