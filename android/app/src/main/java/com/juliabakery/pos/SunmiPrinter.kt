@@ -6,9 +6,16 @@ import android.content.Intent
 import android.content.ServiceConnection
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.graphics.Canvas
+import android.graphics.Color
+import android.graphics.Paint
 import android.os.IBinder
 import android.os.RemoteException
 import android.util.Log
+import com.google.zxing.BarcodeFormat
+import com.google.zxing.EncodeHintType
+import com.google.zxing.qrcode.QRCodeWriter
+import com.google.zxing.qrcode.decoder.ErrorCorrectionLevel
 import kotlinx.serialization.Serializable
 import woyou.aidlservice.jiuiv5.ICallback
 import woyou.aidlservice.jiuiv5.IWoyouService
@@ -93,7 +100,7 @@ class SunmiPrinter {
             // Usamos sendRAWData (no printText + exitPrinterBuffer) para
             // evitar el auto-kick implicito del firmware Sunmi InnerPrinter.
 
-            // 1. Logo bitmap (no para cierre de turno — es ticket operativo)
+            // 1. Logo bitmap arriba (no para cierre de turno — es ticket operativo)
             if (!payload.esCierreTurno) {
                 logoBitmap?.let { bmp ->
                     try {
@@ -107,18 +114,43 @@ class SunmiPrinter {
                 }
             }
 
-            // 2. Cuerpo del ticket — dispatch segun tipo de payload
+            // 2. Cuerpo del ticket (texto ESC/POS, sin cut al final)
             val texto = if (payload.esCierreTurno) {
                 construirTextoCierreTurno(payload)
             } else {
                 construirTextoPlano(payload)
             }
-            val bytes = wrapEscPos(texto)
+            val bytes = wrapEscPosSinCut(texto)
             Log.d(TAG, "printTicket bytes=${bytes.size} esCierreTurno=${payload.esCierreTurno}")
             svc.sendRAWData(bytes, loggingCb)
 
-            // 3. Cashbox: solo en venta-nueva-en-efectivo. Cierre de turno NO
-            //    (la caja ya esta cerrada). Reimpresion NO. Tarjeta/etc NO.
+            // 3. QR de verificacion SAT — solo en facturas FEL (no en cierre).
+            //    El cliente lo escanea y SAT le muestra su factura digital.
+            //    URL felpub.c.sat.gob.gt con UUID + NIT emisor + NIT receptor + monto
+            //    (Reglas FEL pag. 137). Logo de Julia superpuesto en el centro.
+            if (!payload.esCierreTurno && !payload.uuidSat.isNullOrBlank()) {
+                try {
+                    val url = construirUrlSat(payload)
+                    val qrBmp = generarQRConLogo(url, logoBitmap)
+                    svc.setAlignment(1, noopCb)              // center
+                    svc.printBitmap(qrBmp, noopCb)
+                    svc.lineWrap(1, noopCb)
+                    // Caption explicativo + 2 lineas de feed antes del cut
+                    val caption = "Escanea para ver tu factura en SAT\n\n"
+                    svc.sendRAWData(caption.toByteArray(Charsets.ISO_8859_1), noopCb)
+                    svc.setAlignment(0, noopCb)              // back to left
+                } catch (e: Exception) {
+                    Log.w(TAG, "QR fallo (sigue ticket sin QR): ${e.message}")
+                }
+            }
+
+            // 4. Feed + cut parcial
+            svc.sendRAWData(byteArrayOf(
+                0x0A, 0x0A,                                   // 2 lineas feed extra
+                0x1D, 0x56, 0x42, 0x00                        // GS V B 0 = partial cut
+            ), noopCb)
+
+            // 5. Cashbox: solo en venta-nueva-en-efectivo.
             val debeAbrirCaja = !payload.esReimpresion
                 && !payload.esCierreTurno
                 && payload.metodoPago?.trim()?.lowercase() == "efectivo"
@@ -138,22 +170,100 @@ class SunmiPrinter {
     }
 
     /**
+     * Construye la URL pública de SAT para verificar el DTE (Reglas FEL 5.6
+     * pag. 137). El cliente escanea el QR -> SAT le muestra su factura.
+     *
+     * Formato:
+     *   https://felpub.c.sat.gob.gt/verificador-web/publico/vistas/verificacionDte.jsf
+     *   ?tipo=autorizacion
+     *   &numero=<UUID>
+     *   &emisor=<NIT emisor>
+     *   &receptor=<NIT receptor o "CF">
+     *   &monto=<gran total con 2 decimales>
+     *
+     * Aprobado para certificadores privados (Infile) como opcional pero
+     * recomendado. SAT no requiere acceso/login para esa URL.
+     */
+    private fun construirUrlSat(p: TicketPayload): String {
+        val uuid = p.uuidSat ?: ""
+        val emisor = p.nitEmisor ?: ""
+        val receptor = (p.receptorNit.ifBlank { "CF" }).trim().uppercase()
+        val monto = "%.2f".format(p.total)
+        return "https://felpub.c.sat.gob.gt/verificador-web/publico/vistas/verificacionDte.jsf" +
+            "?tipo=autorizacion" +
+            "&numero=$uuid" +
+            "&emisor=$emisor" +
+            "&receptor=$receptor" +
+            "&monto=$monto"
+    }
+
+    /**
+     * Genera un QR con el logo de Julia superpuesto en el centro.
+     *
+     * Detalles tecnicos:
+     *  - Error correction H (~30%) para que el QR aguante el logo central
+     *    sin perder legibilidad.
+     *  - El logo ocupa ~20% del lado del QR (square central con padding blanco).
+     *  - Tamaño total 320x320 px — suficiente para la impresora 58mm Sunmi
+     *    (que pierde resolucion impresa a 384px de ancho de papel).
+     *  - Renderizado en RGB_565 (suficiente; ahorra memoria vs ARGB_8888).
+     *  - Si el logo es null, se genera el QR sin overlay.
+     */
+    private fun generarQRConLogo(url: String, logo: Bitmap?, sizePx: Int = 320): Bitmap {
+        val hints = mapOf(
+            EncodeHintType.ERROR_CORRECTION to ErrorCorrectionLevel.H,
+            EncodeHintType.MARGIN to 1,
+            EncodeHintType.CHARACTER_SET to "UTF-8"
+        )
+        val matrix = QRCodeWriter().encode(url, BarcodeFormat.QR_CODE, sizePx, sizePx, hints)
+        val w = matrix.width
+        val h = matrix.height
+        val bmp = Bitmap.createBitmap(w, h, Bitmap.Config.RGB_565)
+        for (x in 0 until w) {
+            for (y in 0 until h) {
+                bmp.setPixel(x, y, if (matrix[x, y]) Color.BLACK else Color.WHITE)
+            }
+        }
+
+        if (logo != null) {
+            val canvas = Canvas(bmp)
+            // Logo del 20% del QR + padding blanco del 10% del logo
+            val logoSize = (sizePx * 0.20).toInt()
+            val padding = (logoSize * 0.12).toInt()
+            val box = logoSize + padding * 2
+            val left = (sizePx - box) / 2f
+            val top = (sizePx - box) / 2f
+
+            // Cuadrado blanco de fondo (evita que los modulos negros toquen el logo)
+            val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.WHITE }
+            canvas.drawRect(left, top, left + box, top + box, paint)
+
+            // Logo escalado al centro
+            try {
+                val scaled = Bitmap.createScaledBitmap(logo, logoSize, logoSize, true)
+                canvas.drawBitmap(scaled, left + padding, top + padding, null)
+            } catch (e: Exception) {
+                Log.w(TAG, "no pude superponer logo en QR: ${e.message}")
+            }
+        }
+        return bmp
+    }
+
+    /**
      * Encapsula el texto plano del ticket en bytes ESC/POS con:
      * - ESC @ (init)
      * - ESC R 18 (charset Latin-9 para tildes/eñe)
      * - El texto en si en Latin-1
-     * - GS V B 0 (cut parcial al final)
      *
-     * NO incluye comandos de drawer-kick. Por eso bypassa el auto-kick que el
-     * firmware Sunmi mete cuando se usa printText.
+     * NO incluye el cut — eso se manda separado al final de printTicket
+     * porque entre el texto y el cut va el QR de verificacion SAT.
      */
-    private fun wrapEscPos(texto: String): ByteArray {
+    private fun wrapEscPosSinCut(texto: String): ByteArray {
         val out = ByteArrayOutputStream()
         out.write(byteArrayOf(0x1B, 0x40))                       // ESC @ = init
         out.write(byteArrayOf(0x1B, 0x52, 0x12))                 // ESC R 18 = Latin-9
         out.write(texto.toByteArray(Charsets.ISO_8859_1))
-        out.write("\n\n".toByteArray())                          // padding pre-cut
-        out.write(byteArrayOf(0x1D, 0x56, 0x42, 0x00))           // GS V B 0 = partial cut
+        out.write("\n".toByteArray())                            // 1 linea separadora
         return out.toByteArray()
     }
 
@@ -285,7 +395,8 @@ class SunmiPrinter {
         p.textoFooter?.let { sb.append(cen(it)).append('\n') }
 
         sb.append('\n').append(cen("Gracias por su compra")).append('\n')
-        sb.append("\n\n\n\n\n")  // alimentar papel para corte manual
+        // Los saltos para alimentar el papel + corte se mandan separados desde
+        // printTicket() — entre el texto y el cut va el QR de verificacion SAT.
 
         return sb.toString()
     }
@@ -364,7 +475,7 @@ class SunmiPrinter {
         }
         sb.append('\n')
         sb.append(cen("--- FIN CIERRE ---")).append('\n')
-        sb.append("\n\n\n\n\n")  // padding para corte manual
+        // Padding para corte se manda separado desde printTicket()
 
         return sb.toString()
     }

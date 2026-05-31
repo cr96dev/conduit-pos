@@ -12,8 +12,8 @@ android {
         applicationId "com.juliabakery.pos"
         minSdk 24                 // Android 7.0 — Sunmi D3 Mini ship con 7.1+
         targetSdk 35
-        versionCode 10
-        versionName "0.4.1"
+        versionCode 11
+        versionName "0.4.2"
 
         // URLs configurables por build type. Override en linea de comandos:
         //   ./gradlew assembleDebug -PJULIA_BASE_URL="https://preview-foo.vercel.app"
@@ -95,4 +95,9 @@ dependencies {
     // Sunmi InnerPrinter service: bindeamos via AIDL vendored localmente
     // (app/src/main/aidl/woyou/aidlservice/jiuiv5/). No requiere dependency
     // externa. Si el device no es Sunmi, el bind falla y caemos a stub.
+
+    // ZXing core para generar QR codes (la URL de SAT con UUID, NIT emisor,
+    // NIT receptor y monto). Solo core (no -android-embedded) — composamos
+    // el Bitmap a mano con Canvas para superponer el logo de Julia en el centro.
+    implementation 'com.google.zxing:core:3.5.3'
 }
