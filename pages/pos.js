@@ -24,33 +24,38 @@ function POSChrome({ perfil, kiosko, turno, onMostrarHistorial, onMostrarBandeja
   if (!kiosko && !esCajero) return <Layout perfil={perfil}>{children}</Layout>
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
-      <header className="bg-white border-b border-gray-100 px-3 py-2.5 flex items-center justify-between flex-shrink-0 gap-2">
-        <div className="flex items-center gap-2 min-w-0">
-          <img src="/logo.png" alt="" className="h-10 w-auto flex-shrink-0" />
-          <div className="text-base font-bold text-gray-900 truncate">
-            {perfil?.nombre_completo || 'Cajero'}
+    <div className="min-h-screen bg-surface-2 flex flex-col">
+      <header className="bg-white border-b border-gray-100 px-4 py-2.5 flex items-center justify-between flex-shrink-0 gap-2 shadow-xs">
+        <div className="flex items-center gap-3 min-w-0">
+          <img src="/logo.png" alt="" className="h-9 w-auto flex-shrink-0" />
+          <div className="min-w-0">
+            <div className="text-base font-bold text-gray-900 truncate leading-tight">
+              {perfil?.nombre_completo || 'Cajero'}
+            </div>
+            {turno && (
+              <button onClick={() => window.location.href = '/mis-turnos'}
+                className="text-2xs font-mono text-ink-subtle hover:text-julia-red transition-colors flex items-center gap-1 leading-tight mt-0.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block animate-pulse" />
+                Caja abierta · {new Date(turno.fecha_apertura).toLocaleTimeString('es-GT', { hour: '2-digit', minute: '2-digit' })}
+              </button>
+            )}
           </div>
-          {turno && (
-            <button onClick={() => window.location.href = '/mis-turnos'}
-              title={`Apertura ${new Date(turno.fecha_apertura).toLocaleTimeString('es-GT', { hour: '2-digit', minute: '2-digit' })} · Q${Number(turno.monto_apertura || 0).toFixed(2)}`}
-              className="text-sm bg-emerald-50 hover:bg-emerald-100 text-emerald-700 px-3 py-1.5 rounded-lg font-semibold uppercase tracking-wide hidden sm:inline">
-              ● {new Date(turno.fecha_apertura).toLocaleTimeString('es-GT', { hour: '2-digit', minute: '2-digit' })}
-            </button>
-          )}
         </div>
         <div className="flex items-center gap-1.5 flex-shrink-0">
           {turno && onMostrarBandeja && (
             <button onClick={onMostrarBandeja}
-              className={`text-base px-4 py-2.5 rounded-lg font-bold flex items-center gap-2 transition-colors ${
+              className={`text-sm px-3.5 py-2.5 rounded-lg font-bold flex items-center gap-2 transition-all ${
                 pedidosPendientesCount > 0
-                  ? 'bg-amber-100 text-amber-800 hover:bg-amber-200 ring-2 ring-amber-300/50'
-                  : 'bg-amber-50 text-amber-700 hover:bg-amber-100'
+                  ? 'bg-amber-100 text-amber-900 hover:bg-amber-200 ring-2 ring-amber-300/60'
+                  : 'bg-amber-50 text-amber-800 hover:bg-amber-100'
               }`}
               title="Bandeja de pedidos pendientes (Pedidos Ya)">
-              📦 Pedidos
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-14L4 7m8 4v10M4 7v10l8 4" />
+              </svg>
+              Pedidos
               {pedidosPendientesCount > 0 && (
-                <span className="bg-amber-600 text-white rounded-full px-2 py-0.5 text-sm font-bold tabular-nums min-w-[24px] text-center">
+                <span className="bg-amber-600 text-white rounded-full px-2 py-0.5 text-2xs font-bold tabular-nums min-w-[22px] text-center">
                   {pedidosPendientesCount}
                 </span>
               )}
@@ -58,19 +63,25 @@ function POSChrome({ perfil, kiosko, turno, onMostrarHistorial, onMostrarBandeja
           )}
           {turno && onMostrarHistorial && (
             <button onClick={onMostrarHistorial}
-              className="text-base bg-blue-50 text-blue-700 hover:bg-blue-100 px-4 py-2.5 rounded-lg font-bold">
+              className="text-sm bg-blue-50 text-blue-700 hover:bg-blue-100 px-3.5 py-2.5 rounded-lg font-bold flex items-center gap-2">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+              </svg>
               Historial
             </button>
           )}
           {esCajero && (
             <>
               <button onClick={() => window.location.href = '/mis-turnos'}
-                className="text-base text-gray-700 hover:text-julia-red px-3 py-2.5 font-semibold rounded-lg hover:bg-gray-100">
+                className="text-sm text-ink-muted hover:text-julia-red hover:bg-gray-50 px-3 py-2.5 font-semibold rounded-lg transition-colors">
                 Mis turnos
               </button>
               {turno && (
                 <button onClick={() => window.location.href = '/cerrar-caja'}
-                  className="text-base bg-amber-100 text-amber-900 hover:bg-amber-200 px-4 py-2.5 rounded-lg font-bold">
+                  className="text-sm bg-amber-100 text-amber-900 hover:bg-amber-200 px-4 py-2.5 rounded-lg font-bold flex items-center gap-2">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
+                  </svg>
                   Cerrar caja
                 </button>
               )}
@@ -81,7 +92,10 @@ function POSChrome({ perfil, kiosko, turno, onMostrarHistorial, onMostrarBandeja
               await supabase.auth.signOut()
               window.location.href = esCajero ? '/cajero-login' : '/'
             }}
-            className="text-base text-gray-500 hover:text-julia-red px-3 py-2.5 font-semibold rounded-lg hover:bg-gray-100">
+            className="text-sm text-ink-subtle hover:text-red-500 hover:bg-gray-50 px-3 py-2.5 font-semibold rounded-lg transition-colors flex items-center gap-1.5">
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+            </svg>
             Salir
           </button>
         </div>

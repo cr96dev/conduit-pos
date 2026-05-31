@@ -207,55 +207,55 @@ export default function CerrarCaja({ session }) {
 
   if (resultado) {
     const dif = Number(resultado.diferencia)
+    const difColor = dif === 0 ? 'var(--success)' : dif > 0 ? 'var(--warning)' : 'var(--danger)'
+    const difBg    = dif === 0 ? 'var(--success-soft)' : dif > 0 ? 'var(--warning-soft)' : 'var(--danger-soft)'
     return (
       <>
         <Head><title>Caja cerrada · Julia Bakery</title></Head>
-        <div className="min-h-screen bg-gray-50 flex items-center justify-center p-6">
-          <div className="bg-white border border-gray-100 rounded-2xl shadow-sm p-6 w-full max-w-sm text-center">
-            <div className="text-5xl mb-3">✓</div>
-            <h1 className="text-2xl font-semibold text-emerald-700 mb-1">Caja cerrada</h1>
-            <p className="text-xs text-gray-400 mb-5">El turno ha sido cerrado correctamente.</p>
+        <div className="min-h-screen bg-surface-2 flex items-center justify-center p-6">
+          <div className="card-julia shadow-md p-6 w-full max-w-sm text-center animate-slide-up">
+            <div className="w-14 h-14 mx-auto rounded-full flex items-center justify-center mb-3" style={{ background: 'var(--success-soft)' }}>
+              <svg className="w-7 h-7" fill="none" stroke="var(--success)" strokeWidth={2.5} viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+              </svg>
+            </div>
+            <h1 className="text-xl font-bold text-gray-900 mb-1">Caja cerrada</h1>
+            <p className="text-sm text-ink-subtle mb-5">El turno ha sido cerrado correctamente</p>
 
-            <div className="bg-gray-50 border border-gray-100 rounded-xl p-4 space-y-2 text-left mb-4">
-              <Row k="Cajero" v={<span className="font-medium">{perfil?.nombre_completo || '—'}</span>} />
+            <div className="bg-surface-2 border border-gray-100 rounded-xl p-4 space-y-2 text-left mb-4">
+              <Row k="Cajero" v={<span className="font-semibold">{perfil?.nombre_completo || '—'}</span>} />
               <Row k="Apertura" v={fmtQ(resultado.monto_apertura)} />
               <Row k="Ventas efectivo" v={fmtQ(resultado.ventas_efectivo)} />
               <Row k="Ventas tarjeta" v={fmtQ(resultado.ventas_tarjeta)} muted />
               <Row k="Ventas transferencia" v={fmtQ(resultado.ventas_transferencia)} muted />
               <Row k="Ventas Pedidos Ya" v={fmtQ(resultado.ventas_pedidos_ya)} muted />
               <Row k="Ventas otro" v={fmtQ(resultado.ventas_otro)} muted />
-              <hr className="border-gray-200" />
-              <Row k="Total ventas" v={<span className="font-semibold">{fmtQ(resultado.ventas_total)}</span>} />
+              <hr className="border-gray-100" />
+              <Row k="Total ventas" v={<span className="font-bold">{fmtQ(resultado.ventas_total)}</span>} />
               <Row k="Esperado en caja" v={fmtQ(resultado.monto_cierre_esperado)} />
               <Row k="Contado" v={fmtQ(resultado.conteo_efectivo_cierre)} />
-              <hr className="border-gray-200" />
-              <Row k="Diferencia" v={
-                <span className={`font-semibold ${
-                  dif === 0 ? 'text-emerald-600' : dif > 0 ? 'text-amber-600' : 'text-red-600'
-                }`}>
+              <hr className="border-gray-100" />
+              <div className="flex justify-between items-center text-sm">
+                <span className="font-medium text-gray-700">Diferencia</span>
+                <span className="font-bold font-mono tabular-nums" style={{ color: difColor }}>
                   {dif > 0 ? '+' : ''}{fmtQ(dif)}
                 </span>
-              } />
+              </div>
             </div>
 
-            {/* Estado del print del ticket de cierre */}
             {printMsg && (
-              <div className={`text-xs rounded-lg px-3 py-2 mb-3 ${
-                printMsg.ok ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'
-              }`}>
-                {printMsg.ok
-                  ? '🖨 Ticket de cierre impreso'
-                  : `Impresión: ${printMsg.mensaje}`}
+              <div className="text-2xs font-medium rounded-lg px-3 py-2 mb-3 uppercase tracking-wider"
+                style={{ background: printMsg.ok ? 'var(--success-soft)' : 'var(--warning-soft)', color: printMsg.ok ? 'var(--success)' : 'var(--warning)' }}>
+                {printMsg.ok ? '🖨  Ticket de cierre impreso' : `Impresión: ${printMsg.mensaje}`}
               </div>
             )}
 
-            <div className="grid grid-cols-2 gap-2 mb-2">
+            <div className="grid grid-cols-2 gap-2.5">
               <button onClick={reimprimir} disabled={reimprimiendo}
-                className="py-4 border-2 border-gray-200 text-base text-gray-700 font-semibold rounded-lg hover:bg-gray-50 disabled:opacity-50">
+                className="btn-secundario justify-center py-3.5">
                 {reimprimiendo ? 'Imprimiendo...' : 'Reimprimir'}
               </button>
-              <button onClick={salir}
-                className="py-4 bg-julia-red text-white text-base font-semibold rounded-lg hover:bg-red-700">
+              <button onClick={salir} className="btn-primario justify-center py-3.5">
                 Salir
               </button>
             </div>
@@ -268,70 +268,92 @@ export default function CerrarCaja({ session }) {
   return (
     <>
       <Head><title>Cerrar caja · Julia Bakery</title></Head>
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-6">
-        <div className="bg-white border border-gray-100 rounded-2xl shadow-sm p-6 w-full max-w-md">
-          <h1 className="text-2xl font-bold text-gray-900 mb-1">Cerrar caja</h1>
-          <p className="text-xs text-gray-400 mb-5">
-            Abierto: {new Date(data.turno.fecha_apertura).toLocaleString('es-GT')}
-          </p>
+      <div className="min-h-screen bg-surface-2 flex items-center justify-center p-6">
+        <div className="card-julia shadow-md p-6 w-full max-w-md animate-slide-up">
+          {/* Header */}
+          <div className="flex items-center gap-3 mb-5">
+            <div className="w-10 h-10 rounded-xl bg-julia-red/10 text-julia-red flex items-center justify-center">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7M3 10h18M7 15h.01M11 15h2M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+              </svg>
+            </div>
+            <div className="flex-1">
+              <h1 className="text-lg font-bold text-gray-900 leading-tight">Cerrar caja</h1>
+              <p className="text-2xs text-ink-subtle font-mono">
+                Abierto: {new Date(data.turno.fecha_apertura).toLocaleString('es-GT')}
+              </p>
+            </div>
+          </div>
 
           {/* Desglose */}
-          <div className="bg-gray-50 border border-gray-100 rounded-xl p-4 space-y-2 mb-5">
+          <div className="bg-surface-2 border border-gray-100 rounded-xl p-4 space-y-2 mb-5">
+            <div className="label-tech mb-2">Desglose del turno</div>
             <Row k="Apertura" v={fmtQ(apertura)} />
             <Row k="Ventas efectivo" v={fmtQ(ventasEf)} />
             <Row k="Ventas tarjeta" v={fmtQ(data.desglose.ventas_tarjeta)} muted />
             <Row k="Ventas transferencia" v={fmtQ(data.desglose.ventas_transferencia)} muted />
             <Row k="Ventas Pedidos Ya" v={fmtQ(data.desglose.ventas_pedidos_ya)} muted />
             <Row k="Ventas otro" v={fmtQ(data.desglose.ventas_otro)} muted />
-            <hr className="border-gray-200" />
-            <Row k="Esperado en caja" v={<span className="font-semibold tabular-nums text-base">{fmtQ(esperado)}</span>} />
-            <div className="text-[10px] text-gray-400 pt-1">
-              Esperado = apertura + ventas en efectivo. Las ventas con tarjeta/transferencia
+            <hr className="border-gray-100" />
+            <div className="flex justify-between items-center text-sm">
+              <span className="font-semibold text-gray-700">Esperado en caja</span>
+              <span className="font-bold font-mono tabular-nums text-base">{fmtQ(esperado)}</span>
+            </div>
+            <div className="text-2xs text-ink-subtle pt-1 leading-relaxed">
+              Esperado = apertura + ventas en efectivo. Las ventas con tarjeta y transferencia
               no afectan el efectivo de la caja.
             </div>
           </div>
 
           {/* Conteo */}
           <div className="mb-3">
-            <label className="block text-sm text-gray-600 font-medium mb-1.5">Efectivo contado en caja</label>
-            <input type="number" step="any" min="0" value={conteo} onChange={e => setConteo(e.target.value)}
-              inputMode="decimal" autoFocus
-              className="w-full text-3xl text-right tabular-nums px-4 py-4 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-julia-red"
-              placeholder="0.00" />
+            <label className="label-tech block mb-1.5">Efectivo contado en caja</label>
+            <div className="relative">
+              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-ink-subtle font-mono text-base">Q</span>
+              <input type="number" step="any" min="0" value={conteo} onChange={e => setConteo(e.target.value)}
+                inputMode="decimal" autoFocus
+                className="input pl-10 text-2xl font-bold text-right tabular-nums py-4 font-mono"
+                placeholder="0.00" />
+            </div>
           </div>
 
           {/* Diferencia en vivo */}
           {diferencia !== null && (
-            <div className={`rounded-xl px-4 py-3 mb-3 text-base flex justify-between font-medium ${
-              diferencia === 0 ? 'bg-emerald-50 text-emerald-700' :
-              diferencia > 0   ? 'bg-amber-50 text-amber-700' :
-                                 'bg-red-50 text-red-700'
-            }`}>
-              <span>Diferencia</span>
-              <span className="font-bold tabular-nums">
+            <div className="rounded-xl px-4 py-3 mb-3 flex justify-between items-center font-medium"
+              style={{
+                background: diferencia === 0 ? 'var(--success-soft)' : diferencia > 0 ? 'var(--warning-soft)' : 'var(--danger-soft)',
+                borderLeft: `3px solid ${diferencia === 0 ? 'var(--success)' : diferencia > 0 ? 'var(--warning)' : 'var(--danger)'}`,
+              }}>
+              <span className="text-sm font-semibold" style={{ color: diferencia === 0 ? 'var(--success)' : diferencia > 0 ? 'var(--warning)' : 'var(--danger)' }}>
+                Diferencia
+              </span>
+              <span className="font-bold font-mono tabular-nums text-lg" style={{ color: diferencia === 0 ? 'var(--success)' : diferencia > 0 ? 'var(--warning)' : 'var(--danger)' }}>
                 {diferencia > 0 ? '+' : ''}{fmtQ(diferencia)}
               </span>
             </div>
           )}
 
           <div className="mb-4">
-            <label className="block text-sm text-gray-600 font-medium mb-1.5">Observación (opcional)</label>
+            <label className="label-tech block mb-1.5">Observación (opcional)</label>
             <textarea value={obs} onChange={e => setObs(e.target.value)} rows={2}
-              className="w-full px-3 py-3 text-base border-2 border-gray-200 rounded-xl focus:outline-none focus:border-julia-red"
+              className="input resize-none"
               placeholder={diferencia !== null && diferencia !== 0 ? 'Explicá la diferencia...' : ''} />
           </div>
 
           {error && (
-            <div className="bg-red-50 border border-red-100 rounded-xl px-4 py-3 text-sm text-red-700 mb-3">{error}</div>
+            <div className="rounded-lg px-3 py-2.5 text-sm font-medium mb-3"
+              style={{ background: 'var(--danger-soft)', color: 'var(--danger)' }}>
+              {error}
+            </div>
           )}
 
-          <div className="flex gap-2">
+          <div className="flex gap-2.5">
             <button onClick={() => router.push('/pos')}
-              className="flex-1 py-5 border-2 border-gray-200 text-base font-semibold text-gray-700 rounded-xl hover:bg-gray-50">
+              className="btn-secundario flex-1 justify-center py-3.5 text-base">
               Cancelar
             </button>
             <button onClick={confirmar} disabled={enviando || conteo === ''}
-              className="flex-1 py-5 bg-julia-red text-white text-base font-semibold rounded-xl disabled:opacity-50 hover:bg-red-700">
+              className="btn-primario flex-1 justify-center py-3.5 text-base">
               {enviando ? 'Cerrando...' : 'Confirmar cierre'}
             </button>
           </div>
@@ -344,8 +366,8 @@ export default function CerrarCaja({ session }) {
 function Row({ k, v, muted }) {
   return (
     <div className="flex justify-between items-center text-sm">
-      <span className={muted ? 'text-gray-400' : 'text-gray-600'}>{k}</span>
-      <span className={`tabular-nums ${muted ? 'text-gray-400' : 'text-gray-800'}`}>{v}</span>
+      <span className={`${muted ? 'text-ink-subtle' : 'text-gray-700'} font-medium`}>{k}</span>
+      <span className={`font-mono tabular-nums ${muted ? 'text-ink-subtle' : 'text-gray-900'}`}>{v}</span>
     </div>
   )
 }

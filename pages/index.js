@@ -1,3 +1,6 @@
+// pages/index.js
+// Login admin (email/password). En kiosko Sunmi redirige a /cajero-login (PIN).
+
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import { useRouter } from 'next/router'
@@ -10,17 +13,10 @@ export default function Login({ session }) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
-  // En el wrapper Android (cajero on-site) saltamos directo a /pos en vez
-  // de /dashboard. /dashboard requiere navegacion por sidebar a otros modulos
-  // que no aplican para el cajero.
   function destinoPostLogin() {
     return esKiosko() ? '/pos' : '/dashboard'
   }
 
-  // Redireccion inicial:
-  //   - si hay sesion -> destino
-  //   - si no hay sesion y es kiosko -> /cajero-login (PIN)
-  //   - si no hay sesion y NO es kiosko -> mostramos form email/password
   useEffect(() => {
     if (session) {
       router.push(destinoPostLogin())
@@ -42,54 +38,57 @@ export default function Login({ session }) {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
-      <div className="bg-white rounded-2xl border border-gray-200 p-8 w-full max-w-sm shadow-sm">
+    <div className="min-h-screen bg-surface-2 flex items-center justify-center px-4">
+      <div className="card-julia shadow-md p-8 w-full max-w-sm animate-slide-up">
 
-        {/* Logo */}
-        <div className="flex flex-col items-center mb-8">
-          <img src="/logo.png" alt="Julia Bakery" className="w-full object-contain mb-3" style={{ height: '140px' }} />
-          <div className="flex items-center gap-2 mt-1">
-            <div className="h-px w-12 bg-gray-200"></div>
-            <p className="text-xs text-gray-400 text-center">Sistema de gestión</p>
-            <div className="h-px w-12 bg-gray-200"></div>
-          </div>
+        {/* Brand */}
+        <div className="flex flex-col items-center mb-7">
+          <img src="/logo.png" alt="" className="h-20 w-auto object-contain mb-3" />
+          <div className="text-lg font-bold text-gray-900 leading-tight">Julia Bakery</div>
+          <div className="label-tech mt-1">Sistema de operación</div>
         </div>
 
         <form onSubmit={handleLogin} className="space-y-4">
           <div>
-            <label className="block text-xs text-gray-500 mb-1">Correo electrónico</label>
+            <label className="label-tech block mb-1.5">Correo electrónico</label>
             <input type="email" value={email} onChange={e => setEmail(e.target.value)} required
-              className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-blue-400 transition-colors"
-              placeholder="tu-correo@juliabakery.com" />
+              className="input" placeholder="tu-correo@juliabakery.com" autoComplete="email" />
           </div>
           <div>
-            <label className="block text-xs text-gray-500 mb-1">Contraseña</label>
+            <label className="label-tech block mb-1.5">Contraseña</label>
             <input type="password" value={password} onChange={e => setPassword(e.target.value)} required
-              className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-blue-400 transition-colors"
-              placeholder="••••••••" />
+              className="input" placeholder="••••••••" autoComplete="current-password" />
           </div>
           {error && (
-            <div className="flex items-center gap-2 bg-red-50 border border-red-100 rounded-lg px-3 py-2">
-              <svg className="w-4 h-4 text-red-500 flex-shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+            <div className="flex items-center gap-2 rounded-lg px-3 py-2.5"
+              style={{ background: 'var(--danger-soft)' }}>
+              <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="var(--danger)" strokeWidth={2.2} viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
-              <p className="text-xs text-red-600">{error}</p>
+              <p className="text-sm font-medium" style={{ color: 'var(--danger)' }}>{error}</p>
             </div>
           )}
           <button type="submit" disabled={loading}
-            className="w-full bg-blue-600 text-white text-sm font-medium py-2.5 rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors flex items-center justify-center gap-2">
+            className="btn-primario w-full justify-center py-3 text-base">
             {loading && <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>}
             {loading ? 'Iniciando sesión...' : 'Iniciar sesión'}
           </button>
         </form>
 
+        <div className="divider-text mt-6">o</div>
+
         <button
           onClick={() => router.push('/cajero-login')}
-          className="mt-5 w-full text-xs text-gray-400 hover:text-julia-red transition-colors">
+          className="w-full text-2xs text-ink-subtle hover:text-julia-red transition-colors font-medium uppercase tracking-wider flex items-center justify-center gap-1.5">
+          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 11c0 3.517-1.009 6.799-2.753 9.571m-3.44-2.04l.054-.09A13.916 13.916 0 008 11a4 4 0 118 0c0 1.017-.07 2.019-.203 3m-2.118 6.844A21.88 21.88 0 0015.171 17m3.839 1.132c.645-2.266.99-4.659.99-7.132A8 8 0 008 4.07M3 15.364c.64-1.319 1-2.8 1-4.364 0-1.457.39-2.823 1.07-4" />
+          </svg>
           Soy cajero · ingresar con PIN
         </button>
 
-        <p className="text-center text-xs text-gray-300 mt-6">Julia Bakery · Guatemala</p>
+        <div className="mt-7 pt-5 border-t border-gray-100 text-center">
+          <p className="text-2xs text-ink-subtle font-medium uppercase tracking-wider">Julia Bakery · Guatemala</p>
+        </div>
       </div>
     </div>
   )

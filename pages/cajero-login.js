@@ -15,12 +15,10 @@ export default function CajeroLogin({ session }) {
   const [bloqueoSeg, setBloqueoSeg] = useState(0)
   const [shake, setShake] = useState(false)
 
-  // Si ya hay sesion, ir directo al POS.
   useEffect(() => {
     if (session) router.push('/pos')
   }, [session])
 
-  // Contador de bloqueo.
   useEffect(() => {
     if (bloqueoSeg <= 0) return
     const t = setInterval(() => setBloqueoSeg(s => Math.max(0, s - 1)), 1000)
@@ -50,17 +48,15 @@ export default function CajeroLogin({ session }) {
         setEnviando(false)
         return
       }
-      // Setear sesion en el cliente con los tokens devueltos.
       const { error: setErr } = await supabase.auth.setSession({
         access_token: json.session.access_token,
         refresh_token: json.session.refresh_token,
       })
       if (setErr) {
-        setError('Error iniciando sesion: ' + setErr.message)
+        setError('Error iniciando sesión: ' + setErr.message)
         setEnviando(false)
         return
       }
-      // Redirigir al POS — el POS redirigira a /abrir-caja si no hay turno.
       router.push('/pos')
     } catch (e) {
       setError('Error de red: ' + (e?.message || e))
@@ -74,7 +70,6 @@ export default function CajeroLogin({ session }) {
     const nuevo = pin + d
     setPin(nuevo)
     if (nuevo.length === 4) {
-      // Auto-enviar al cuarto digito
       setTimeout(() => enviarLogin(nuevo), 80)
     }
   }
@@ -90,18 +85,26 @@ export default function CajeroLogin({ session }) {
   return (
     <>
       <Head><title>Cajero · Julia Bakery</title></Head>
-      <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-6">
-        <img src="/logo.png" alt="Julia Bakery" className="w-40 mb-6" />
-        <div className="text-center mb-6">
-          <h1 className="text-xl font-semibold text-gray-900 mb-1">Ingresá tu PIN</h1>
-          <p className="text-xs text-gray-400">4 dígitos</p>
+      <div className="min-h-screen bg-surface-2 flex flex-col items-center justify-center p-6">
+        {/* Brand */}
+        <div className="flex items-center gap-3 mb-8">
+          <img src="/logo.png" alt="" className="h-12 w-auto" />
+          <div>
+            <div className="text-lg font-bold text-gray-900 leading-tight">Julia Bakery</div>
+            <div className="text-2xs text-ink-subtle font-medium uppercase tracking-wider leading-tight">Punto de venta</div>
+          </div>
         </div>
 
-        {/* Dots */}
+        <div className="text-center mb-6">
+          <h1 className="text-xl font-bold text-gray-900 mb-1">Ingresá tu PIN</h1>
+          <p className="text-sm text-ink-subtle">4 dígitos</p>
+        </div>
+
+        {/* Dots de progreso */}
         <div className={`flex gap-3 mb-6 ${shake ? 'animate-shake' : ''}`}>
           {[0,1,2,3].map(i => (
             <div key={i}
-              className={`w-4 h-4 rounded-full border-2 transition-all ${
+              className={`w-4 h-4 rounded-full border-2 transition-all duration-150 ${
                 pin.length > i
                   ? 'bg-julia-red border-julia-red scale-110'
                   : 'border-gray-300'
@@ -110,13 +113,17 @@ export default function CajeroLogin({ session }) {
         </div>
 
         {error && bloqueoSeg <= 0 && (
-          <div className="text-xs text-red-600 mb-4 text-center max-w-xs">{error}</div>
+          <div className="text-sm font-medium mb-4 text-center max-w-xs rounded-lg px-4 py-2.5"
+            style={{ background: 'var(--danger-soft)', color: 'var(--danger)' }}>
+            {error}
+          </div>
         )}
         {bloqueoSeg > 0 && (
-          <div className="bg-red-50 border border-red-200 rounded-lg px-4 py-2 mb-4 text-center">
-            <div className="text-xs text-red-700 font-medium">Bloqueado por seguridad</div>
-            <div className="text-2xl font-semibold text-red-700 tabular-nums">{bloqueoSeg}s</div>
-            <div className="text-[10px] text-red-500">Demasiados PINs incorrectos seguidos</div>
+          <div className="rounded-xl px-5 py-3 mb-4 text-center max-w-xs"
+            style={{ background: 'var(--danger-soft)', borderLeft: '3px solid var(--danger)' }}>
+            <div className="label-tech mb-1" style={{ color: 'var(--danger)' }}>Bloqueado por seguridad</div>
+            <div className="text-3xl font-bold font-mono tabular-nums" style={{ color: 'var(--danger)' }}>{bloqueoSeg}s</div>
+            <div className="text-2xs mt-1" style={{ color: 'var(--danger)' }}>Demasiados PINs incorrectos seguidos</div>
           </div>
         )}
 
@@ -124,24 +131,26 @@ export default function CajeroLogin({ session }) {
         <div className="grid grid-cols-3 gap-3 max-w-xs w-full">
           {teclas.map(d => (
             <button key={d} onClick={() => teclear(d)} disabled={enviando || bloqueoSeg > 0}
-              className="aspect-square bg-white border border-gray-200 rounded-2xl text-2xl font-medium text-gray-800 active:bg-gray-100 disabled:opacity-40 transition-colors shadow-sm">
+              className="aspect-square bg-white border border-gray-200 rounded-xl text-2xl font-semibold text-gray-800 active:bg-gray-100 active:scale-[0.97] disabled:opacity-40 transition-all shadow-xs">
               {d}
             </button>
           ))}
           <div></div>
           <button onClick={() => teclear('0')} disabled={enviando || bloqueoSeg > 0}
-            className="aspect-square bg-white border border-gray-200 rounded-2xl text-2xl font-medium text-gray-800 active:bg-gray-100 disabled:opacity-40 transition-colors shadow-sm">
+            className="aspect-square bg-white border border-gray-200 rounded-xl text-2xl font-semibold text-gray-800 active:bg-gray-100 active:scale-[0.97] disabled:opacity-40 transition-all shadow-xs">
             0
           </button>
           <button onClick={borrar} disabled={enviando || bloqueoSeg > 0}
-            className="aspect-square bg-white border border-gray-200 rounded-2xl text-base text-gray-500 active:bg-gray-100 disabled:opacity-40 transition-colors shadow-sm flex items-center justify-center">
-            ⌫
+            className="aspect-square bg-white border border-gray-200 rounded-xl text-ink-subtle active:bg-gray-100 active:scale-[0.97] disabled:opacity-40 transition-all shadow-xs flex items-center justify-center">
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth={1.75} viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 19l-7-7 7-7m-7 7h18" />
+            </svg>
           </button>
         </div>
 
         <button
           onClick={() => router.push('/')}
-          className="mt-8 text-xs text-gray-400 hover:text-gray-700">
+          className="mt-8 text-2xs text-ink-subtle hover:text-julia-red font-medium uppercase tracking-wider transition-colors">
           Ingresar como administrador
         </button>
 

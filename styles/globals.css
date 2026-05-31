@@ -1,33 +1,124 @@
-/* Tipografias:
-   - Inter (body): sans-serif tecnica/sobria. Optimizada para UI/POS.
-     Reemplaza a Cormorant Garamond del manual de marca — los cajeros pidieron
-     un font "mas normal y tecnologico, no tan estilizado".
-   - Cinzel: SOLO en .font-display (titulos de marca, paginas de marketing).
-     El POS y modulos operativos usan Inter por defecto. */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Cinzel:wght@400;500;600;700&display=swap');
+/* ============================================================================
+   Julia Bakery — Design System
+   ============================================================================
+   Identidad visual: tecnica + sobria con acentos rojos del manual de marca.
+   - Inter (body): sans-serif tecnica
+   - IBM Plex Mono (data-tech): para UUIDs, IDs, lineas de log, valores SAT
+   - Cinzel (font-display): SOLO en lugares de branding (landing, manual)
+
+   La paleta julia-red (#C62127) y julia-cream (#EFDEB3) se mantiene como
+   acento — el resto de la UI usa una escala de grises neutros + estados
+   semanticos para que el rojo destaque sin saturar.
+============================================================================ */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&family=Cinzel:wght@400;500;600;700&display=swap');
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-body {
-  font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
-  font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';  /* Inter stylistic alternates: 0 con slash, 1 con serif, etc */
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+/* ============================================================================
+   Design Tokens
+============================================================================ */
+:root {
+  /* Marca */
+  --julia-red:       #C62127;
+  --julia-red-dark:  #9F1A1F;
+  --julia-red-soft:  rgba(198, 33, 39, 0.08);
+  --julia-cream:     #EFDEB3;
+  --julia-cream-soft: rgba(239, 222, 179, 0.35);
+
+  /* Neutros (base de toda la UI) */
+  --surface:         #ffffff;
+  --surface-2:       #fafafa;
+  --surface-3:       #f4f4f5;
+  --ink:             #18181b;
+  --ink-muted:       #52525b;
+  --ink-subtle:      #71717a;
+  --ink-disabled:    #a1a1aa;
+  --border:          #e4e4e7;
+  --border-strong:   #d4d4d8;
+
+  /* Estados semanticos (sutiles, sin saturar) */
+  --success:         #16a34a;
+  --success-soft:    #f0fdf4;
+  --warning:         #d97706;
+  --warning-soft:    #fffbeb;
+  --danger:          #dc2626;
+  --danger-soft:     #fef2f2;
+  --info:            #2563eb;
+  --info-soft:       #eff6ff;
+
+  /* Sombras (cuidadas — no juguete) */
+  --shadow-xs: 0 1px 2px rgba(15, 15, 20, 0.04);
+  --shadow-sm: 0 1px 3px rgba(15, 15, 20, 0.06), 0 1px 2px rgba(15, 15, 20, 0.04);
+  --shadow-md: 0 4px 12px -2px rgba(15, 15, 20, 0.08), 0 2px 4px -2px rgba(15, 15, 20, 0.06);
+  --shadow-lg: 0 12px 28px -6px rgba(15, 15, 20, 0.12), 0 4px 10px -4px rgba(15, 15, 20, 0.08);
+  --shadow-modal: 0 24px 60px -12px rgba(15, 15, 20, 0.25), 0 8px 24px -8px rgba(15, 15, 20, 0.1);
+
+  /* Radio standard */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 18px;
 }
 
-/* Refuerzo en elementos donde los numeros son protagonistas */
+html.dark {
+  --surface:         #0f0a0a;
+  --surface-2:       #1a1212;
+  --surface-3:       #2a1c1c;
+  --ink:             #f5e6d3;
+  --ink-muted:       #c5b890;
+  --ink-subtle:      #9a8e6e;
+  --ink-disabled:    #6e644e;
+  --border:          #2a1c1c;
+  --border-strong:   #3a2828;
+  --success-soft:    rgba(22, 163, 74, 0.12);
+  --warning-soft:    rgba(217, 119, 6, 0.12);
+  --danger-soft:     rgba(220, 38, 38, 0.12);
+  --info-soft:       rgba(37, 99, 235, 0.12);
+}
+
+/* ============================================================================
+   Tipografia base
+============================================================================ */
+body {
+  font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  /* Inter stylistic alternates: 0 con slash, 1 sin serif, etc */
+  font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11', 'ss01';
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  letter-spacing: -0.01em;
+  background-color: var(--surface-2);
+  color: var(--ink);
+}
+
+/* Numeros tabulares globalmente donde matter */
 input, table, td, th, .tabular-nums {
   font-variant-numeric: tabular-nums;
   font-feature-settings: 'tnum';
 }
 
-/* Headings por default heredan Inter del body. Solo `.font-display` mantiene
-   Cinzel para los lugares de branding (landing, manual de marca, etc). */
+/* Cinzel SOLO para branding/marketing */
 .font-display {
   font-family: 'Cinzel', 'Georgia', serif;
   letter-spacing: 0.02em;
+}
+
+/* IBM Plex Mono para datos tecnicos */
+.font-mono,
+.data-tech,
+code,
+kbd {
+  font-family: 'IBM Plex Mono', 'JetBrains Mono', 'Menlo', monospace;
+  font-feature-settings: 'tnum', 'zero';
+}
+
+/* ============================================================================
+   Reset suave
+============================================================================ */
+button {
+  -webkit-tap-highlight-color: transparent;
 }
 
 @media (max-width: 768px) {
@@ -36,108 +127,263 @@ input, table, td, th, .tabular-nums {
   }
 }
 
-/* Modo noche */
+/* ============================================================================
+   Modo noche — refinado, contraste cuidado
+============================================================================ */
 html.dark {
-  background-color: #0f0a0a;
-  color: #f5e6d3;
+  background-color: var(--surface);
+  color: var(--ink);
 }
 
 html.dark body {
-  background-color: #0f0a0a;
-  color: #f5e6d3;
+  background-color: var(--surface);
+  color: var(--ink);
 }
 
 /* Fondos */
-html.dark .bg-white     { background-color: #1a1212 !important; }
-html.dark .bg-gray-50   { background-color: #0f0a0a !important; }
-html.dark .bg-gray-100  { background-color: #1a1212 !important; }
-html.dark .bg-gray-200  { background-color: #2a1c1c !important; }
+html.dark .bg-white     { background-color: var(--surface-2) !important; }
+html.dark .bg-gray-50   { background-color: var(--surface) !important; }
+html.dark .bg-gray-100  { background-color: var(--surface-2) !important; }
+html.dark .bg-gray-200  { background-color: var(--surface-3) !important; }
 
 /* Bordes */
-html.dark .border-gray-100 { border-color: #2a1c1c !important; }
-html.dark .border-gray-200 { border-color: #3a2828 !important; }
+html.dark .border-gray-100 { border-color: var(--border) !important; }
+html.dark .border-gray-200 { border-color: var(--border-strong) !important; }
 
 /* Textos */
-html.dark .text-gray-900 { color: #f5e6d3 !important; }
-html.dark .text-gray-800 { color: #efdeb3 !important; }
-html.dark .text-gray-700 { color: #e0d2a8 !important; }
-html.dark .text-gray-600 { color: #c5b890 !important; }
-html.dark .text-gray-500 { color: #9a8e6e !important; }
-html.dark .text-gray-400 { color: #6e644e !important; }
-html.dark .text-gray-300 { color: #4a4234 !important; }
+html.dark .text-gray-900 { color: var(--ink) !important; }
+html.dark .text-gray-800 { color: var(--ink) !important; }
+html.dark .text-gray-700 { color: var(--ink-muted) !important; }
+html.dark .text-gray-600 { color: var(--ink-muted) !important; }
+html.dark .text-gray-500 { color: var(--ink-subtle) !important; }
+html.dark .text-gray-400 { color: var(--ink-disabled) !important; }
+html.dark .text-gray-300 { color: var(--ink-disabled) !important; }
 
 /* Inputs */
 html.dark input,
 html.dark select,
 html.dark textarea {
-  background-color: #2a1c1c !important;
-  border-color: #3a2828 !important;
-  color: #f5e6d3 !important;
+  background-color: var(--surface-2) !important;
+  border-color: var(--border-strong) !important;
+  color: var(--ink) !important;
 }
 
 html.dark input::placeholder,
 html.dark textarea::placeholder {
-  color: #6e644e !important;
+  color: var(--ink-disabled) !important;
 }
 
 /* Hovers */
-html.dark .hover\:bg-gray-50:hover  { background-color: #2a1c1c !important; }
-html.dark .hover\:bg-gray-100:hover { background-color: #2a1c1c !important; }
+html.dark .hover\:bg-gray-50:hover  { background-color: var(--surface-2) !important; }
+html.dark .hover\:bg-gray-100:hover { background-color: var(--surface-3) !important; }
 
-/* Sidebar y topbar */
-html.dark aside { background-color: #1a1212 !important; }
-html.dark nav   { background-color: #1a1212 !important; }
-html.dark .sticky { background-color: #1a1212 !important; }
+/* Chrome (sidebar, topbar) */
+html.dark aside { background-color: var(--surface-2) !important; }
+html.dark nav   { background-color: var(--surface-2) !important; }
+html.dark .sticky { background-color: var(--surface-2) !important; }
 
-/* Colores semanticos en dark mode */
-html.dark .bg-julia-red { background-color: #C62127 !important; }
+/* Colores semanticos */
+html.dark .bg-julia-red { background-color: var(--julia-red) !important; }
 html.dark .text-julia-red { color: #ef6a70 !important; }
-html.dark .bg-green-50  { background-color: #0d2818 !important; }
-html.dark .bg-red-50    { background-color: #3a1010 !important; }
-html.dark .bg-amber-50  { background-color: #2a1c08 !important; }
+html.dark .bg-green-50  { background-color: var(--success-soft) !important; }
+html.dark .bg-red-50    { background-color: var(--danger-soft) !important; }
+html.dark .bg-amber-50  { background-color: var(--warning-soft) !important; }
+html.dark .bg-emerald-50 { background-color: var(--success-soft) !important; }
+html.dark .bg-blue-50    { background-color: var(--info-soft) !important; }
 
 html.dark .text-green-700 { color: #86efac !important; }
 html.dark .text-green-600 { color: #4ade80 !important; }
+html.dark .text-emerald-700 { color: #86efac !important; }
+html.dark .text-emerald-600 { color: #4ade80 !important; }
 html.dark .text-red-600   { color: #fca5a5 !important; }
 html.dark .text-red-500   { color: #f87171 !important; }
-html.dark .text-amber-700 { color: #ef6a70 !important; }
-html.dark .text-amber-800 { color: #c62127 !important; }
+html.dark .text-amber-700 { color: #fbbf24 !important; }
+html.dark .text-amber-800 { color: #f59e0b !important; }
+html.dark .text-blue-600  { color: #60a5fa !important; }
+html.dark .text-blue-700  { color: #60a5fa !important; }
 
 /* Tablas */
-html.dark tr:hover { background-color: #2a1c1c !important; }
+html.dark tr:hover { background-color: var(--surface-2) !important; }
 
-/* Scrollbar */
-html.dark ::-webkit-scrollbar { width: 6px; }
-html.dark ::-webkit-scrollbar-track { background: #1a1212; }
-html.dark ::-webkit-scrollbar-thumb { background: #4a4234; border-radius: 3px; }
+/* Scrollbar — slim y discreto */
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: var(--ink-disabled); }
+html.dark ::-webkit-scrollbar-thumb { background: var(--border-strong); }
 
 /* ============================================================================
-   Form primitives reusables (usados por todos los modales del proyecto)
-   ============================================================================ */
+   Componentes utilitarios reusables
+============================================================================ */
 
+/* Inputs primarios — mantiene compat con codigo legacy via .input */
 .input {
-  width: 100%; border: 1px solid #e5e7eb; border-radius: 0.5rem;
-  padding: 0.5rem 0.75rem; font-size: 0.875rem;
-  background: white;
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 0.625rem 0.875rem;
+  font-size: 0.875rem;
+  background: var(--surface);
+  color: var(--ink);
+  transition: border-color 150ms, box-shadow 150ms;
 }
-.input:focus { outline: none; border-color: #991b1b; }
+.input:focus {
+  outline: none;
+  border-color: var(--julia-red);
+  box-shadow: 0 0 0 3px var(--julia-red-soft);
+}
 .input:disabled { opacity: 0.6; cursor: not-allowed; }
 
+/* Botones (reusables con clases utilitarias) */
 .btn-primario {
-  padding: 0.5rem 1.25rem; background: #991b1b; color: white;
-  border-radius: 0.5rem; font-size: 0.875rem; font-weight: 500;
-  display: inline-flex; align-items: center; gap: 0.5rem;
+  padding: 0.625rem 1.25rem;
+  background: var(--julia-red);
+  color: white;
+  border-radius: var(--radius-md);
+  font-size: 0.875rem;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  transition: background-color 150ms, transform 80ms;
+  box-shadow: var(--shadow-xs);
 }
-.btn-primario:hover { background: #7f1d1d; }
+.btn-primario:hover { background: var(--julia-red-dark); }
+.btn-primario:active { transform: scale(0.98); }
 .btn-primario:disabled { opacity: 0.5; cursor: not-allowed; }
 
 .btn-secundario {
-  padding: 0.5rem 1rem; border: 1px solid #e5e7eb; color: #4b5563;
-  border-radius: 0.5rem; font-size: 0.875rem; background: white;
+  padding: 0.625rem 1.125rem;
+  border: 1px solid var(--border);
+  color: var(--ink-muted);
+  border-radius: var(--radius-md);
+  font-size: 0.875rem;
+  font-weight: 500;
+  background: var(--surface);
+  transition: background-color 150ms, border-color 150ms;
 }
-.btn-secundario:hover { background: #f9fafb; }
+.btn-secundario:hover { background: var(--surface-3); border-color: var(--border-strong); }
 .btn-secundario:disabled { opacity: 0.5; cursor: not-allowed; }
 
-html.dark .input         { background: #2a1c1c !important; border-color: #3a2828 !important; color: #f5e6d3 !important; }
-html.dark .btn-secundario { background: #1a1212 !important; border-color: #3a2828 !important; color: #e0d2a8 !important; }
-html.dark .btn-secundario:hover { background: #2a1c1c !important; }
+/* Card primitiva */
+.card-julia {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-xs);
+}
+
+/* Badge — para chips de estado, contadores, etc */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.125rem 0.5rem;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  border-radius: 999px;
+  border: 1px solid transparent;
+}
+.badge-success { background: var(--success-soft); color: var(--success); }
+.badge-warning { background: var(--warning-soft); color: var(--warning); }
+.badge-danger  { background: var(--danger-soft);  color: var(--danger); }
+.badge-info    { background: var(--info-soft);    color: var(--info); }
+.badge-neutral { background: var(--surface-3);    color: var(--ink-muted); border-color: var(--border); }
+
+/* KBD — etiqueta tecla teclado para hints */
+kbd, .kbd {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.0625rem 0.375rem;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.6875rem;
+  font-weight: 500;
+  color: var(--ink-muted);
+  background: var(--surface-3);
+  border: 1px solid var(--border);
+  border-bottom-width: 2px;
+  border-radius: 4px;
+  line-height: 1.4;
+}
+
+/* Label tecnica (uppercase + tracking) */
+.label-tech {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-subtle);
+}
+
+/* Data tech — usa monospace + tabular nums */
+.data-tech {
+  font-family: 'IBM Plex Mono', monospace;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+}
+
+/* Separador con texto */
+.divider-text {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-disabled);
+  margin: 1rem 0;
+}
+.divider-text::before,
+.divider-text::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+
+/* Sombras tailwind override */
+.shadow-card  { box-shadow: var(--shadow-sm); }
+.shadow-pop   { box-shadow: var(--shadow-md); }
+.shadow-modal { box-shadow: var(--shadow-modal); }
+
+/* Focus visible mejorado (a11y) */
+*:focus-visible {
+  outline: 2px solid var(--julia-red);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+button:focus-visible {
+  outline-offset: 3px;
+}
+
+html.dark .input         { background: var(--surface-2) !important; border-color: var(--border-strong) !important; color: var(--ink) !important; }
+html.dark .btn-secundario { background: var(--surface-2) !important; border-color: var(--border-strong) !important; color: var(--ink-muted) !important; }
+html.dark .btn-secundario:hover { background: var(--surface-3) !important; }
+html.dark .card-julia     { background: var(--surface-2) !important; border-color: var(--border) !important; }
+
+/* ============================================================================
+   Animaciones sutiles
+============================================================================ */
+@keyframes shimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+.shimmer {
+  background: linear-gradient(
+    90deg,
+    var(--surface-3) 0%,
+    var(--border) 50%,
+    var(--surface-3) 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s ease-in-out infinite;
+}
+
+@keyframes slide-up {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.animate-slide-up { animation: slide-up 200ms ease-out; }
