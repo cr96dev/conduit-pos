@@ -823,7 +823,7 @@ export default function POS({ session }) {
   const [busqueda, setBusqueda] = useState('')
   const [catSel, setCatSel] = useState('')
   const [carrito, setCarrito] = useState([])  // [{variant_id, descripcion, cantidad, precio_unitario, descuenta_insumos, receta_id?}]
-  const [receptor, setReceptor] = useState({ nit: 'CF', nombre: 'CONSUMIDOR FINAL', email: '' })
+  const [receptor, setReceptor] = useState({ nit: 'CF', nombre: 'CONSUMIDOR FINAL', email: '', modo: 'cf' })
   const [metodoPago, setMetodoPago] = useState('efectivo')
   const [enviando, setEnviando] = useState(false)
   const [resultado, setResultado] = useState(null)
@@ -1023,25 +1023,64 @@ export default function POS({ session }) {
     }
   }
 
+  // Consulta CUI/DPI (personas naturales). 13 digitos. Devuelve nombre + flag
+  // fallecido (alerta amarilla — no bloquea la venta).
+  async function consultarDpi(dpiArg) {
+    const dpi = String(dpiArg ?? receptor.nit).replace(/\D/g, '')
+    if (!dpi || dpi.length !== 13) return
+    if (dpi === ultimoNitConsultado.current) return
+    setConsultando(true); setNitMsg(null)
+    ultimoNitConsultado.current = dpi
+    try {
+      const r = await apiFetch(`/api/fel/consultar-cui?cui=${encodeURIComponent(dpi)}`)
+      const j = await r.json()
+      if (r.ok && j.receptor?.nombre) {
+        setReceptor(rec => ({ ...rec, nombre: j.receptor.nombre }))
+        if (j.fallecido) {
+          setNitMsg(j.mensaje || '⚠️ La persona figura como FALLECIDA en RENAP')
+        } else {
+          setNitMsg(null)
+        }
+      } else if (r.ok) {
+        setNitMsg(j.mensaje || 'DPI no encontrado — ingresá el nombre manualmente')
+      } else {
+        setNitMsg(j.error || 'No se pudo consultar el DPI — ingresá el nombre manualmente')
+      }
+    } catch (e) {
+      setNitMsg('Sin conexión al RENAP — ingresá el nombre manualmente')
+    } finally {
+      setConsultando(false)
+    }
+  }
+
   // Debounce automático: consulta 600 ms despues de que el usuario dejo de
-  // tipear, si el NIT cambio. Si pierde foco (onBlur del input) se gatilla
-  // inmediato. Validacion: 5+ caracteres tras normalizar.
+  // tipear, si el NIT/DPI cambio. Si pierde foco (onBlur del input) se gatilla
+  // inmediato. Validacion: 5+ chars para NIT, 13 exactos para DPI.
   useEffect(() => {
     if (debounceTimer.current) clearTimeout(debounceTimer.current)
-    const nit = normalizarNit(receptor.nit)
-    if (!nit || nit === 'CF' || nit.length < 5) return
-    if (nit === ultimoNitConsultado.current) return
-    debounceTimer.current = setTimeout(() => {
-      consultarNit(nit)
-    }, 600)
+    const id = String(receptor.nit || '').replace(/\D/g, '')
+    if (receptor.modo === 'dpi') {
+      if (id.length !== 13) return
+      if (id === ultimoNitConsultado.current) return
+      debounceTimer.current = setTimeout(() => consultarDpi(id), 600)
+    } else if (receptor.modo === 'nit') {
+      const nit = normalizarNit(receptor.nit)
+      if (!nit || nit === 'CF' || nit.length < 5) return
+      if (nit === ultimoNitConsultado.current) return
+      debounceTimer.current = setTimeout(() => consultarNit(nit), 600)
+    }
     return () => debounceTimer.current && clearTimeout(debounceTimer.current)
-  }, [receptor.nit])
+  }, [receptor.nit, receptor.modo])
 
-  function setNitMode(esCF) {
-    ultimoNitConsultado.current = ''   // resetear memo al cambiar de modo
+  // Cambia entre los 3 modos del receptor: cf | nit | dpi.
+  function setReceptorModo(modo) {
+    ultimoNitConsultado.current = ''
     setNitMsg(null)
-    if (esCF) setReceptor({ nit: 'CF', nombre: 'CONSUMIDOR FINAL', email: '' })
-    else setReceptor(r => ({ ...r, nit: '', nombre: '' }))
+    if (modo === 'cf') {
+      setReceptor({ nit: 'CF', nombre: 'CONSUMIDOR FINAL', email: '', modo: 'cf' })
+    } else {
+      setReceptor(r => ({ ...r, nit: '', nombre: '', modo }))
+    }
   }
 
   async function cobrar() {
@@ -1681,27 +1720,37 @@ export default function POS({ session }) {
           <div className="px-5 py-4 border-t border-gray-100 space-y-3">
             <div className="text-sm uppercase tracking-wider text-gray-600 font-bold">Receptor</div>
             <div className="flex gap-1.5 bg-gray-100 p-1.5 rounded-xl">
-              <button onClick={() => setNitMode(true)}
-                className={`flex-1 text-base py-4 rounded-lg font-bold transition-colors ${
-                  receptor.nit === 'CF' ? 'bg-white shadow-sm text-julia-red' : 'text-gray-500'
+              <button onClick={() => setReceptorModo('cf')}
+                className={`flex-1 text-sm py-3 rounded-lg font-bold transition-colors ${
+                  receptor.modo === 'cf' ? 'bg-white shadow-sm text-julia-red' : 'text-gray-500'
                 }`}>
-                Consumidor final
+                Cons. final
               </button>
-              <button onClick={() => setNitMode(false)}
-                className={`flex-1 text-base py-4 rounded-lg font-bold transition-colors ${
-                  receptor.nit !== 'CF' ? 'bg-white shadow-sm text-julia-red' : 'text-gray-500'
+              <button onClick={() => setReceptorModo('nit')}
+                className={`flex-1 text-sm py-3 rounded-lg font-bold transition-colors ${
+                  receptor.modo === 'nit' ? 'bg-white shadow-sm text-julia-red' : 'text-gray-500'
                 }`}>
                 Con NIT
               </button>
+              <button onClick={() => setReceptorModo('dpi')}
+                className={`flex-1 text-sm py-3 rounded-lg font-bold transition-colors ${
+                  receptor.modo === 'dpi' ? 'bg-white shadow-sm text-julia-red' : 'text-gray-500'
+                }`}>
+                Con DPI
+              </button>
             </div>
-            {receptor.nit !== 'CF' && (
+            {receptor.modo !== 'cf' && (
               <div className="space-y-2.5">
                 <div className="relative">
-                  <input type="text" placeholder="NIT (sin guiones)" value={receptor.nit}
+                  <input type="text"
+                    placeholder={receptor.modo === 'dpi' ? 'DPI (13 dígitos)' : 'NIT (sin guiones)'}
+                    value={receptor.nit}
                     onChange={e => setReceptor(r => ({ ...r, nit: e.target.value }))}
-                    onBlur={() => consultarNit(receptor.nit)}
-                    className="w-full px-4 py-3.5 text-base border-2 border-gray-200 rounded-lg focus:outline-none focus:border-julia-red pr-11"
-                    inputMode="text" autoComplete="off" />
+                    onBlur={() => receptor.modo === 'dpi' ? consultarDpi(receptor.nit) : consultarNit(receptor.nit)}
+                    className="w-full px-4 py-3.5 text-base font-mono border-2 border-gray-200 rounded-lg focus:outline-none focus:border-julia-red pr-11"
+                    inputMode={receptor.modo === 'dpi' ? 'numeric' : 'text'}
+                    maxLength={receptor.modo === 'dpi' ? 13 : 20}
+                    autoComplete="off" />
                   {consultando ? (
                     <span className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 border-2 border-gray-200 border-t-julia-red rounded-full animate-spin" title="Consultando RTU…" />
                   ) : (
