@@ -1738,7 +1738,7 @@ export default function POS({ session }) {
               <div className="space-y-3">
                 <div className="bg-blue-50 border-2 border-blue-300 rounded-xl p-4 space-y-2.5">
                   <div className="text-sm uppercase tracking-wider text-blue-700 font-bold mb-1">
-                    ✂️ {pagosDivididos.length} pagos divididos
+                    {pagosDivididos.length} pagos divididos
                   </div>
                   {pagosDivididos.map((p, i) => (
                     <div key={i} className="flex justify-between items-center text-lg bg-white rounded-lg px-3 py-2.5 border border-blue-200">
@@ -1776,8 +1776,8 @@ export default function POS({ session }) {
                 {carrito.length > 0 && (
                   <button
                     onClick={() => setMostrarDividirPago(true)}
-                    className="w-full mt-3 py-4 text-base font-bold rounded-xl bg-blue-50 text-blue-700 border-2 border-blue-200 hover:bg-blue-100 hover:border-blue-300 transition-colors flex items-center justify-center gap-2">
-                    ✂️ Dividir pago en varios métodos
+                    className="w-full mt-3 py-4 text-base font-bold rounded-xl bg-blue-50 text-blue-700 border-2 border-blue-200 hover:bg-blue-100 hover:border-blue-300 transition-colors flex items-center justify-center">
+                    Dividir pago
                   </button>
                 )}
               </>
