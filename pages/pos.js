@@ -825,6 +825,7 @@ export default function POS({ session }) {
   const [carrito, setCarrito] = useState([])  // [{variant_id, descripcion, cantidad, precio_unitario, descuenta_insumos, receta_id?}]
   const [receptor, setReceptor] = useState({ nit: 'CF', nombre: 'CONSUMIDOR FINAL', email: '', modo: 'cf' })
   const [metodoPago, setMetodoPago] = useState('efectivo')
+  const [montoRecibido, setMontoRecibido] = useState(0)  // calculadora vuelto efectivo
   const [enviando, setEnviando] = useState(false)
   const [resultado, setResultado] = useState(null)
   const [consultando, setConsultando] = useState(false)
@@ -1244,6 +1245,7 @@ export default function POS({ session }) {
     setCarrito([])
     setReceptor({ nit: 'CF', nombre: 'CONSUMIDOR FINAL', email: '' })
     setMetodoPago('efectivo')
+    setMontoRecibido(0)
     setPagosDivididos(null)
     setResultado(null)
     setErr(null)
@@ -1281,6 +1283,7 @@ export default function POS({ session }) {
     setCarrito([])
     setReceptor({ nit: 'CF', nombre: 'CONSUMIDOR FINAL', email: '' })
     setMetodoPago('efectivo')
+    setMontoRecibido(0)
     setMostrarGuardarPedido(false)
     flashToast(`Pedido "${referencia}" guardado en bandeja`)
     recargarPedidos()
@@ -1821,6 +1824,64 @@ export default function POS({ session }) {
                       }`}>{m.label}</button>
                   ))}
                 </div>
+                {/* Calculadora de vuelto — solo cuando efectivo + hay items */}
+                {metodoPago === 'efectivo' && carrito.length > 0 && (
+                  <div className="mt-3 p-3 bg-gray-50 border-2 border-gray-200 rounded-xl">
+                    <div className="flex items-center justify-between mb-2">
+                      <label className="text-sm font-semibold text-gray-700">Recibido</label>
+                      <button
+                        type="button"
+                        onClick={() => setMontoRecibido(0)}
+                        className="text-xs text-gray-500 hover:text-julia-red font-semibold underline">
+                        Limpiar
+                      </button>
+                    </div>
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="text-lg font-bold text-gray-700">Q</span>
+                      <input
+                        type="number"
+                        inputMode="decimal"
+                        step="0.01"
+                        min="0"
+                        value={montoRecibido === 0 ? '' : montoRecibido}
+                        onChange={e => {
+                          const v = parseFloat(e.target.value)
+                          setMontoRecibido(Number.isFinite(v) && v >= 0 ? v : 0)
+                        }}
+                        placeholder="0.00"
+                        className="flex-1 text-2xl font-bold tabular-nums px-3 py-2 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-julia-red text-right" />
+                    </div>
+                    <div className="grid grid-cols-6 gap-1.5 mb-2">
+                      {[5, 10, 20, 50, 100, 200].map(d => (
+                        <button
+                          key={d}
+                          type="button"
+                          onClick={() => setMontoRecibido(prev => Math.round((Number(prev || 0) + d) * 100) / 100)}
+                          className="py-2 text-sm font-bold bg-white border-2 border-gray-300 rounded-lg hover:border-julia-red hover:bg-red-50 active:scale-95 transition-all">
+                          Q{d}
+                        </button>
+                      ))}
+                    </div>
+                    {montoRecibido > 0 && (
+                      <div className={`flex items-center justify-between px-3 py-2 rounded-lg ${
+                        montoRecibido >= totales.total
+                          ? 'bg-green-50 border-2 border-green-200'
+                          : 'bg-red-50 border-2 border-red-200'
+                      }`}>
+                        <span className={`text-sm font-bold ${
+                          montoRecibido >= totales.total ? 'text-green-800' : 'text-red-800'
+                        }`}>
+                          {montoRecibido >= totales.total ? 'Vuelto' : 'Falta'}
+                        </span>
+                        <span className={`text-xl font-bold tabular-nums ${
+                          montoRecibido >= totales.total ? 'text-green-800' : 'text-red-800'
+                        }`}>
+                          {fmtQ(Math.abs(Math.round((montoRecibido - totales.total) * 100) / 100))}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                )}
                 {/* Botón "Dividir pago" — primario y grande para Sunmi táctil */}
                 {carrito.length > 0 && (
                   <button
