@@ -938,6 +938,47 @@ export default function POS({ session }) {
     recargarPedidos()
   }, [session])
 
+  // ─────────────────────────────────────────────────────────────────────────
+  // Realtime — escuchar nuevos pedidos de KIOSKO y alertar al cajero
+  // Cuando entra un pedido_pendientes con origen='kiosko', sonamos beep +
+  // mostramos toast clickeable que carga el pedido al carrito.
+  // ─────────────────────────────────────────────────────────────────────────
+  useEffect(() => {
+    if (!session || !perfil) return
+    const channel = supabase
+      .channel('kiosko-pedidos-realtime')
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'pedidos_pendientes', filter: "origen=eq.kiosko" },
+        (payload) => {
+          const nuevo = payload.new
+          if (!nuevo) return
+          // Beep para alertar
+          try {
+            const audioCtx = new (window.AudioContext || window.webkitAudioContext)()
+            const o = audioCtx.createOscillator()
+            const g = audioCtx.createGain()
+            o.type = 'sine'; o.frequency.value = 880; g.gain.value = 0.2
+            o.connect(g); g.connect(audioCtx.destination)
+            o.start(); o.stop(audioCtx.currentTime + 0.18)
+            setTimeout(() => {
+              const o2 = audioCtx.createOscillator()
+              const g2 = audioCtx.createGain()
+              o2.type = 'sine'; o2.frequency.value = 1100; g2.gain.value = 0.2
+              o2.connect(g2); g2.connect(audioCtx.destination)
+              o2.start(); o2.stop(audioCtx.currentTime + 0.2)
+            }, 180)
+          } catch (_) {}
+          // Toast simple — el cajero ve y va a la bandeja a cargar
+          flashToast(`🛎️ Nueva orden ${nuevo.referencia} — Q ${Number(nuevo.total_estimado || 0).toFixed(2)} — Mirá la bandeja`)
+          // Refrescar bandeja en background para que aparezca cuando la abra
+          recargarPedidos()
+        },
+      )
+      .subscribe()
+    return () => { supabase.removeChannel(channel) }
+  }, [session, perfil])
+
   const esAdmin = perfil?.rol === 'admin'
   const esCajero = perfil?.rol === 'cajero'
 
