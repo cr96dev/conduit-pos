@@ -828,6 +828,10 @@ export default function POS({ session }) {
   const [montoRecibido, setMontoRecibido] = useState(0)  // calculadora vuelto efectivo
   const [enviando, setEnviando] = useState(false)
   const [resultado, setResultado] = useState(null)
+  // Payload de comanda guardado para poder imprimirla bajo demanda desde
+  // PantallaExito (boton manual). Se arma durante el cobro y se guarda
+  // junto con el resultado.
+  const [payloadComanda, setPayloadComanda] = useState(null)
   const [consultando, setConsultando] = useState(false)
   const [nitMsg, setNitMsg] = useState(null)        // 'NIT no encontrado en RTU' o null
   const [mostrarHistorial, setMostrarHistorial] = useState(false)
@@ -1236,41 +1240,35 @@ export default function POS({ session }) {
         const r = await window.JuliaPOS.printTicket(payload)
         console.log('[POS] printTicket result:', r)
 
-        // ---- COMANDA (segundo papel) ----
-        // Se imprime SIEMPRE después del ticket, con la lista pelada de
-        // items (sin precios, sin logo, sin QR) para que el mostrador y
-        // la barista vean qué armar. Best-effort: si falla, no rompe.
-        try {
-          const refComanda = (f.uuid_sat || '').slice(-6).toUpperCase() || String(f.numero_sat || '').slice(-6)
-          const comandaPayload = {
-            ...payload,
-            esComanda: true,
-            numeroComanda: refComanda,
-            // En comanda no van precios — pero el wrapper igual los lee
-            // para mostrar cantidad. Mandamos items con precio=0 para que
-            // un wrapper viejo (pre-0.4.3) no muestre cifras absurdas.
-            items: carrito.map(l => ({
-              descripcion: fusionarDesc(l),
-              cantidad: String(l.cantidad),
-              precioUnitario: 0,
-              subtotal: 0,
-            })),
-            totalGravado: 0,
-            iva: 0,
-            total: 0,
-            uuidSat: null,
-            serieSat: null,
-            numeroSat: null,
-            certificadorNombre: null,
-            certificadorNit: null,
-            fechaCertificacion: null,
-            textoFooter: null,
-          }
-          const rc = await window.JuliaPOS.printTicket(comandaPayload)
-          console.log('[POS] printComanda result:', rc)
-        } catch (eC) {
-          console.warn('[POS] printComanda fallo (no crashea venta):', eC?.message || eC)
-        }
+        // ---- COMANDA bajo demanda ----
+        // El D3 Mini no tiene cuchilla automatica — solo barra rasgable.
+        // Si imprimimos ticket+comanda automatico, salen pegados y al
+        // cajero no le queda claro donde rasgar.
+        // En su lugar guardamos el payload de comanda en state y
+        // PantallaExito muestra un boton 'Imprimir comanda' que el
+        // cajero toca DESPUES de rasgar el ticket de venta.
+        const refComanda = (f.uuid_sat || '').slice(-6).toUpperCase() || String(f.numero_sat || '').slice(-6)
+        setPayloadComanda({
+          ...payload,
+          esComanda: true,
+          numeroComanda: refComanda,
+          items: carrito.map(l => ({
+            descripcion: fusionarDesc(l),
+            cantidad: String(l.cantidad),
+            precioUnitario: 0,
+            subtotal: 0,
+          })),
+          totalGravado: 0,
+          iva: 0,
+          total: 0,
+          uuidSat: null,
+          serieSat: null,
+          numeroSat: null,
+          certificadorNombre: null,
+          certificadorNit: null,
+          fechaCertificacion: null,
+          textoFooter: null,
+        })
       }
     } catch (e) {
       console.warn('[POS] printTicket fallo (no crashea venta):', e?.message || e)
@@ -1284,6 +1282,7 @@ export default function POS({ session }) {
     setMontoRecibido(0)
     setPagosDivididos(null)
     setResultado(null)
+    setPayloadComanda(null)
     setErr(null)
     setMostrarCarritoMobile(false)
     setPedidoEditando(null)  // si veniamos de un pedido, salir del modo edicion
@@ -1490,7 +1489,7 @@ export default function POS({ session }) {
 
       {/* Resultado de venta exitosa: pantalla completa con detalle */}
       {resultado && resultado.ok && (
-        <PantallaExito resultado={resultado} onNueva={nuevaVenta} />
+        <PantallaExito resultado={resultado} payloadComanda={payloadComanda} onNueva={nuevaVenta} />
       )}
 
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_440px] gap-0 min-h-[calc(100vh-3.5rem)] bg-gray-50">
@@ -2044,10 +2043,29 @@ export default function POS({ session }) {
   )
 }
 
-function PantallaExito({ resultado, onNueva }) {
+function PantallaExito({ resultado, payloadComanda, onNueva }) {
   const f = resultado.factura
   const comandaCreada = resultado.comanda?.ok && resultado.comanda?.comanda
   const [verDetalles, setVerDetalles] = useState(false)
+  const [imprimiendoComanda, setImprimiendoComanda] = useState(false)
+  const [comandaImpresa, setComandaImpresa] = useState(false)
+  const tieneBridge = typeof window !== 'undefined' && window.JuliaPOS && window.JuliaPOS.printTicket
+
+  async function imprimirComanda() {
+    if (!payloadComanda || !tieneBridge) return
+    setImprimiendoComanda(true)
+    try {
+      await window.JuliaPOS.printTicket(payloadComanda)
+      setComandaImpresa(true)
+    } catch (e) {
+      console.warn('[POS] imprimirComanda fallo:', e?.message || e)
+      // Permitir reintentar
+      setComandaImpresa(false)
+    } finally {
+      setImprimiendoComanda(false)
+    }
+  }
+
   return (
     <div className="fixed inset-0 z-50 bg-gradient-to-b from-gray-50 to-white flex items-center justify-center p-6 overflow-y-auto">
       <div className="w-full max-w-lg text-center flex flex-col items-center">
@@ -2083,6 +2101,35 @@ function PantallaExito({ resultado, onNueva }) {
             detail={resultado.asiento?.ok ? `#${resultado.asiento.numero}` : '⚠'} />
           {comandaCreada && <StatusChip ok={true} label="Barra" detail="enviada" />}
         </div>
+
+        {/* Botón Imprimir comanda — solo si hay payload y wrapper presente */}
+        {payloadComanda && tieneBridge && (
+          <button
+            onClick={imprimirComanda}
+            disabled={imprimiendoComanda}
+            className={`w-full max-w-sm block px-8 py-5 mb-3 text-lg font-bold rounded-2xl active:scale-[0.98] transition-all shadow-lg flex items-center justify-center gap-3 ${
+              comandaImpresa
+                ? 'bg-emerald-50 text-emerald-700 border-2 border-emerald-200 hover:bg-emerald-100'
+                : 'bg-amber-500 text-white hover:bg-amber-600 ring-4 ring-amber-200/50'
+            } ${imprimiendoComanda ? 'opacity-60 cursor-wait' : ''}`}>
+            {imprimiendoComanda ? (
+              <>
+                <div className="w-6 h-6 border-2 border-white/40 border-t-white rounded-full animate-spin"></div>
+                <span>Imprimiendo…</span>
+              </>
+            ) : comandaImpresa ? (
+              <>
+                <span className="text-2xl">✓</span>
+                <span>Comanda impresa — repetir</span>
+              </>
+            ) : (
+              <>
+                <span className="text-2xl">🖨️</span>
+                <span>Imprimir comanda</span>
+              </>
+            )}
+          </button>
+        )}
 
         {/* Botón Nueva venta grande, centrado */}
         <button onClick={onNueva}
