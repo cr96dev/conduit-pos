@@ -81,7 +81,9 @@ export default async function handler(req, res) {
           jsonrpc: '2.0',
           id,
           result: {
-            content: [{ type: 'text', text: JSON.stringify(result, null, 2) }],
+            // JSON sin indentacion para evitar newlines literales que
+            // rompen parsers estrictos (Python json.loads sin strict=False).
+            content: [{ type: 'text', text: JSON.stringify(result) }],
             isError: result?.ok === false,
           },
         })
