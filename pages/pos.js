@@ -1826,58 +1826,80 @@ export default function POS({ session }) {
                 </div>
                 {/* Calculadora de vuelto — solo cuando efectivo + hay items */}
                 {metodoPago === 'efectivo' && carrito.length > 0 && (
-                  <div className="mt-3 p-3 bg-gray-50 border-2 border-gray-200 rounded-xl">
-                    <div className="flex items-center justify-between mb-2">
-                      <label className="text-sm font-semibold text-gray-700">Recibido</label>
-                      <button
-                        type="button"
-                        onClick={() => setMontoRecibido(0)}
-                        className="text-xs text-gray-500 hover:text-julia-red font-semibold underline">
-                        Limpiar
-                      </button>
+                  <div className="mt-4 bg-white border-2 border-gray-200 rounded-2xl overflow-hidden shadow-sm">
+                    {/* Header con label e input */}
+                    <div className="px-4 pt-4 pb-3 bg-gradient-to-b from-gray-50 to-white">
+                      <div className="flex items-center justify-between mb-2">
+                        <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">
+                          Efectivo recibido
+                        </label>
+                        {montoRecibido > 0 && (
+                          <button
+                            type="button"
+                            onClick={() => setMontoRecibido(0)}
+                            className="text-xs font-bold text-gray-400 hover:text-julia-red px-2 py-1 rounded-md hover:bg-red-50 transition-colors">
+                            ✕ Limpiar
+                          </button>
+                        )}
+                      </div>
+                      <div className="relative">
+                        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-2xl font-bold text-gray-400 pointer-events-none">Q</span>
+                        <input
+                          type="number"
+                          inputMode="decimal"
+                          step="0.01"
+                          min="0"
+                          value={montoRecibido === 0 ? '' : montoRecibido}
+                          onChange={e => {
+                            const v = parseFloat(e.target.value)
+                            setMontoRecibido(Number.isFinite(v) && v >= 0 ? v : 0)
+                          }}
+                          placeholder="0.00"
+                          className="w-full text-3xl font-bold tabular-nums pl-10 pr-4 py-3 bg-gray-50 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-julia-red focus:bg-white focus:ring-4 focus:ring-julia-red/10 text-right transition-all" />
+                      </div>
                     </div>
-                    <div className="flex items-center gap-2 mb-2">
-                      <span className="text-lg font-bold text-gray-700">Q</span>
-                      <input
-                        type="number"
-                        inputMode="decimal"
-                        step="0.01"
-                        min="0"
-                        value={montoRecibido === 0 ? '' : montoRecibido}
-                        onChange={e => {
-                          const v = parseFloat(e.target.value)
-                          setMontoRecibido(Number.isFinite(v) && v >= 0 ? v : 0)
-                        }}
-                        placeholder="0.00"
-                        className="flex-1 text-2xl font-bold tabular-nums px-3 py-2 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-julia-red text-right" />
+
+                    {/* Botones de denominación — 3x2 grandes para tap */}
+                    <div className="px-4 pb-3">
+                      <div className="grid grid-cols-3 gap-2">
+                        {[5, 10, 20, 50, 100, 200].map(d => (
+                          <button
+                            key={d}
+                            type="button"
+                            onClick={() => setMontoRecibido(prev => Math.round((Number(prev || 0) + d) * 100) / 100)}
+                            className="py-3.5 text-base font-bold bg-white border-2 border-gray-200 rounded-xl text-gray-700 hover:border-julia-red hover:text-julia-red hover:bg-red-50 active:scale-95 transition-all shadow-sm">
+                            + Q{d}
+                          </button>
+                        ))}
+                      </div>
                     </div>
-                    <div className="grid grid-cols-6 gap-1.5 mb-2">
-                      {[5, 10, 20, 50, 100, 200].map(d => (
-                        <button
-                          key={d}
-                          type="button"
-                          onClick={() => setMontoRecibido(prev => Math.round((Number(prev || 0) + d) * 100) / 100)}
-                          className="py-2 text-sm font-bold bg-white border-2 border-gray-300 rounded-lg hover:border-julia-red hover:bg-red-50 active:scale-95 transition-all">
-                          Q{d}
-                        </button>
-                      ))}
-                    </div>
+
+                    {/* Display de resultado — banner grande prominente */}
                     {montoRecibido > 0 && (
-                      <div className={`flex items-center justify-between px-3 py-2 rounded-lg ${
+                      <div className={`px-4 py-3.5 border-t-2 ${
                         montoRecibido >= totales.total
-                          ? 'bg-green-50 border-2 border-green-200'
-                          : 'bg-red-50 border-2 border-red-200'
+                          ? 'bg-gradient-to-r from-green-50 to-emerald-50 border-green-200'
+                          : 'bg-gradient-to-r from-red-50 to-orange-50 border-red-200'
                       }`}>
-                        <span className={`text-sm font-bold ${
-                          montoRecibido >= totales.total ? 'text-green-800' : 'text-red-800'
-                        }`}>
-                          {montoRecibido >= totales.total ? 'Vuelto' : 'Falta'}
-                        </span>
-                        <span className={`text-xl font-bold tabular-nums ${
-                          montoRecibido >= totales.total ? 'text-green-800' : 'text-red-800'
-                        }`}>
-                          {fmtQ(Math.abs(Math.round((montoRecibido - totales.total) * 100) / 100))}
-                        </span>
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <span className={`text-xl ${
+                              montoRecibido >= totales.total ? 'text-green-600' : 'text-red-600'
+                            }`}>
+                              {montoRecibido >= totales.total ? '✓' : '⚠'}
+                            </span>
+                            <span className={`text-sm font-bold uppercase tracking-wide ${
+                              montoRecibido >= totales.total ? 'text-green-700' : 'text-red-700'
+                            }`}>
+                              {montoRecibido >= totales.total ? 'Vuelto a dar' : 'Falta cobrar'}
+                            </span>
+                          </div>
+                          <span className={`text-3xl font-bold tabular-nums ${
+                            montoRecibido >= totales.total ? 'text-green-700' : 'text-red-700'
+                          }`}>
+                            {fmtQ(Math.abs(Math.round((montoRecibido - totales.total) * 100) / 100))}
+                          </span>
+                        </div>
                       </div>
                     )}
                   </div>
