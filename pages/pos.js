@@ -1235,6 +1235,42 @@ export default function POS({ session }) {
         }
         const r = await window.JuliaPOS.printTicket(payload)
         console.log('[POS] printTicket result:', r)
+
+        // ---- COMANDA (segundo papel) ----
+        // Se imprime SIEMPRE después del ticket, con la lista pelada de
+        // items (sin precios, sin logo, sin QR) para que el mostrador y
+        // la barista vean qué armar. Best-effort: si falla, no rompe.
+        try {
+          const refComanda = (f.uuid_sat || '').slice(-6).toUpperCase() || String(f.numero_sat || '').slice(-6)
+          const comandaPayload = {
+            ...payload,
+            esComanda: true,
+            numeroComanda: refComanda,
+            // En comanda no van precios — pero el wrapper igual los lee
+            // para mostrar cantidad. Mandamos items con precio=0 para que
+            // un wrapper viejo (pre-0.4.3) no muestre cifras absurdas.
+            items: carrito.map(l => ({
+              descripcion: fusionarDesc(l),
+              cantidad: String(l.cantidad),
+              precioUnitario: 0,
+              subtotal: 0,
+            })),
+            totalGravado: 0,
+            iva: 0,
+            total: 0,
+            uuidSat: null,
+            serieSat: null,
+            numeroSat: null,
+            certificadorNombre: null,
+            certificadorNit: null,
+            fechaCertificacion: null,
+            textoFooter: null,
+          }
+          const rc = await window.JuliaPOS.printTicket(comandaPayload)
+          console.log('[POS] printComanda result:', rc)
+        } catch (eC) {
+          console.warn('[POS] printComanda fallo (no crashea venta):', eC?.message || eC)
+        }
       }
     } catch (e) {
       console.warn('[POS] printTicket fallo (no crashea venta):', e?.message || e)
