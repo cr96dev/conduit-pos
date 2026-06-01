@@ -100,8 +100,8 @@ class SunmiPrinter {
             // Usamos sendRAWData (no printText + exitPrinterBuffer) para
             // evitar el auto-kick implicito del firmware Sunmi InnerPrinter.
 
-            // 1. Logo bitmap arriba (no para cierre de turno — es ticket operativo)
-            if (!payload.esCierreTurno) {
+            // 1. Logo bitmap arriba (no para cierre de turno ni comanda — son operativos)
+            if (!payload.esCierreTurno && !payload.esComanda) {
                 logoBitmap?.let { bmp ->
                     try {
                         svc.setAlignment(1, noopCb)
@@ -115,20 +115,20 @@ class SunmiPrinter {
             }
 
             // 2. Cuerpo del ticket (texto ESC/POS, sin cut al final)
-            val texto = if (payload.esCierreTurno) {
-                construirTextoCierreTurno(payload)
-            } else {
-                construirTextoPlano(payload)
+            val texto = when {
+                payload.esComanda -> construirTextoComanda(payload)
+                payload.esCierreTurno -> construirTextoCierreTurno(payload)
+                else -> construirTextoPlano(payload)
             }
             val bytes = wrapEscPosSinCut(texto)
-            Log.d(TAG, "printTicket bytes=${bytes.size} esCierreTurno=${payload.esCierreTurno}")
+            Log.d(TAG, "printTicket bytes=${bytes.size} esCierreTurno=${payload.esCierreTurno} esComanda=${payload.esComanda}")
             svc.sendRAWData(bytes, loggingCb)
 
-            // 3. QR de verificacion SAT — solo en facturas FEL (no en cierre).
+            // 3. QR de verificacion SAT — solo en facturas FEL (no en cierre ni comanda).
             //    El cliente lo escanea y SAT le muestra su factura digital.
             //    URL felpub.c.sat.gob.gt con UUID + NIT emisor + NIT receptor + monto
             //    (Reglas FEL pag. 137). Logo de Julia superpuesto en el centro.
-            if (!payload.esCierreTurno && !payload.uuidSat.isNullOrBlank()) {
+            if (!payload.esCierreTurno && !payload.esComanda && !payload.uuidSat.isNullOrBlank()) {
                 try {
                     val url = construirUrlSat(payload)
                     val qrBmp = generarQRConLogo(url, logoBitmap)
@@ -150,9 +150,10 @@ class SunmiPrinter {
                 0x1D, 0x56, 0x42, 0x00                        // GS V B 0 = partial cut
             ), noopCb)
 
-            // 5. Cashbox: solo en venta-nueva-en-efectivo.
+            // 5. Cashbox: solo en venta-nueva-en-efectivo (NO en comanda — no es cobro).
             val debeAbrirCaja = !payload.esReimpresion
                 && !payload.esCierreTurno
+                && !payload.esComanda
                 && payload.metodoPago?.trim()?.lowercase() == "efectivo"
             if (debeAbrirCaja) {
                 kickCashDrawer(svc)
@@ -421,6 +422,73 @@ class SunmiPrinter {
      *   - total = ventas total
      *   - textoFooter = "Turno #xxx · Cerrado yyy"
      */
+    /**
+     * Texto plano de COMANDA. No es comprobante fiscal — es solo lista
+     * de items para el staff (mostrador, barista) sin precios ni IVA.
+     * Header grande para diferenciar visualmente del ticket de venta.
+     */
+    private fun construirTextoComanda(p: TicketPayload): String {
+        val W = 32
+        fun cen(s: String): String {
+            val pad = ((W - s.length) / 2).coerceAtLeast(0)
+            return " ".repeat(pad) + s
+        }
+        val sep = "=".repeat(W)
+        val sub = "-".repeat(W)
+
+        val sb = StringBuilder()
+
+        // ===== Header grande para que se distinga del ticket =====
+        sb.append(sep).append('\n')
+        sb.append(cen("*** COMANDA ***")).append('\n')
+        p.numeroComanda?.let { sb.append(cen("Ref: $it")).append('\n') }
+        sb.append(sep).append('\n')
+        sb.append('\n')
+
+        // ===== Cabecera operacional =====
+        sb.append("Hora: ${p.fecha}").append('\n')
+        p.cajeroNombre?.let { sb.append("Cajero: $it").append('\n') }
+        // Receptor solo si NO es CF — ayuda a identificar pedidos para llevar
+        if (p.receptorNit != "CF" && p.receptorNombre.isNotBlank()
+            && p.receptorNombre != "CONSUMIDOR FINAL") {
+            sb.append("Cliente: ${p.receptorNombre}").append('\n')
+        }
+        sb.append(sub).append('\n')
+
+        // ===== Items (cantidad x descripcion, sin precios) =====
+        for (item in p.items) {
+            // cantidad va a la izquierda en formato "Nx" para que se vea claro
+            val cantTxt = "${item.cantidad}x"
+            val maxDescLen = W - cantTxt.length - 1
+            // Si la descripcion es muy larga, partir en multiples lineas
+            val desc = item.descripcion.trim()
+            if (desc.length <= maxDescLen) {
+                sb.append("$cantTxt ${desc}").append('\n')
+            } else {
+                // Primer linea con cantidad
+                sb.append("$cantTxt ${desc.substring(0, maxDescLen)}").append('\n')
+                // Continuacion(es) con sangria
+                var idx = maxDescLen
+                val indent = " ".repeat(cantTxt.length + 1)
+                val contMax = W - indent.length
+                while (idx < desc.length) {
+                    val end = (idx + contMax).coerceAtMost(desc.length)
+                    sb.append(indent).append(desc.substring(idx, end)).append('\n')
+                    idx = end
+                }
+            }
+        }
+        sb.append(sub).append('\n')
+
+        // ===== Total items (no monetario) =====
+        val totalUnidades = p.items.sumOf { it.cantidad.toDoubleOrNull() ?: 0.0 }
+        sb.append(cen("Total items: ${totalUnidades.toInt()}")).append('\n')
+        sb.append('\n')
+        sb.append(cen("--- ARMAR Y ENTREGAR ---")).append('\n')
+
+        return sb.toString()
+    }
+
     private fun construirTextoCierreTurno(p: TicketPayload): String {
         val W = 32
         fun cen(s: String): String {
@@ -701,6 +769,16 @@ data class TicketPayload(
     val esCierreTurno: Boolean = false,
     val fechaApertura: String? = null,
     val tipo: String? = null,             // 'cierre_turno' u otros marcadores futuros
+
+    // Marca de comanda interna (NO es comprobante fiscal). Si esComanda=true:
+    // - Sin logo
+    // - Sin QR SAT
+    // - Sin precios ni IVA (solo lista de items con cantidad)
+    // - Header grande "*** COMANDA ***" para diferenciarla del ticket
+    // - Sin cashbox (no es cobro)
+    // Util para que el mostrador / barista vea que armar.
+    val esComanda: Boolean = false,
+    val numeroComanda: String? = null,    // referencia corta (ej. ultimos 4 del UUID)
 
     // Compatibilidad con payloads antiguos (no se usan)
     val merchantSubtitle: String? = null,
