@@ -390,6 +390,40 @@ function PantallaConfirmar({
   carrito, totales, receptor, setReceptor, mostrarFactura, setMostrarFactura,
   enviando, onConfirmar, onVolver,
 }) {
+  const [consultando, setConsultando] = useState(false)
+  const [nitMsg, setNitMsg] = useState(null)
+  const ultimoConsultado = useRef('')
+
+  async function consultarReceptor(valor) {
+    const limpio = String(valor || '').replace(/\D/g, '')
+    if (!limpio || limpio === ultimoConsultado.current) return
+    ultimoConsultado.current = limpio
+    setConsultando(true)
+    setNitMsg(null)
+    try {
+      // Si tiene 13 dígitos → DPI/CUI (persona natural)
+      // Caso contrario → NIT empresarial
+      const esDpi = limpio.length === 13
+      const url = esDpi
+        ? `/api/fel/consultar-cui-kiosko?cui=${encodeURIComponent(limpio)}`
+        : `/api/fel/consultar-nit-kiosko?nit=${encodeURIComponent(limpio)}`
+      const r = await fetch(url)
+      const j = await r.json()
+      if (r.ok && j.receptor?.nombre) {
+        setReceptor(rec => ({ ...rec, nombre: j.receptor.nombre }))
+        if (j.fallecido) setNitMsg('⚠️ La persona figura como fallecida en RENAP')
+      } else if (r.ok) {
+        setNitMsg(j.mensaje || (esDpi ? 'CUI no encontrado' : 'NIT no encontrado'))
+      } else {
+        setNitMsg(j.error || 'No se pudo consultar')
+      }
+    } catch (e) {
+      setNitMsg('Sin conexión — ingresá el nombre manual')
+    } finally {
+      setConsultando(false)
+    }
+  }
+
   return (
     <div className="min-h-screen p-6 max-w-3xl mx-auto">
       <button onClick={onVolver}
@@ -431,20 +465,33 @@ function PantallaConfirmar({
         </div>
         {mostrarFactura && (
           <div className="space-y-3 mt-4">
-            <input
-              type="text"
-              placeholder="NIT o DPI"
-              value={receptor.nit}
-              onChange={e => setReceptor(r => ({ ...r, nit: e.target.value }))}
-              className="w-full px-5 py-4 text-2xl border-2 border-gray-200 rounded-2xl focus:outline-none focus:border-julia-red" />
+            <div className="relative">
+              <input
+                type="text"
+                inputMode="numeric"
+                placeholder="NIT o DPI"
+                value={receptor.nit === 'CF' ? '' : receptor.nit}
+                onChange={e => setReceptor(r => ({ ...r, nit: e.target.value }))}
+                onBlur={e => consultarReceptor(e.target.value)}
+                className="w-full px-5 py-4 text-2xl border-2 border-gray-200 rounded-2xl focus:outline-none focus:border-julia-red" />
+              {consultando && (
+                <div className="absolute right-4 top-1/2 -translate-y-1/2 w-6 h-6 border-2 border-julia-red/30 border-t-julia-red rounded-full animate-spin"></div>
+              )}
+            </div>
+            {nitMsg && (
+              <div className="text-base text-amber-700 bg-amber-50 border border-amber-200 rounded-xl px-4 py-2.5">
+                {nitMsg}
+              </div>
+            )}
             <input
               type="text"
               placeholder="Nombre completo"
-              value={receptor.nombre}
+              value={receptor.nombre === 'CONSUMIDOR FINAL' ? '' : receptor.nombre}
               onChange={e => setReceptor(r => ({ ...r, nombre: e.target.value }))}
               className="w-full px-5 py-4 text-2xl border-2 border-gray-200 rounded-2xl focus:outline-none focus:border-julia-red" />
             <p className="text-base text-gray-500">
-              Si no tipeás nada, sale como CONSUMIDOR FINAL.
+              Tipeá tu NIT o DPI (13 dígitos) y el nombre se autocompleta.
+              Si no, sale como CONSUMIDOR FINAL.
             </p>
           </div>
         )}
