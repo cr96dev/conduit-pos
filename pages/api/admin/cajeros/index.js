@@ -14,7 +14,7 @@ export default async function handler(req, res) {
   if (req.method === 'GET') {
     const { data, error } = await auth.admin
       .from('perfiles')
-      .select('id, email, nombre_completo, activo, created_at, pin_updated_at')
+      .select('id, email, nombre_completo, activo, created_at, pin_updated_at, es_kiosko')
       .eq('rol', 'cajero')
       .order('nombre_completo', { ascending: true })
     if (error) return res.status(500).json({ error: error.message })
@@ -42,13 +42,15 @@ export default async function handler(req, res) {
   }
 
   if (req.method === 'POST') {
-    const { nombre_completo, email, pin } = req.body || {}
+    const { nombre_completo, email, pin, es_kiosko } = req.body || {}
     if (!nombre_completo?.trim()) return res.status(400).json({ error: 'nombre_completo requerido' })
     if (!email?.trim() || !email.includes('@')) return res.status(400).json({ error: 'email invalido' })
 
     const pinFinal = pin || generarPinAleatorio()
     const errFormato = validarFormatoPin(pinFinal)
     if (errFormato) return res.status(400).json({ error: errFormato })
+
+    const esKioskoFlag = es_kiosko === true
 
     // 1. Crear usuario auth (email confirmado)
     const passwordInicial = require('crypto').randomBytes(24).toString('hex')
@@ -73,6 +75,7 @@ export default async function handler(req, res) {
       pin_hash: hash,
       pin_salt: salt,
       pin_updated_at: new Date().toISOString(),
+      es_kiosko: esKioskoFlag,
     })
     if (perfilErr) {
       // Rollback: borrar usuario auth recien creado para no dejar huerfano.
@@ -82,7 +85,7 @@ export default async function handler(req, res) {
 
     return res.status(200).json({
       ok: true,
-      cajero: { id: userId, nombre_completo, email, rol: 'cajero' },
+      cajero: { id: userId, nombre_completo, email, rol: 'cajero', es_kiosko: esKioskoFlag },
       pin: pinFinal, // se devuelve UNA SOLA VEZ al admin para que se lo pase al cajero.
     })
   }

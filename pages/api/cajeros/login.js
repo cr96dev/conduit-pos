@@ -63,7 +63,7 @@ export default async function handler(req, res) {
   // 2. Buscar cajero por PIN
   const { data: cajeros, error: qErr } = await admin
     .from('perfiles')
-    .select('id, email, nombre_completo, rol, activo, pin_hash, pin_salt')
+    .select('id, email, nombre_completo, rol, activo, pin_hash, pin_salt, es_kiosko')
     .eq('rol', 'cajero')
     .eq('activo', true)
     .not('pin_hash', 'is', null)
@@ -130,6 +130,7 @@ export default async function handler(req, res) {
       id: cajero.id,
       nombre_completo: cajero.nombre_completo,
       rol: cajero.rol,
+      es_kiosko: !!cajero.es_kiosko,
     },
     session: {
       access_token: sesion.session.access_token,

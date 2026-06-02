@@ -29,6 +29,7 @@ export default function CajerosAdmin({ session }) {
   const [creando, setCreando] = useState(false)
   const [nuevoNombre, setNuevoNombre] = useState('')
   const [nuevoEmail, setNuevoEmail] = useState('')
+  const [nuevoEsKiosko, setNuevoEsKiosko] = useState(false)
 
   // Modal reset PIN
   const [resetCajero, setResetCajero] = useState(null)
@@ -66,13 +67,17 @@ export default function CajerosAdmin({ session }) {
     if (!nuevoNombre.trim() || !nuevoEmail.trim()) { setError('Nombre y email requeridos'); return }
     const r = await apiFetch('/api/admin/cajeros', {
       method: 'POST',
-      body: JSON.stringify({ nombre_completo: nuevoNombre, email: nuevoEmail }),
+      body: JSON.stringify({
+        nombre_completo: nuevoNombre,
+        email: nuevoEmail,
+        es_kiosko: nuevoEsKiosko,
+      }),
     })
     const j = await r.json()
     if (!r.ok) { setError(j.error || 'Error creando cajero'); return }
     setPinRevelado({ cajero: j.cajero, pin: j.pin, tipo: 'creado' })
     setCreando(false)
-    setNuevoNombre(''); setNuevoEmail('')
+    setNuevoNombre(''); setNuevoEmail(''); setNuevoEsKiosko(false)
     cargarTodo()
   }
 
@@ -147,7 +152,14 @@ export default function CajerosAdmin({ session }) {
                 <tbody>
                   {cajeros.map(c => (
                     <tr key={c.id} className="border-t border-gray-100">
-                      <td className="px-4 py-3 text-gray-800">{c.nombre_completo}</td>
+                      <td className="px-4 py-3 text-gray-800">
+                        {c.nombre_completo}
+                        {c.es_kiosko && (
+                          <span className="ml-2 text-[10px] bg-purple-50 text-purple-700 px-2 py-0.5 rounded uppercase tracking-wide align-middle">
+                            Kiosko
+                          </span>
+                        )}
+                      </td>
                       <td className="px-4 py-3 text-gray-500 text-xs">{c.email}</td>
                       <td className="px-4 py-3 text-center">
                         {c.turno_abierto ? (
@@ -244,6 +256,21 @@ export default function CajerosAdmin({ session }) {
                   className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-julia-red" />
                 <div className="text-[10px] text-gray-400 mt-1">El cajero nunca ve este email. Solo usa PIN.</div>
               </div>
+
+              {/* Toggle kiosko: cuando está activo el POS oculta efectivo y bandeja Pedidos Ya */}
+              <label className="flex items-start gap-3 cursor-pointer select-none px-3 py-3 border border-gray-200 rounded-lg hover:bg-gray-50">
+                <input type="checkbox" checked={nuevoEsKiosko}
+                  onChange={e => setNuevoEsKiosko(e.target.checked)}
+                  className="mt-0.5 w-4 h-4 accent-purple-600" />
+                <span>
+                  <span className="block text-sm text-gray-800">Es kiosko de autoservicio</span>
+                  <span className="block text-[11px] text-gray-500 mt-0.5">
+                    El POS oculta el método "Efectivo" y la bandeja de pedidos. Usar
+                    para terminales K2 Mini donde el cliente paga solo con tarjeta o QR.
+                  </span>
+                </span>
+              </label>
+
               <div className="flex justify-end gap-2">
                 <button type="button" onClick={() => setCreando(false)}
                   className="text-sm px-4 py-2 border border-gray-200 rounded-lg hover:bg-gray-50 text-gray-600">
