@@ -897,7 +897,7 @@ export default function POS({ session }) {
       router.push(k ? '/cajero-login' : '/')
       return
     }
-    supabase.from('perfiles').select('id, email, nombre_completo, rol').eq('id', session.user.id).single()
+    supabase.from('perfiles').select('id, email, nombre_completo, rol, es_kiosko').eq('id', session.user.id).single()
       .then(({ data }) => {
         const p = data || { id: session.user.id, email: session.user.email, rol: 'empleado' }
         setPerfil(p)
@@ -938,49 +938,28 @@ export default function POS({ session }) {
     recargarPedidos()
   }, [session])
 
-  // ─────────────────────────────────────────────────────────────────────────
-  // Realtime — escuchar nuevos pedidos de KIOSKO y alertar al cajero
-  // Cuando entra un pedido_pendientes con origen='kiosko', sonamos beep +
-  // mostramos toast clickeable que carga el pedido al carrito.
-  // ─────────────────────────────────────────────────────────────────────────
-  useEffect(() => {
-    if (!session || !perfil) return
-    const channel = supabase
-      .channel('kiosko-pedidos-realtime')
-      .on(
-        'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'pedidos_pendientes', filter: "origen=eq.kiosko" },
-        (payload) => {
-          const nuevo = payload.new
-          if (!nuevo) return
-          // Beep para alertar
-          try {
-            const audioCtx = new (window.AudioContext || window.webkitAudioContext)()
-            const o = audioCtx.createOscillator()
-            const g = audioCtx.createGain()
-            o.type = 'sine'; o.frequency.value = 880; g.gain.value = 0.2
-            o.connect(g); g.connect(audioCtx.destination)
-            o.start(); o.stop(audioCtx.currentTime + 0.18)
-            setTimeout(() => {
-              const o2 = audioCtx.createOscillator()
-              const g2 = audioCtx.createGain()
-              o2.type = 'sine'; o2.frequency.value = 1100; g2.gain.value = 0.2
-              o2.connect(g2); g2.connect(audioCtx.destination)
-              o2.start(); o2.stop(audioCtx.currentTime + 0.2)
-            }, 180)
-          } catch (_) {}
-          // Toast simple — el cajero ve y va a la bandeja a cargar
-          flashToast(`🛎️ Nueva orden ${nuevo.referencia} — Q ${Number(nuevo.total_estimado || 0).toFixed(2)} — Mirá la bandeja`)
-          // Refrescar bandeja en background para que aparezca cuando la abra
-          recargarPedidos()
-        },
-      )
-      .subscribe()
-    return () => { supabase.removeChannel(channel) }
-  }, [session, perfil])
+  // Nota: la suscripción realtime a pedidos de "kiosko separado" se eliminó.
+  // Desde 2026-06-01 el kiosko es un cajero más (PIN propio, flag es_kiosko en
+  // perfil), factura directamente y no genera pedidos pendientes que otro
+  // cajero deba recoger.
 
   const esAdmin = perfil?.rol === 'admin'
   const esCajero = perfil?.rol === 'cajero'
+  // Cajero "Kiosko" (K2 Mini autoservicio): oculta efectivo + bandeja Pedidos Ya
+  const esKioskoCajero = !!perfil?.es_kiosko
+  // Métodos de pago visibles para el cajero actual. En kiosko sacamos efectivo
+  // y Pedidos Ya (no aplican: cliente paga solo con tarjeta o QR/transferencia).
+  const metodosPagoDisponibles = esKioskoCajero
+    ? METODOS_PAGO.filter(m => m.id !== 'efectivo' && m.id !== 'pedidos_ya')
+    : METODOS_PAGO
+
+  // Si entra como kiosko y el método activo no es válido (default 'efectivo'),
+  // forzamos a tarjeta. Solo corre cuando cambia es_kiosko.
+  useEffect(() => {
+    if (esKioskoCajero && !metodosPagoDisponibles.some(m => m.id === metodoPago)) {
+      setMetodoPago('tarjeta')
+    }
+  }, [esKioskoCajero])
 
   const productosFiltrados = useMemo(() => {
     const q = busqueda.trim().toLowerCase()
@@ -1319,7 +1298,8 @@ export default function POS({ session }) {
   function nuevaVenta() {
     setCarrito([])
     setReceptor({ nit: 'CF', nombre: 'CONSUMIDOR FINAL', email: '' })
-    setMetodoPago('efectivo')
+    // En kiosko nunca hay efectivo — default a tarjeta para evitar estado inválido
+    setMetodoPago(esKioskoCajero ? 'tarjeta' : 'efectivo')
     setMontoRecibido(0)
     setPagosDivididos(null)
     setResultado(null)
@@ -1327,7 +1307,7 @@ export default function POS({ session }) {
     setErr(null)
     setMostrarCarritoMobile(false)
     setPedidoEditando(null)  // si veniamos de un pedido, salir del modo edicion
-    recargarPedidos()  // refrescar bandeja despues de cualquier venta
+    if (!esKioskoCajero) recargarPedidos()  // refrescar bandeja despues de cualquier venta
   }
 
   // ===== Handlers de pedidos pendientes =====
@@ -1441,7 +1421,7 @@ export default function POS({ session }) {
   return (
     <POSChrome perfil={perfil} kiosko={kiosko} turno={turno}
       onMostrarHistorial={turno ? () => setMostrarHistorial(true) : null}
-      onMostrarBandeja={turno ? () => { setMostrarBandeja(true); recargarPedidos() } : null}
+      onMostrarBandeja={turno && !esKioskoCajero ? () => { setMostrarBandeja(true); recargarPedidos() } : null}
       pedidosPendientesCount={pedidosPendientes.length}>
       <Head><title>Punto de Venta · Julia Bakery</title></Head>
 
@@ -1891,7 +1871,7 @@ export default function POS({ session }) {
             ) : (
               <>
                 <div className="grid grid-cols-2 gap-2.5">
-                  {METODOS_PAGO.map(m => (
+                  {metodosPagoDisponibles.map(m => (
                     <button key={m.id} onClick={() => setMetodoPago(m.id)}
                       className={`text-base py-5 rounded-xl font-bold transition-all ${
                         metodoPago === m.id
