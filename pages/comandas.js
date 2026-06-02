@@ -135,9 +135,12 @@ export default function Comandas({ session }) {
   const audioCtxRef = useRef(null)
   const ultimoIdRef = useRef(new Set())  // para detectar nuevas y beepear
 
-  // Auth + carga inicial
+  // Auth + carga inicial.
+  // Si no hay sesión, mandar al login de cajero con next=/comandas para que
+  // tras el PIN vuelva acá directo (no al POS). El admin sigue pudiendo entrar
+  // desde el botón "Ingresar como administrador" en /cajero-login.
   useEffect(() => {
-    if (!session) { router.push('/'); return }
+    if (!session) { router.push('/cajero-login?next=/comandas'); return }
     supabase.from('perfiles').select('id, nombre_completo, rol').eq('id', session.user.id).single()
       .then(({ data }) => {
         const p = data || {}

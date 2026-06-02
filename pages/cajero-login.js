@@ -7,6 +7,18 @@ import { useRouter } from 'next/router'
 import Head from 'next/head'
 import { supabase } from '../lib/supabase'
 
+// Devuelve el path interno seguro al que redirigir tras el login.
+// Acepta solo paths internos absolutos ('/comandas', '/pos/algo'). Bloquea
+// URLs externas, protocol-relative ('//evil.com') y paths sospechosos.
+// Default: '/pos' (comportamiento histórico).
+function destinoSeguro(next) {
+  if (typeof next !== 'string' || !next) return '/pos'
+  if (!next.startsWith('/')) return '/pos'
+  if (next.startsWith('//')) return '/pos'      // protocol-relative
+  if (next.includes('\\')) return '/pos'        // backslash tricks
+  return next
+}
+
 export default function CajeroLogin({ session }) {
   const router = useRouter()
   const [pin, setPin] = useState('')
@@ -15,8 +27,10 @@ export default function CajeroLogin({ session }) {
   const [bloqueoSeg, setBloqueoSeg] = useState(0)
   const [shake, setShake] = useState(false)
 
+  const destino = destinoSeguro(router.query.next)
+
   useEffect(() => {
-    if (session) router.push('/pos')
+    if (session) router.push(destino)
   }, [session])
 
   useEffect(() => {
@@ -57,7 +71,7 @@ export default function CajeroLogin({ session }) {
         setEnviando(false)
         return
       }
-      router.push('/pos')
+      router.push(destino)
     } catch (e) {
       setError('Error de red: ' + (e?.message || e))
       setEnviando(false)
