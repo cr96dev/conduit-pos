@@ -84,6 +84,28 @@ class JuliaPOSBridge(
     }
 
     /**
+     * Llamado desde JS: window.__JuliaPOSNative.openCashDrawer(callbackId)
+     *
+     * Abre el cajon monedero ad-hoc (sin imprimir). Usado por
+     * /admin/diagnostico para probar el cable + cajon sin cobrar una venta.
+     */
+    @JavascriptInterface
+    fun openCashDrawer(callbackId: String) {
+        Log.d(TAG, "openCashDrawer($callbackId)")
+        scope.launch {
+            val printer = sunmiPrinter
+            if (printer == null || !printer.isConnected()) {
+                resolveJsPrint(callbackId, PrintTicketResult(ok = false,
+                    errorMessage = if (printer == null) "wrapper_sin_printer" else "no_sunmi_printer"))
+                return@launch
+            }
+            val ok = printer.openCashDrawerStandalone()
+            resolveJsPrint(callbackId, PrintTicketResult(ok = ok,
+                errorMessage = if (ok) null else "drawer_kick_fallo"))
+        }
+    }
+
+    /**
      * Llamado desde JS: window.__JuliaPOSNative.printTicket(payloadJson, callbackId)
      *
      * Imprime un ticket de venta en la impresora termica integrada del Sunmi

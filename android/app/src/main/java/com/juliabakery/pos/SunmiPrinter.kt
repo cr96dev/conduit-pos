@@ -177,6 +177,20 @@ class SunmiPrinter {
     }
 
     /**
+     * Abre el cajón monedero ad-hoc (sin imprimir nada). Usado por
+     * /admin/diagnostico para probar conexion del cajon sin tener que
+     * cobrar una venta de prueba.
+     *
+     * Devuelve true si el servicio Sunmi esta conectado (no garantiza
+     * que el cajon haya abierto fisicamente — depende del cable).
+     */
+    fun openCashDrawerStandalone(): Boolean {
+        val svc = service ?: return false
+        kickCashDrawer(svc)
+        return true
+    }
+
+    /**
      * Construye la URL pública de SAT para verificar el DTE (Reglas FEL 5.6
      * pag. 137). El cliente escanea el QR -> SAT le muestra su factura.
      *

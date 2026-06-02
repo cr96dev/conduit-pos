@@ -309,9 +309,32 @@ class MainActivity : AppCompatActivity() {
                       }
                     }, 15000);
                   });
+                },
+                /**
+                 * Abre el cajon monedero sin imprimir. Util para /admin/diagnostico
+                 * para probar el cable + cajon sin tener que cobrar una venta.
+                 * Returns: Promise<{ ok: boolean, error_message?: string }>
+                 */
+                openCashDrawer: function(){
+                  return new Promise(function(resolve, reject){
+                    var id = uid();
+                    pending[id] = { resolve: resolve, reject: reject };
+                    try {
+                      window.__JuliaPOSNative.openCashDrawer(id);
+                    } catch(e){
+                      delete pending[id];
+                      reject(e);
+                    }
+                    setTimeout(function(){
+                      if (pending[id]) {
+                        delete pending[id];
+                        reject(new Error('Timeout esperando respuesta del cajon (5s)'));
+                      }
+                    }, 5000);
+                  });
                 }
               };
-              console.log('[JuliaPOS] bridge instalado v0.2.0');
+              console.log('[JuliaPOS] bridge instalado v0.3.0');
             })();
         """.trimIndent()
     }
