@@ -144,11 +144,17 @@ class SunmiPrinter {
                 }
             }
 
-            // 4. Feed + cut parcial
-            svc.sendRAWData(byteArrayOf(
-                0x0A, 0x0A,                                   // 2 lineas feed extra
-                0x1D, 0x56, 0x42, 0x00                        // GS V B 0 = partial cut
-            ), noopCb)
+            // 4. Feed largo al final del print.
+            // El Sunmi D3 Mini NO tiene cuchilla automatica — solo barra
+            // rasgable manual. El comando GS V B (partial cut ESC/POS) no
+            // hace nada porque no hay cortador fisico. La unica forma de
+            // separar prints es alimentar suficiente papel para que el
+            // cajero pueda rasgar a mano con la barra de plastico/metal
+            // que esta arriba de la ranura de salida.
+            //
+            // 12 lineas = ~36mm de papel libre = suficiente espacio para
+            // rasgar comodamente sin perder texto del print siguiente.
+            svc.lineWrap(12, noopCb)
 
             // 5. Cashbox: solo en venta-nueva-en-efectivo (NO en comanda — no es cobro).
             val debeAbrirCaja = !payload.esReimpresion
@@ -168,6 +174,20 @@ class SunmiPrinter {
             Log.e(TAG, "Error printTicket", e)
             false
         }
+    }
+
+    /**
+     * Abre el cajón monedero ad-hoc (sin imprimir nada). Usado por
+     * /admin/diagnostico para probar conexion del cajon sin tener que
+     * cobrar una venta de prueba.
+     *
+     * Devuelve true si el servicio Sunmi esta conectado (no garantiza
+     * que el cajon haya abierto fisicamente — depende del cable).
+     */
+    fun openCashDrawerStandalone(): Boolean {
+        val svc = service ?: return false
+        kickCashDrawer(svc)
+        return true
     }
 
     /**
@@ -678,13 +698,32 @@ class SunmiPrinter {
      * APAGADO. Si esta prendido, la gaveta se abrira en TODO print (incluyendo
      * tarjeta y reimpresion), arruinando la regla.
      */
+    /**
+     * Manda 3 comandos ESC/POS en cascada para abrir el cajón.
+     * Algunos firmwares Sunmi (especialmente Function Cradle de la P3 Mix)
+     * no responden al pin 2 estandar — necesitan pin 5 o tiempos largos.
+     *
+     * Comando 1: ESC p 0 25 250 — pin 2, on=25ms, off=250ms (estandar)
+     * Comando 2: ESC p 1 25 250 — pin 5, on=25ms, off=250ms (alternativo)
+     * Comando 3: ESC p 0 50 250 — pin 2, on=50ms, off=250ms (firmware lento)
+     *
+     * sendRAWData es asincrono → mandar los 3 seguidos NO causa colision.
+     * El cajon abre con el primero que su firmware reconozca, los otros
+     * 2 quedan no-op silenciosos.
+     */
     private fun kickCashDrawer(svc: IWoyouService) {
-        try {
-            val cmd = byteArrayOf(0x1B, 0x70, 0x00, 0x19.toByte(), 0xFA.toByte())
-            svc.sendRAWData(cmd, noopCb)
-            Log.d(TAG, "cashbox: kick enviado")
-        } catch (e: Exception) {
-            Log.w(TAG, "cashbox kick fallo (no critico): ${e.message}")
+        val comandos = listOf(
+            byteArrayOf(0x1B, 0x70, 0x00, 0x19.toByte(), 0xFA.toByte()),  // pin 2 estandar
+            byteArrayOf(0x1B, 0x70, 0x01, 0x19.toByte(), 0xFA.toByte()),  // pin 5
+            byteArrayOf(0x1B, 0x70, 0x00, 0x32.toByte(), 0xFA.toByte()),  // pin 2 tiempo largo
+        )
+        for ((i, cmd) in comandos.withIndex()) {
+            try {
+                svc.sendRAWData(cmd, noopCb)
+                Log.d(TAG, "cashbox: kick #$i enviado")
+            } catch (e: Exception) {
+                Log.w(TAG, "cashbox kick #$i fallo: ${e.message}")
+            }
         }
     }
 
