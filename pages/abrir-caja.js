@@ -23,12 +23,32 @@ export default function AbrirCaja({ session }) {
 
   useEffect(() => {
     if (!session) { router.push('/cajero-login'); return }
-    supabase.from('perfiles').select('id, nombre_completo, rol').eq('id', session.user.id).single()
+    supabase.from('perfiles').select('id, nombre_completo, rol, es_kiosko').eq('id', session.user.id).single()
       .then(({ data }) => setPerfil(data))
     apiFetch('/api/turnos/actual').then(r => r.json()).then(j => {
       if (j?.turno) router.replace('/pos')
     })
   }, [session])
+
+  const esKiosko = !!perfil?.es_kiosko
+
+  // Apertura del kiosko: monto = 0 forzado, sin formulario de efectivo.
+  // El backend ya acepta monto_apertura=0 sin cambios.
+  async function abrirKiosko() {
+    setError('')
+    setEnviando(true)
+    const r = await apiFetch('/api/turnos/abrir', {
+      method: 'POST',
+      body: JSON.stringify({
+        monto_apertura: 0,
+        observacion_apertura: 'Apertura automática · Kiosko autoservicio (sin caja física)',
+      }),
+    })
+    const j = await r.json()
+    setEnviando(false)
+    if (!r.ok) { setError(j.error || 'Error iniciando turno'); return }
+    router.replace('/pos')
+  }
 
   async function abrir(e) {
     e.preventDefault()
@@ -49,6 +69,53 @@ export default function AbrirCaja({ session }) {
   async function logout() {
     await supabase.auth.signOut()
     router.push('/cajero-login')
+  }
+
+  // Variante kiosko: pantalla minimalista sin formulario de efectivo
+  if (esKiosko) {
+    return (
+      <>
+        <Head><title>Iniciar kiosko · Julia Bakery</title></Head>
+        <div className="min-h-screen bg-surface-2 flex flex-col items-center justify-center p-6">
+          <div className="card-julia shadow-md p-6 w-full max-w-sm animate-slide-up">
+            <div className="flex items-center justify-between mb-5">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-purple-100 text-purple-700 flex items-center justify-center">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 17v-2a4 4 0 018 0v2M5 21h14a2 2 0 002-2V7l-3-4H6L3 7v12a2 2 0 002 2z" />
+                  </svg>
+                </div>
+                <div>
+                  <h1 className="text-lg font-bold text-gray-900 leading-tight">Iniciar kiosko</h1>
+                  <p className="text-sm text-ink-subtle leading-tight">{perfil?.nombre_completo || 'Kiosko'}</p>
+                </div>
+              </div>
+              <button onClick={logout}
+                className="text-2xs text-ink-subtle hover:text-julia-red font-medium uppercase tracking-wider transition-colors">
+                Salir
+              </button>
+            </div>
+
+            <div className="bg-purple-50 border border-purple-100 rounded-xl px-4 py-3 mb-5 text-sm text-purple-900 leading-relaxed">
+              Este terminal cobra solo con tarjeta y QR. No se maneja efectivo, por
+              eso el turno se abre con caja en <strong>Q 0.00</strong> automáticamente.
+            </div>
+
+            {error && (
+              <div className="rounded-lg px-3 py-2.5 text-sm font-medium mb-3"
+                style={{ background: 'var(--danger-soft)', color: 'var(--danger)' }}>
+                {error}
+              </div>
+            )}
+
+            <button onClick={abrirKiosko} disabled={enviando}
+              className="btn-primario w-full justify-center py-3.5 text-base">
+              {enviando ? 'Iniciando...' : 'Iniciar día'}
+            </button>
+          </div>
+        </div>
+      </>
+    )
   }
 
   return (

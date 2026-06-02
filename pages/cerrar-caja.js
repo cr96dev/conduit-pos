@@ -140,7 +140,7 @@ export default function CerrarCaja({ session }) {
     // En paralelo: turno actual + perfil del cajero + datos del emisor (para el ticket)
     const [rT, rP, rE] = await Promise.all([
       apiFetch('/api/turnos/actual'),
-      supabase.from('perfiles').select('id, nombre_completo, email, rol').eq('id', session.user.id).single(),
+      supabase.from('perfiles').select('id, nombre_completo, email, rol, es_kiosko').eq('id', session.user.id).single(),
       apiFetch('/api/fel/emisor').then(r => r.json()).catch(() => ({})),
     ])
     const j = await rT.json()
@@ -154,10 +154,12 @@ export default function CerrarCaja({ session }) {
     setEmisor(rE?.emisor || null)
   }
 
+  const esKiosko = !!perfil?.es_kiosko
   const esperado = data?.esperado ?? 0
   const apertura = Number(data?.turno?.monto_apertura) || 0
   const ventasEf = Number(data?.desglose?.ventas_efectivo) || 0
-  const conteoNum = Number(conteo)
+  // En kiosko forzamos conteo=0 (no hay caja física). En atendido lee del input.
+  const conteoNum = esKiosko ? 0 : Number(conteo)
   const diferencia = Number.isFinite(conteoNum) ? Math.round((conteoNum - esperado) * 100) / 100 : null
 
   async function confirmar() {
@@ -169,7 +171,12 @@ export default function CerrarCaja({ session }) {
     setEnviando(true)
     const r = await apiFetch('/api/turnos/cerrar', {
       method: 'POST',
-      body: JSON.stringify({ conteo_efectivo_cierre: conteoNum, observacion_cierre: obs }),
+      body: JSON.stringify({
+        conteo_efectivo_cierre: conteoNum,
+        observacion_cierre: esKiosko
+          ? (obs || 'Cierre kiosko · sin caja física (conteo Q0)')
+          : obs,
+      }),
     })
     const j = await r.json()
     setEnviando(false)
@@ -305,20 +312,27 @@ export default function CerrarCaja({ session }) {
             </div>
           </div>
 
-          {/* Conteo */}
-          <div className="mb-3">
-            <label className="label-tech block mb-1.5">Efectivo contado en caja</label>
-            <div className="relative">
-              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-ink-subtle font-mono text-base">Q</span>
-              <input type="number" step="any" min="0" value={conteo} onChange={e => setConteo(e.target.value)}
-                inputMode="decimal" autoFocus
-                className="input pl-10 text-2xl font-bold text-right tabular-nums py-4 font-mono"
-                placeholder="0.00" />
+          {/* Conteo de efectivo — oculto en kiosko (no hay caja física) */}
+          {esKiosko ? (
+            <div className="bg-purple-50 border border-purple-100 rounded-xl px-4 py-3 mb-3 text-sm text-purple-900 leading-relaxed">
+              Este kiosko no maneja efectivo. El cierre se registra con conteo
+              <strong> Q 0.00</strong> y diferencia <strong>Q 0.00</strong>.
             </div>
-          </div>
+          ) : (
+            <div className="mb-3">
+              <label className="label-tech block mb-1.5">Efectivo contado en caja</label>
+              <div className="relative">
+                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-ink-subtle font-mono text-base">Q</span>
+                <input type="number" step="any" min="0" value={conteo} onChange={e => setConteo(e.target.value)}
+                  inputMode="decimal" autoFocus
+                  className="input pl-10 text-2xl font-bold text-right tabular-nums py-4 font-mono"
+                  placeholder="0.00" />
+              </div>
+            </div>
+          )}
 
           {/* Diferencia en vivo */}
-          {diferencia !== null && (
+          {!esKiosko && diferencia !== null && (
             <div className="rounded-xl px-4 py-3 mb-3 flex justify-between items-center font-medium"
               style={{
                 background: diferencia === 0 ? 'var(--success-soft)' : diferencia > 0 ? 'var(--warning-soft)' : 'var(--danger-soft)',
@@ -352,7 +366,7 @@ export default function CerrarCaja({ session }) {
               className="btn-secundario flex-1 justify-center py-3.5 text-base">
               Cancelar
             </button>
-            <button onClick={confirmar} disabled={enviando || conteo === ''}
+            <button onClick={confirmar} disabled={enviando || (!esKiosko && conteo === '')}
               className="btn-primario flex-1 justify-center py-3.5 text-base">
               {enviando ? 'Cerrando...' : 'Confirmar cierre'}
             </button>
