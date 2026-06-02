@@ -58,11 +58,17 @@ export default async function handler(req, res) {
 
   let autorizado = false
   if (estado === 'preparando' || estado === 'lista') {
-    autorizado = esAdmin || esBarista
+    // En Julia Bakery cualquier cajero/barista opera la barra (no hay rol
+    // barista creado todavía). Si más adelante se agrega rol barista
+    // dedicado y se quiere restringir, sacar `esCajero` de acá.
+    autorizado = esAdmin || esBarista || esCajero
   } else if (estado === 'entregada') {
     autorizado = esAdmin || esCajero || esBarista
   } else if (estado === 'cancelada') {
-    autorizado = esAdmin || (esCajeroDueño && comanda.estado === 'pendiente')
+    // Cualquier cajero/barista puede cancelar una comanda mientras esté
+    // pendiente o preparando (productos no entregados). Admin siempre.
+    autorizado = esAdmin
+      || ((esCajero || esBarista) && ['pendiente', 'preparando'].includes(comanda.estado))
   }
   if (!autorizado) {
     return res.status(403).json({ error: 'No autorizado para esta transicion' })
