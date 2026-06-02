@@ -12,8 +12,8 @@ android {
         applicationId "com.juliabakery.pos"
         minSdk 24                 // Android 7.0 — Sunmi D3 Mini ship con 7.1+
         targetSdk 35
-        versionCode 12
-        versionName "0.5.0"
+        versionCode 13
+        versionName "0.5.1"
 
         // URLs configurables por build type. Override en linea de comandos:
         //   ./gradlew assembleDebug -PJULIA_BASE_URL="https://preview-foo.vercel.app"
