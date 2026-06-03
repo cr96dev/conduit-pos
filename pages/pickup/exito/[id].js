@@ -10,11 +10,6 @@ import { useRouter } from 'next/router'
 import Link from 'next/link'
 import PickupShell from '../../../components/pickup/PickupShell'
 
-function qrUrl(text, size = 256) {
-  const data = encodeURIComponent(text)
-  return `https://api.qrserver.com/v1/create-qr-code/?size=${size}x${size}&data=${data}&margin=10&bgcolor=fdf9f2&color=2a1010`
-}
-
 export default function PickupExito() {
   const router = useRouter()
   const { id } = router.query
@@ -49,11 +44,7 @@ export default function PickupExito() {
   const slotLabel = pedido?.slot_label || ''
   const dayLabel = pedido?.day_label || ''
   const total = pedido?.total_estimado ? Number(pedido.total_estimado).toFixed(2) : null
-
-  // El QR codifica la URL al detalle del pedido. El cajero la escanea con
-  // cualquier lector y se le abre la página con el resumen + items + total.
-  const baseUrl = typeof window !== 'undefined' ? window.location.origin : ''
-  const qrPayload = `${baseUrl}/pickup/pedido/${id}`
+  const email = pedido?.receptor_email || pedido?.receptor?.email
 
   return (
     <PickupShell title="¡Listo! · Julia Bakery">
@@ -87,16 +78,19 @@ export default function PickupExito() {
           Pedido {ref}
         </div>
 
-        {/* QR */}
-        <div className="bg-surface border-2 border-outline-variant rounded-2xl p-4 mb-stack-md">
-          <img
-            alt={`Código QR del pedido ${ref}`}
-            src={qrUrl(qrPayload, 220)}
-            width={220}
-            height={220}
-            className="rounded-lg"
-          />
-        </div>
+        {/* Aviso email — reemplaza al QR */}
+        {email && (
+          <div className="w-full max-w-sm bg-surface-container-low border border-outline-variant rounded-xl px-5 py-4 mb-stack-md flex items-start gap-3 text-left">
+            <span className="material-symbols-outlined text-secondary text-[24px] flex-shrink-0 mt-0.5">mail</span>
+            <div className="flex-grow">
+              <div className="font-body-lg text-on-surface leading-tight">Te enviamos la confirmación</div>
+              <div className="text-[13px] text-on-surface-variant break-all mt-0.5">{email}</div>
+              <div className="text-[12px] text-tertiary mt-2">
+                Si no te llega en 5 minutos, revisá tu carpeta de spam.
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Hora pickup destacada */}
         {slotLabel && (

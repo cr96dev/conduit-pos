@@ -13,6 +13,7 @@
 
 import { createClient } from '@supabase/supabase-js'
 import { esTestMode } from '../../../lib/recurrente/client'
+import { enviarEmailConfirmacion } from '../../../lib/pickup/email'
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -31,7 +32,7 @@ export default async function handler(req, res) {
   // Cargar pedido
   const { data: pedido, error: errLoad } = await supabaseAdmin
     .from('pedidos_pendientes')
-    .select('id, referencia, estado, pago_simulado, pago_metodo')
+    .select('id, referencia, estado, pago_simulado, pago_metodo, items, total_estimado, receptor_email, receptor_nombre, slot_label, day_label')
     .eq('id', order_id)
     .eq('origen', 'app_pickup')
     .single()
@@ -56,6 +57,22 @@ export default async function handler(req, res) {
     .single()
 
   if (errUpd) return res.status(500).json({ error: errUpd.message })
+
+  // Enviar email de confirmación (best-effort, no rompe el flujo si falla)
+  if (pedido.receptor_email) {
+    const proto = req.headers['x-forwarded-proto'] || 'https'
+    const baseUrl = `${proto}://${req.headers.host}`
+    enviarEmailConfirmacion({
+      to: pedido.receptor_email,
+      referencia: updated.referencia,
+      items: pedido.items,
+      total: pedido.total_estimado,
+      slot_label: pedido.slot_label,
+      day_label: pedido.day_label,
+      baseUrl,
+      order_id: updated.id,
+    }).catch(e => console.error('[email] send failed:', e.message))
+  }
 
   return res.status(200).json({
     ok: true,

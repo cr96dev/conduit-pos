@@ -23,10 +23,6 @@ function fmtDate(iso) {
   } catch { return '' }
 }
 
-function qrUrl(text, size = 256) {
-  return `https://api.qrserver.com/v1/create-qr-code/?size=${size}x${size}&data=${encodeURIComponent(text)}&margin=10&bgcolor=fdf9f2&color=2a1010`
-}
-
 export default function PickupPedidoDetalle() {
   const router = useRouter()
   const { id } = router.query
@@ -62,9 +58,6 @@ export default function PickupPedidoDetalle() {
   const statusIdx = STATUS_TIMELINE.findIndex(s => s.key === status)
   const isLista = status === 'lista'
   const ref = pedido.referencia || `JU-${pedido.id?.slice(0,8).toUpperCase()}`
-  const qrPayload = typeof window !== 'undefined'
-    ? `${window.location.origin}/pickup/pedido/${pedido.id}`
-    : ref
 
   function reordenar() {
     for (const it of (pedido.items || [])) {
@@ -93,13 +86,15 @@ export default function PickupPedidoDetalle() {
           <div className="text-[13px] text-tertiary mt-1">{fmtDate(pedido.created_at)}</div>
         </div>
 
-        {/* QR si listo */}
+        {/* Aviso cuando está listo */}
         {isLista && (
-          <div className="bg-secondary-container border-2 border-secondary rounded-2xl p-4 flex flex-col items-center text-center animate-pulse-soft">
-            <div className="font-caption-caps text-caption-caps text-on-secondary-container mb-2">
-              Mostrá este código en el mostrador
+          <div className="bg-secondary-container border-2 border-secondary rounded-2xl px-6 py-5 text-center animate-pulse-soft">
+            <span className="material-symbols-outlined text-secondary text-[40px] mb-2 block">check_circle</span>
+            <div className="font-headline-lg text-headline-lg text-on-secondary-container">¡Tu pedido está listo!</div>
+            <div className="font-body-md text-on-secondary-container/80 mt-1">
+              Pasá a recogerlo a Julia Bakery, 5a Av 12-34 Z14.<br/>
+              Mostrá tu pedido <strong>{ref}</strong> en el mostrador.
             </div>
-            <img alt="QR del pedido" src={qrUrl(qrPayload, 220)} width={220} height={220} className="rounded-lg bg-white" />
           </div>
         )}
 

@@ -49,15 +49,19 @@ async function getHandler(req, res, auth) {
     .select(`
       id, turno_id, cajero_creador, cajero_que_facturo,
       referencia, origen, items, total_estimado,
-      receptor_nit, receptor_nombre, receptor_email,
+      receptor_nit, receptor_nombre, receptor_email, receptor_telefono,
       estado, factura_id, motivo_cancelacion, notas,
+      slot_pickup_at, slot_label, day_label,
       created_at, updated_at, facturado_at, cancelado_at
     `)
     .order('created_at', { ascending: estado === 'pendiente_entrega' })
     .limit(limit)
 
   if (estado !== 'all') q = q.eq('estado', estado)
-  if (turnoId) q = q.eq('turno_id', turnoId)
+  // Filtro de turno: incluir el turno actual del cajero Y los pedidos
+  // públicos sin turno (origen='app_pickup' creados desde la PWA, sin
+  // sesión, por eso turno_id=null). Admin sin turno_id ve todos.
+  if (turnoId) q = q.or(`turno_id.eq.${turnoId},and(turno_id.is.null,origen.eq.app_pickup)`)
 
   const { data, error } = await q
   if (error) return res.status(500).json({ ok: false, error: error.message })
