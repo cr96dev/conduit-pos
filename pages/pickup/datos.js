@@ -32,7 +32,7 @@ export default function PickupDatos() {
     setConsNit(true)
     setNitMsg('')
     try {
-      const r = await fetch(`/api/fel/consultar-nit?nit=${encodeURIComponent(limpio)}`)
+      const r = await fetch(`/api/pickup/consultar-nit?nit=${encodeURIComponent(limpio)}`)
       const j = await r.json()
       if (j?.receptor?.nombre) {
         setNitNombre(j.receptor.nombre)
