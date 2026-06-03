@@ -10,7 +10,6 @@ import Link from 'next/link'
 import PickupShell from '../../components/pickup/PickupShell'
 import { PickupTopBar, PickupBottomNav, PickupCartFAB } from '../../components/pickup/Nav'
 import { useCart } from '../../lib/pickup/cart'
-import { supabase } from '../../lib/supabase'
 
 // Imagen fallback por nombre de categoría (las 4 imágenes Stitch que ya bajamos)
 const FALLBACK_BY_CAT_NAME = {
@@ -59,28 +58,23 @@ export default function PickupMenu() {
   const [cargando, setCargando] = useState(true)
   const [flash, setFlash] = useState('')
 
-  // Cargar catálogo real
+  // Cargar catálogo real desde el endpoint público (server-side con service role).
+  // Las tablas loyverse_* tienen RLS que solo permite a authenticated; pickup es público.
   useEffect(() => {
     let cancelled = false
     ;(async () => {
       try {
-        const [{ data: cats }, { data: its }] = await Promise.all([
-          supabase.from('loyverse_categories').select('loyverse_id, name'),
-          supabase.from('loyverse_items')
-            .select('loyverse_id, item_name, category_id, variants, image_url, reference_id')
-            .is('deleted_at', null),
-        ])
-        const catsArr = (cats || []).filter(c => c.name)
+        const r = await fetch('/api/pickup/catalogo')
+        const j = await r.json()
+        if (cancelled || !j?.ok) return
+        const catsArr = (j.categorias || []).filter(c => c.name)
         const catMap = Object.fromEntries(catsArr.map(c => [c.loyverse_id, c]))
-        const expanded = expandirVariantes(its || [], catMap)
-        if (cancelled) return
-        // Solo categorías que tienen al menos 1 item con precio
+        const expanded = expandirVariantes(j.items || [], catMap)
         const catsConItems = catsArr
           .filter(c => expanded.some(i => i.category_id === c.loyverse_id))
           .map(c => ({ id: c.loyverse_id, label: c.name }))
         setCategorias(catsConItems)
         setItems(expanded)
-        // Categoría activa: por query o la primera
         const qcat = router.query?.categoria
         const found = qcat && catsConItems.find(c => c.label.toLowerCase() === String(qcat).toLowerCase())
         setActiva(found?.id || catsConItems[0]?.id || null)

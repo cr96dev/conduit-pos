@@ -7,7 +7,6 @@ import Link from 'next/link'
 import PickupShell from '../../../components/pickup/PickupShell'
 import { PickupTopBar, PickupBottomNav } from '../../../components/pickup/Nav'
 import { useCart } from '../../../lib/pickup/cart'
-import { supabase } from '../../../lib/supabase'
 
 // Reuso del mismo mock del menu para que funcione sin Supabase
 const FALLBACK_BY_ID = {
@@ -18,11 +17,10 @@ const FALLBACK_BY_ID = {
 
 async function fetchItem(variantId) {
   try {
-    const { data: items } = await supabase
-      .from('loyverse_items')
-      .select('item_name, variants, image_url, reference_id, category_id')
-      .is('deleted_at', null)
-    for (const it of items || []) {
+    const r = await fetch('/api/pickup/catalogo')
+    const j = await r.json()
+    if (!j?.ok) return null
+    for (const it of j.items || []) {
       for (const v of (it.variants || [])) {
         if (v.variant_id === variantId) {
           const price = v.stores?.[0]?.price ?? v.default_price ?? 0
