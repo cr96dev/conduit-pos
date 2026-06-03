@@ -57,7 +57,10 @@ async function getHandler(req, res, auth) {
     .order('created_at', { ascending: estado === 'pendiente_entrega' })
     .limit(limit)
 
-  if (estado !== 'all') q = q.eq('estado', estado)
+  // 'activos' = pendiente_entrega + lista (todo lo que el cajero debe operar).
+  // 'all' = sin filtro. Cualquier otro valor = exact match.
+  if (estado === 'activos') q = q.in('estado', ['pendiente_entrega', 'lista'])
+  else if (estado !== 'all') q = q.eq('estado', estado)
   // Filtro de turno: incluir el turno actual del cajero Y los pedidos
   // públicos sin turno (origen='app_pickup' creados desde la PWA, sin
   // sesión, por eso turno_id=null). Admin sin turno_id ve todos.

@@ -280,8 +280,9 @@ function ModalGuardarPedido({ totalEstimado, cantItems, onClose, onGuardar }) {
 // Bandeja: lista los pedidos pendientes del turno actual con accion
 // Continuar (carga al carrito + permite editar y cobrar) y Cancelar.
 // Auto-refresca al abrir.
-function ModalBandejaPedidos({ pedidos, cargando, onClose, onContinuar, onCancelar, onRefresh }) {
+function ModalBandejaPedidos({ pedidos, cargando, onClose, onContinuar, onCancelar, onMarcarListo, onRefresh }) {
   const [cancelandoId, setCancelandoId] = useState(null)
+  const [marcandoListoId, setMarcandoListoId] = useState(null)
   const [motivos, setMotivos] = useState({})
 
   async function cancelar(p) {
@@ -291,6 +292,15 @@ function ModalBandejaPedidos({ pedidos, cargando, onClose, onContinuar, onCancel
       await onCancelar(p.id, motivo || 'Sin motivo especificado')
     } finally {
       setCancelandoId(null)
+    }
+  }
+
+  async function marcarListo(p) {
+    setMarcandoListoId(p.id)
+    try {
+      await onMarcarListo(p.id)
+    } finally {
+      setMarcandoListoId(null)
     }
   }
 
@@ -366,11 +376,41 @@ function ModalBandejaPedidos({ pedidos, cargando, onClose, onContinuar, onCancel
                   </div>
                 )}
 
+                {/* Badge especial si es pickup app */}
+                {p.origen === 'app_pickup' && (
+                  <div className={`mb-3 px-3 py-2 rounded-lg flex items-center justify-between gap-2 ${
+                    p.estado === 'lista'
+                      ? 'bg-amber-100 border border-amber-300'
+                      : 'bg-blue-50 border border-blue-200'
+                  }`}>
+                    <div className="text-sm font-bold">
+                      {p.estado === 'lista' ? (
+                        <span className="text-amber-900">🔔 Listo · cliente notificado</span>
+                      ) : (
+                        <span className="text-blue-900">📱 Pickup app · {p.receptor_email}</span>
+                      )}
+                    </div>
+                    {p.slot_label && (
+                      <div className="text-xs text-gray-700 font-medium">
+                        {p.day_label} {p.slot_label}
+                      </div>
+                    )}
+                  </div>
+                )}
+
                 <div className="grid grid-cols-2 gap-2.5">
-                  <button onClick={() => onContinuar(p)}
-                    className="py-4 bg-emerald-600 text-white font-bold rounded-xl hover:bg-emerald-700 text-base shadow">
-                    📥 Cobrar / Continuar
-                  </button>
+                  {/* Botón principal cambia según estado y origen */}
+                  {p.origen === 'app_pickup' && p.estado === 'pendiente_entrega' ? (
+                    <button onClick={() => marcarListo(p)} disabled={marcandoListoId === p.id}
+                      className="py-4 bg-amber-500 text-white font-bold rounded-xl hover:bg-amber-600 text-base shadow disabled:opacity-50">
+                      {marcandoListoId === p.id ? 'Avisando...' : '🔔 Marcar listo (avisa al cliente)'}
+                    </button>
+                  ) : (
+                    <button onClick={() => onContinuar(p)}
+                      className="py-4 bg-emerald-600 text-white font-bold rounded-xl hover:bg-emerald-700 text-base shadow">
+                      📥 Cobrar / Facturar
+                    </button>
+                  )}
                   <div className="flex flex-col gap-1.5">
                     <input type="text" placeholder="Motivo cancelación..."
                       value={motivos[p.id] || ''}
@@ -382,6 +422,14 @@ function ModalBandejaPedidos({ pedidos, cargando, onClose, onContinuar, onCancel
                     </button>
                   </div>
                 </div>
+
+                {/* Si el pickup ya está marcado listo, mostrar también el botón de facturar */}
+                {p.origen === 'app_pickup' && p.estado === 'lista' && (
+                  <button onClick={() => onContinuar(p)}
+                    className="w-full mt-2 py-3 bg-emerald-600 text-white font-bold rounded-xl hover:bg-emerald-700 text-base shadow">
+                    📥 Cliente vino — Cobrar / Facturar
+                  </button>
+                )}
               </div>
             )
           })}
@@ -873,7 +921,9 @@ export default function POS({ session }) {
   async function recargarPedidos() {
     setCargandoPedidos(true)
     try {
-      const r = await apiFetch('/api/pos/pedidos?estado=pendiente_entrega&limit=50')
+      // Traer pedidos en preparación Y los marcados como 'lista' (esperando
+      // que el cliente venga a recoger) para que el cajero vea ambos.
+      const r = await apiFetch('/api/pos/pedidos?estado=activos&limit=50')
       const j = await r.json()
       if (j.ok) setPedidosPendientes(j.pedidos || [])
     } finally {
@@ -1387,6 +1437,27 @@ export default function POS({ session }) {
     recargarPedidos()
   }
 
+  // Marca pedido pickup como 'lista' y dispara email al cliente.
+  // Solo aplica a origen=app_pickup en estado pendiente_entrega.
+  async function marcarPedidoListo(pedidoId) {
+    const r = await apiFetch(`/api/pos/pedidos/${pedidoId}/marcar-listo`, { method: 'POST' })
+    const j = await r.json()
+    if (!r.ok || !j.ok) {
+      flashToast(`Error: ${j.error || 'no se pudo marcar como listo'}`)
+      return
+    }
+    if (j.email?.ok) {
+      flashToast('✅ Marcado listo · email enviado al cliente')
+    } else if (j.email?.skipped) {
+      flashToast('✅ Marcado listo (email no configurado)')
+    } else if (j.email?.error) {
+      flashToast(`✅ Marcado listo · email falló: ${j.email.error}`)
+    } else {
+      flashToast('✅ Pedido marcado como listo')
+    }
+    recargarPedidos()
+  }
+
   // Cantidades por variant_id en el carrito — para mostrar badge en cards.
   // OJO: este hook DEBE estar antes de cualquier early return; si quedaba
   // despues, React tiraba "Rendered fewer hooks than expected" (error #300).
@@ -1467,6 +1538,7 @@ export default function POS({ session }) {
           onClose={() => setMostrarBandeja(false)}
           onContinuar={continuarPedido}
           onCancelar={cancelarPedido}
+          onMarcarListo={marcarPedidoListo}
           onRefresh={recargarPedidos}
         />
       )}
