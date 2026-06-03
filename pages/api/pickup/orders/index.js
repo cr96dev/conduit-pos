@@ -99,9 +99,13 @@ async function crear(req, res) {
     .gte('created_at', yyyyMmDd + 'T00:00:00.000Z')
   const referencia = `JU-${String((count || 0) + 1).padStart(4, '0')}`
 
-  // Estado inicial: 'pendiente_entrega' (visible para el cajero como pedido a preparar).
-  // En el futuro cuando integremos Neonet real, primero queda 'pendiente_pago' y
-  // pasa a 'pendiente_entrega' tras la autorización.
+  // Estado inicial:
+  //   - 'pendiente_pago'    si el pago va por gateway real (Recurrente) y aún
+  //     no confirmamos: el webhook lo pasará a 'pendiente_entrega'
+  //   - 'pendiente_entrega' si pago_simulado=true o si no hay gateway
+  const usaGateway = pago?.metodo === 'recurrente' && pago?.simulado === false
+  const estadoInicial = usaGateway ? 'pendiente_pago' : 'pendiente_entrega'
+
   const insertData = {
     referencia,
     origen: 'app_pickup',
@@ -111,7 +115,7 @@ async function crear(req, res) {
     receptor_nombre: (receptor.nitNombre || receptor.nombre || 'CONSUMIDOR FINAL').toString().slice(0, 100),
     receptor_email: receptor.email.toString().slice(0, 100),
     receptor_telefono: receptor.telefono.toString().slice(0, 20),
-    estado: 'pendiente_entrega',
+    estado: estadoInicial,
     slot_pickup_at: slot_iso || null,
     slot_label: slot_label || null,
     day_label: body.day_label || null,
