@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+
+<html class="light" lang="es"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;700&amp;family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "on-tertiary-fixed-variant": "#603e3d",
+                        "tertiary-container": "#845e5d",
+                        "inverse-surface": "#31302c",
+                        "on-primary-fixed-variant": "#930012",
+                        "surface-container-lowest": "#ffffff",
+                        "on-secondary": "#ffffff",
+                        "on-secondary-fixed": "#2c1700",
+                        "inverse-on-surface": "#f4f0e9",
+                        "error": "#ba1a1a",
+                        "on-secondary-fixed-variant": "#614018",
+                        "surface-dim": "#dddad3",
+                        "on-primary-fixed": "#410004",
+                        "on-primary": "#ffffff",
+                        "primary-fixed-dim": "#ffb3ad",
+                        "on-tertiary-container": "#ffe0df",
+                        "on-surface-variant": "#5b403e",
+                        "on-surface": "#1c1c18",
+                        "secondary-fixed-dim": "#efbd8a",
+                        "on-error-container": "#93000a",
+                        "tertiary": "#6a4645",
+                        "inverse-primary": "#ffb3ad",
+                        "on-tertiary": "#ffffff",
+                        "on-background": "#1c1c18",
+                        "outline-variant": "#e4beba",
+                        "surface-bright": "#fdf9f2",
+                        "secondary-container": "#fecb97",
+                        "primary": "#a40016",
+                        "surface-container": "#f1ede6",
+                        "on-error": "#ffffff",
+                        "surface": "#fdf9f2",
+                        "surface-container-highest": "#e6e2db",
+                        "surface-container-high": "#ebe8e1",
+                        "secondary-fixed": "#ffdcbc",
+                        "primary-container": "#c8242a",
+                        "tertiary-fixed-dim": "#ebbbb9",
+                        "background": "#fdf9f2",
+                        "on-tertiary-fixed": "#2e1414",
+                        "error-container": "#ffdad6",
+                        "on-secondary-container": "#79542a",
+                        "surface-container-low": "#f7f3ec",
+                        "tertiary-fixed": "#ffdad8",
+                        "on-primary-container": "#ffe0de",
+                        "outline": "#8f6f6d",
+                        "surface-variant": "#e6e2db",
+                        "secondary": "#7c572d",
+                        "surface-tint": "#ba1822",
+                        "primary-fixed": "#ffdad7",
+                        "sage": "#8da38c", /* Custom brand status */
+                        "brick": "#b35e4d", /* Custom brand status */
+                        "cream": "#F8F4ED", /* Base background */
+                        "wheat": "#D4A574", /* Border/Accent */
+                        "bordeaux": "#6a4645" /* Text accent */
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "container-margin-mobile": "20px",
+                        "stack-sm": "8px",
+                        "unit": "4px",
+                        "stack-lg": "48px",
+                        "gutter": "16px",
+                        "stack-md": "24px",
+                        "container-margin-desktop": "48px"
+                    },
+                    "fontFamily": {
+                        "accent-tag": ["Playfair Display"],
+                        "caption-caps": ["Inter"],
+                        "body-lg": ["Inter"],
+                        "body-md": ["Inter"],
+                        "headline-xl": ["Playfair Display"],
+                        "headline-xl-mobile": ["Playfair Display"],
+                        "price-display": ["Inter"],
+                        "headline-lg": ["Playfair Display"]
+                    },
+                    "fontSize": {
+                        "accent-tag": ["16px", {"lineHeight": "1", "fontWeight": "400"}],
+                        "caption-caps": ["12px", {"lineHeight": "1", "letterSpacing": "0.1em", "fontWeight": "500"}],
+                        "body-lg": ["18px", {"lineHeight": "1.4", "fontWeight": "600"}],
+                        "body-md": ["15px", {"lineHeight": "1.6", "fontWeight": "400"}],
+                        "headline-xl": ["48px", {"lineHeight": "1.1", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                        "headline-xl-mobile": ["36px", {"lineHeight": "1.1", "fontWeight": "700"}],
+                        "price-display": ["24px", {"lineHeight": "1", "letterSpacing": "-0.01em", "fontWeight": "700"}],
+                        "headline-lg": ["28px", {"lineHeight": "1.2", "fontWeight": "500"}]
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            vertical-align: middle;
+        }
+        body {
+            background-color: #F8F4ED;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .card-shadow {
+            box-shadow: 0 10px 30px -15px rgba(106, 70, 69, 0.08);
+        }
+        .active-scale:active {
+            transform: scale(0.98);
+            transition: transform 0.1s ease;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="font-body-md text-on-surface selection:bg-secondary-container">
+<!-- TopAppBar -->
+<header class="bg-surface dark:bg-surface-dim flex justify-between items-center w-full px-container-margin-mobile h-16 z-50 fixed top-0 left-0">
+<button class="text-primary dark:text-inverse-primary hover:opacity-80 transition-opacity Active: scale-95 duration-150">
+<span class="material-symbols-outlined">menu</span>
+</button>
+<h1 class="font-headline-lg-mobile text-headline-lg-mobile font-bold text-primary dark:text-inverse-primary">Julia Bakery</h1>
+<button class="text-primary dark:text-inverse-primary hover:opacity-80 transition-opacity Active: scale-95 duration-150">
+<span class="material-symbols-outlined">shopping_bag</span>
+</button>
+</header>
+<main class="pt-24 pb-32 px-container-margin-mobile max-w-2xl mx-auto min-h-screen">
+<!-- Page Header -->
+<div class="mb-stack-md">
+<h2 class="font-headline-xl-mobile text-headline-xl-mobile text-on-surface mb-2">Mis pedidos</h2>
+<div class="h-1 w-12 bg-primary rounded-full"></div>
+</div>
+<!-- Order Cards List -->
+<div class="space-y-stack-md">
+<!-- Card 1: En el horno -->
+<div class="bg-surface border border-outline-variant/30 rounded-xl p-5 card-shadow active-scale cursor-pointer group">
+<div class="flex justify-between items-start mb-4">
+<div>
+<p class="font-caption-caps text-caption-caps text-outline mb-1">PEDIDO</p>
+<h3 class="font-body-lg text-body-lg text-on-surface">#JU-1024</h3>
+</div>
+<span class="bg-secondary-container text-on-secondary-container px-3 py-1 rounded-full font-caption-caps text-[10px] tracking-widest flex items-center gap-1.5">
+<span class="w-1.5 h-1.5 rounded-full bg-primary animate-pulse"></span>
+                        EN EL HORNO
+                    </span>
+</div>
+<div class="border-y border-outline-variant/20 py-4 my-4">
+<p class="text-on-surface-variant font-body-md italic leading-relaxed">
+                        Pan de Masa Madre + 2 Croissants
+                    </p>
+</div>
+<div class="flex justify-between items-end">
+<div class="text-on-surface-variant/70 text-sm">
+<div class="flex items-center gap-1">
+<span class="material-symbols-outlined text-[16px]">calendar_today</span>
+<span>Hoy, 14:30</span>
+</div>
+</div>
+<div class="text-right">
+<p class="font-caption-caps text-[10px] text-outline mb-0.5">TOTAL</p>
+<p class="font-price-display text-price-display text-primary">Q125.00</p>
+</div>
+</div>
+</div>
+<!-- Card 2: Entregado -->
+<div class="bg-surface-container-low border border-outline-variant/30 rounded-xl p-5 card-shadow active-scale cursor-pointer">
+<div class="flex justify-between items-start mb-4">
+<div>
+<p class="font-caption-caps text-caption-caps text-outline mb-1">PEDIDO</p>
+<h3 class="font-body-lg text-body-lg text-on-surface-variant">#JU-0988</h3>
+</div>
+<span class="bg-surface border border-outline-variant/50 text-outline px-3 py-1 rounded-full font-caption-caps text-[10px] tracking-widest">
+                        ENTREGADO
+                    </span>
+</div>
+<div class="flex justify-between items-end">
+<div class="text-on-surface-variant/70 text-sm">
+<div class="flex items-center gap-1">
+<span class="material-symbols-outlined text-[16px]">calendar_today</span>
+<span>12 Oct, 09:15</span>
+</div>
+</div>
+<div class="text-right">
+<p class="font-price-display text-price-display text-on-surface-variant">Q84.00</p>
+</div>
+</div>
+</div>
+<!-- Card 3: Listo para recoger -->
+<div class="bg-surface border border-outline-variant/30 rounded-xl p-5 card-shadow active-scale cursor-pointer overflow-hidden relative">
+<div class="absolute top-0 right-0 w-1 h-full bg-sage"></div>
+<div class="flex justify-between items-start mb-4">
+<div>
+<p class="font-caption-caps text-caption-caps text-outline mb-1">PEDIDO</p>
+<h3 class="font-body-lg text-body-lg text-on-surface">#JU-1030</h3>
+</div>
+<span class="bg-sage text-white px-3 py-1 rounded-full font-caption-caps text-[10px] tracking-widest shadow-sm">
+                        LISTO PARA RECOGER
+                    </span>
+</div>
+<div class="flex justify-between items-end">
+<div class="text-on-surface-variant/70 text-sm">
+<div class="flex items-center gap-1">
+<span class="material-symbols-outlined text-[16px]">calendar_today</span>
+<span>Ayer, 16:45</span>
+</div>
+</div>
+<div class="text-right">
+<p class="font-price-display text-price-display text-primary">Q45.50</p>
+</div>
+</div>
+</div>
+</div>
+<!-- Optional Empty State (Hidden for now as there are orders) -->
+<div class="hidden flex-col items-center justify-center py-stack-lg text-center" id="empty-state">
+<div class="w-48 h-48 mb-6 relative">
+<img alt="Croissant Julia" class="w-full h-full object-contain mix-blend-multiply opacity-80" data-alt="A sophisticated, high-end artistic illustration of a golden-brown, flaky artisan croissant on a minimalist cream background. The style is editorial and culinary-focused, utilizing soft lighting to highlight the delicate layers of the pastry. The color palette is composed of warm wheats, rich ochres, and clean cream tones, evoking a premium bakery feel with a sense of craftsmanship and tradition." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBO_fjhoeXzdFo8O7LSYomHkl7nZPuP07zzIHX7ZjRuOalXiGrh76IllT0WqlYQk1yjjhVtgnJcnW5n3Jy-ZREc2V6MdGB8JR2e2J-8-HgJfqa2mnS0ZbHf_-xp9zj3NFRu3lO4LP78dCkYgd8XnghqTO2W6lKZNy5aJpRJ0A6lH4gH_Ktu7cDTOcUmBAKFYoF_q9lOOAGqixrTqE7cr-0RlHcGUca_MQGVwhPfoQvBSZ6M1qCWrR5x2BNKofkD9oH609Ll_hBkBJUY"/>
+</div>
+<p class="font-headline-lg text-headline-lg text-on-surface-variant max-w-xs mx-auto mb-stack-md">
+                Tu primer pedido lo recordamos siempre — ¡vamos!
+            </p>
+<button class="bg-primary text-white px-8 py-4 rounded-full font-body-lg active-scale shadow-lg">
+                Explorá el menú
+            </button>
+</div>
+</main>
+<!-- BottomNavBar -->
+<nav class="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-4 py-3 pb-safe bg-surface dark:bg-surface-dim border-t border-outline-variant shadow-lg md:hidden">
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-outline hover:text-primary dark:hover:text-inverse-primary transition-colors" href="#">
+<span class="material-symbols-outlined">home</span>
+<span class="font-caption-caps text-[10px] mt-1">Inicio</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-outline hover:text-primary dark:hover:text-inverse-primary transition-colors" href="#">
+<span class="material-symbols-outlined">bakery_dining</span>
+<span class="font-caption-caps text-[10px] mt-1">Menú</span>
+</a>
+<a class="flex flex-col items-center justify-center text-primary dark:text-inverse-primary font-bold scale-95" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">receipt_long</span>
+<span class="font-caption-caps text-[10px] mt-1">Mis Pedidos</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-outline hover:text-primary dark:hover:text-inverse-primary transition-colors" href="#">
+<span class="material-symbols-outlined">person</span>
+<span class="font-caption-caps text-[10px] mt-1">Perfil</span>
+</a>
+</nav>
+<!-- Micro-interactions Script -->
+<script>
+        document.querySelectorAll('.active-scale').forEach(card => {
+            card.addEventListener('click', () => {
+                // Future: Navigate to detail
+                console.log('Navegando al detalle del pedido...');
+            });
+        });
+
+        // Toggle visibility of empty state for demo if needed
+        function showEmptyState(show) {
+            const list = document.querySelector('.space-y-stack-md');
+            const empty = document.getElementById('empty-state');
+            if(show) {
+                list.classList.add('hidden');
+                empty.classList.remove('hidden');
+            } else {
+                list.classList.remove('hidden');
+                empty.classList.add('hidden');
+            }
+        }
+    </script>
+</body></html>

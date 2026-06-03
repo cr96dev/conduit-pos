@@ -1,0 +1,216 @@
+<!DOCTYPE html><html class="light" lang="es"><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0, viewport-fit=cover" name="viewport">
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;700&amp;family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "on-tertiary-fixed-variant": "#603e3d",
+                    "tertiary-container": "#845e5d",
+                    "inverse-surface": "#31302c",
+                    "on-primary-fixed-variant": "#930012",
+                    "surface-container-lowest": "#ffffff",
+                    "on-secondary": "#ffffff",
+                    "on-secondary-fixed": "#2c1700",
+                    "inverse-on-surface": "#f4f0e9",
+                    "error": "#ba1a1a",
+                    "on-secondary-fixed-variant": "#614018",
+                    "surface-dim": "#dddad3",
+                    "on-primary-fixed": "#410004",
+                    "on-primary": "#ffffff",
+                    "primary-fixed-dim": "#ffb3ad",
+                    "on-tertiary-container": "#ffe0df",
+                    "on-surface-variant": "#5b403e",
+                    "on-surface": "#1c1c18",
+                    "secondary-fixed-dim": "#efbd8a",
+                    "on-error-container": "#93000a",
+                    "tertiary": "#6a4645",
+                    "inverse-primary": "#ffb3ad",
+                    "on-tertiary": "#ffffff",
+                    "on-background": "#1c1c18",
+                    "outline-variant": "#e4beba",
+                    "surface-bright": "#fdf9f2",
+                    "secondary-container": "#fecb97",
+                    "primary": "#a40016",
+                    "surface-container": "#f1ede6",
+                    "on-error": "#ffffff",
+                    "surface": "#fdf9f2",
+                    "surface-container-highest": "#e6e2db",
+                    "surface-container-high": "#ebe8e1",
+                    "secondary-fixed": "#ffdcbc",
+                    "primary-container": "#c8242a",
+                    "tertiary-fixed-dim": "#ebbbb9",
+                    "background": "#fdf9f2",
+                    "on-tertiary-fixed": "#2e1414",
+                    "error-container": "#ffdad6",
+                    "on-secondary-container": "#79542a",
+                    "surface-container-low": "#f7f3ec",
+                    "tertiary-fixed": "#ffdad8",
+                    "on-primary-container": "#ffe0de",
+                    "outline": "#8f6f6d",
+                    "surface-variant": "#e6e2db",
+                    "secondary": "#7c572d",
+                    "surface-tint": "#ba1822",
+                    "primary-fixed": "#ffdad7"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "spacing": {
+                    "container-margin-mobile": "20px",
+                    "stack-sm": "8px",
+                    "unit": "4px",
+                    "stack-lg": "48px",
+                    "gutter": "16px",
+                    "stack-md": "24px",
+                    "container-margin-desktop": "48px"
+            },
+            "fontFamily": {
+                    "accent-tag": ["Playfair Display"],
+                    "caption-caps": ["Inter"],
+                    "body-lg": ["Inter"],
+                    "body-md": ["Inter"],
+                    "headline-xl": ["Playfair Display"],
+                    "headline-xl-mobile": ["Playfair Display"],
+                    "price-display": ["Inter"],
+                    "headline-lg": ["Playfair Display"]
+            },
+            "fontSize": {
+                    "accent-tag": ["16px", {"lineHeight": "1", "fontWeight": "400"}],
+                    "caption-caps": ["12px", {"lineHeight": "1", "letterSpacing": "0.1em", "fontWeight": "500"}],
+                    "body-lg": ["18px", {"lineHeight": "1.4", "fontWeight": "600"}],
+                    "body-md": ["15px", {"lineHeight": "1.6", "fontWeight": "400"}],
+                    "headline-xl": ["48px", {"lineHeight": "1.1", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                    "headline-xl-mobile": ["36px", {"lineHeight": "1.1", "fontWeight": "700"}],
+                    "price-display": ["24px", {"lineHeight": "1", "letterSpacing": "-0.01em", "fontWeight": "700"}],
+                    "headline-lg": ["28px", {"lineHeight": "1.2", "fontWeight": "500"}]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        body {
+            background-color: #fdf9f2; /* Cream background from Design System */
+            -webkit-tap-highlight-color: transparent;
+        }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .cart-container {
+            max-width: 600px;
+            margin: 0 auto;
+        }
+    </style>
+</head>
+<body class="text-on-surface font-body-md min-h-screen">
+<!-- TopAppBar -->
+<header class="flex justify-between items-center w-full px-container-margin-mobile h-16 z-50 sticky top-0 bg-surface dark:bg-surface-dim">
+<button class="hover:opacity-80 transition-opacity active:scale-95 duration-150 text-primary">
+<span class="material-symbols-outlined">close</span>
+</button>
+<h1 class="font-headline-lg-mobile text-headline-lg-mobile font-bold text-primary dark:text-inverse-primary">Julia Bakery</h1>
+<div class="w-6"></div> <!-- Spacer for centering -->
+</header>
+<main class="cart-container px-container-margin-mobile pt-stack-md pb-40">
+<header class="mb-stack-md">
+<h2 class="font-headline-lg text-headline-lg text-on-surface">Tu canasta</h2>
+</header>
+<!-- Cart Items List -->
+<div class="space-y-stack-md">
+<!-- Item 1 -->
+<div class="flex items-start gap-gutter">
+<div class="w-16 h-16 rounded-lg overflow-hidden flex-shrink-0 bg-surface-container">
+<img class="w-full h-full object-cover" data-alt="A macro shot of a golden-brown almond croissant with delicate flakes of toasted almonds and a dusting of powdered sugar. The lighting is soft and warm, highlighting the buttery textures of the artisanal pastry. The overall aesthetic is rustic yet premium, consistent with a high-end Guatemalan bakery setting." src="https://lh3.googleusercontent.com/aida/AP1WRLsw6LInmEcP2qPWdDwea2veycIektor71Cnv6Kfzzsm7u8HpmuhivN1sLUJSzmsfrLnJUlqkzC579catyjqjtv04Hw_xQ_2vEoNqzMujvop-kxYQDPR5f0PS6bXgciDeOphEb09jfVjmR08RGxScW8gdVL8rY120MCQ-ufTcdb5R_GNheUdKfZdvB_JnL5inKmcQJRRuPz1X5j_keMkp51dY0Y4EntBt1e77EwqVwOoYHXWSapCCsqWe19c">
+</div>
+<div class="flex-grow">
+<div class="flex justify-between items-start">
+<h3 class="font-body-md text-body-md text-on-surface">Croissant de Almendra</h3>
+<span class="font-price-display text-price-display text-primary">Q25.00</span>
+</div>
+<div class="mt-unit flex items-center justify-between">
+<span class="text-on-surface-variant text-sm">1 unidad</span>
+<button class="text-on-surface-variant hover:text-primary transition-colors flex items-center gap-1 active:scale-95">
+<span class="material-symbols-outlined text-[18px]">delete</span>
+<span class="text-sm">Eliminar</span>
+</button>
+</div>
+</div>
+</div>
+<div class="border-b border-outline-variant"></div>
+<!-- Item 2 (Optional for visual richness) -->
+<div class="flex items-start gap-gutter">
+<div class="w-16 h-16 rounded-lg overflow-hidden flex-shrink-0 bg-surface-container">
+<img class="w-full h-full object-cover" data-alt="Close up of artisanal sourdough bread with a beautifully scored crust, resting on a wooden surface. The warm light creates soft shadows, emphasizing the crunchy texture of the crust. The color palette is composed of warm ochres and deep browns, echoing the handcrafted quality of a premium bakery." src="https://lh3.googleusercontent.com/aida/AP1WRLsV1ML8o1jBFiKHqatOpYuMXta-4u2bweu7zGdbSIW42AMfGVJK1laHhjeidzC2IE95IeQctVdudEJBeRje9cVbf2o16uDzM5nVu_FoWT7WPH2aMdoKBVDW-scsb-1VKkukv_WnDV4v2qKTUIZxlu67exBrrmxhIXHlUGNBuYXFKTNI5BUKLc3bXN5RcgGLQQ4XW013lAgU8B6qrRAJs8jMvgW0v1yczKHFai4uCuZBwG9hBYOEm5nvIyKQ">
+</div>
+<div class="flex-grow">
+<div class="flex justify-between items-start">
+<h3 class="font-body-md text-body-md text-on-surface">Pan de Masa Madre</h3>
+<span class="font-price-display text-price-display text-primary">Q45.00</span>
+</div>
+<div class="mt-unit flex items-center justify-between">
+<span class="text-on-surface-variant text-sm">1 unidad</span>
+<button class="text-on-surface-variant hover:text-primary transition-colors flex items-center gap-1 active:scale-95">
+<span class="material-symbols-outlined text-[18px]">delete</span>
+<span class="text-sm">Eliminar</span>
+</button>
+</div>
+</div>
+</div>
+<div class="border-b border-outline-variant"></div>
+</div>
+<!-- Summary Section -->
+<section class="mt-stack-lg space-y-stack-sm">
+<div class="flex justify-between items-center">
+<span class="text-on-surface-variant font-body-md">Subtotal</span>
+<span class="text-on-surface font-body-md">Q70.00</span>
+</div>
+<div class="flex justify-between items-center">
+<span class="text-on-surface-variant font-body-md">IVA (12%)</span>
+<span class="text-on-surface font-body-md">Q8.40</span>
+</div>
+<div class="flex justify-between items-center pt-stack-sm">
+<span class="font-headline-lg text-headline-lg text-on-surface">Total</span>
+<span class="font-headline-lg text-headline-lg text-primary">Q78.40</span>
+</div>
+</section>
+<!-- Delivery Message -->
+<div class="mt-stack-md p-4 rounded-xl bg-secondary-fixed text-on-secondary-container flex gap-3 items-center">
+<span class="material-symbols-outlined text-secondary">local_shipping</span>
+<p class="text-sm font-medium">¡Llegamos a tu casa en 30-45 minutos!</p>
+</div>
+</main>
+<!-- Sticky Bottom Navigation Shell -->
+<div class="fixed bottom-0 left-0 w-full z-50 bg-surface dark:bg-surface-dim shadow-lg rounded-t-xl px-4 py-6 pb-safe border-t border-outline-variant">
+<div class="cart-container">
+<button class="w-full h-[56px] bg-primary text-white font-body-lg text-body-lg rounded-full shadow-md active:scale-95 transition-transform duration-150 flex items-center justify-center gap-2">
+                Continuar al pago
+                <span class="material-symbols-outlined">arrow_forward</span>
+</button>
+</div>
+</div>
+<!-- Background Decoration (Subtle Artisan Feel) -->
+<div class="fixed inset-0 pointer-events-none opacity-[0.03] z-[-1]" style="background-image: url('https://www.transparenttextures.com/patterns/paper-fibers.png');"></div>
+<script>
+        // Micro-interaction for delete buttons
+        document.querySelectorAll('button').forEach(btn => {
+            btn.addEventListener('touchstart', function() {
+                this.classList.add('opacity-70');
+            });
+            btn.addEventListener('touchend', function() {
+                this.classList.remove('opacity-70');
+            });
+        });
+    </script>
+
+
+</body></html>

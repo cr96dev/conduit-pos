@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+
+<html lang="es"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;700&amp;family=Inter:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "on-tertiary-fixed-variant": "#603e3d",
+                    "tertiary-container": "#845e5d",
+                    "inverse-surface": "#31302c",
+                    "on-primary-fixed-variant": "#930012",
+                    "surface-container-lowest": "#ffffff",
+                    "on-secondary": "#ffffff",
+                    "on-secondary-fixed": "#2c1700",
+                    "inverse-on-surface": "#f4f0e9",
+                    "error": "#ba1a1a",
+                    "on-secondary-fixed-variant": "#614018",
+                    "surface-dim": "#dddad3",
+                    "on-primary-fixed": "#410004",
+                    "on-primary": "#ffffff",
+                    "primary-fixed-dim": "#ffb3ad",
+                    "on-tertiary-container": "#ffe0df",
+                    "on-surface-variant": "#5b403e",
+                    "on-surface": "#1c1c18",
+                    "secondary-fixed-dim": "#efbd8a",
+                    "on-error-container": "#93000a",
+                    "tertiary": "#6a4645",
+                    "inverse-primary": "#ffb3ad",
+                    "on-tertiary": "#ffffff",
+                    "on-background": "#1c1c18",
+                    "outline-variant": "#e4beba",
+                    "surface-bright": "#fdf9f2",
+                    "secondary-container": "#fecb97",
+                    "primary": "#a40016",
+                    "surface-container": "#f1ede6",
+                    "on-error": "#ffffff",
+                    "surface": "#fdf9f2",
+                    "surface-container-highest": "#e6e2db",
+                    "surface-container-high": "#ebe8e1",
+                    "secondary-fixed": "#ffdcbc",
+                    "primary-container": "#c8242a",
+                    "tertiary-fixed-dim": "#ebbbb9",
+                    "background": "#fdf9f2",
+                    "on-tertiary-fixed": "#2e1414",
+                    "error-container": "#ffdad6",
+                    "on-secondary-container": "#79542a",
+                    "surface-container-low": "#f7f3ec",
+                    "tertiary-fixed": "#ffdad8",
+                    "on-primary-container": "#ffe0de",
+                    "outline": "#8f6f6d",
+                    "surface-variant": "#e6e2db",
+                    "secondary": "#7c572d",
+                    "surface-tint": "#ba1822",
+                    "primary-fixed": "#ffdad7",
+                    "stone-handle": "#6B6258"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "spacing": {
+                    "container-margin-mobile": "20px",
+                    "stack-sm": "8px",
+                    "unit": "4px",
+                    "stack-lg": "48px",
+                    "gutter": "16px",
+                    "stack-md": "24px",
+                    "container-margin-desktop": "48px"
+            },
+            "fontFamily": {
+                    "accent-tag": ["Playfair Display"],
+                    "caption-caps": ["Inter"],
+                    "body-lg": ["Inter"],
+                    "body-md": ["Inter"],
+                    "headline-xl": ["Playfair Display"],
+                    "headline-xl-mobile": ["Playfair Display"],
+                    "price-display": ["Inter"],
+                    "headline-lg": ["Playfair Display"]
+            },
+            "fontSize": {
+                    "accent-tag": ["16px", {"lineHeight": "1", "fontWeight": "400"}],
+                    "caption-caps": ["12px", {"lineHeight": "1", "letterSpacing": "0.1em", "fontWeight": "500"}],
+                    "body-lg": ["18px", {"lineHeight": "1.4", "fontWeight": "600"}],
+                    "body-md": ["15px", {"lineHeight": "1.6", "fontWeight": "400"}],
+                    "headline-xl": ["48px", {"lineHeight": "1.1", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                    "headline-xl-mobile": ["36px", {"lineHeight": "1.1", "fontWeight": "700"}],
+                    "price-display": ["24px", {"lineHeight": "1", "letterSpacing": "-0.01em", "fontWeight": "700"}],
+                    "headline-lg": ["28px", {"lineHeight": "1.2", "fontWeight": "500"}]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            display: inline-block;
+            vertical-align: middle;
+        }
+        .backdrop-blur-premium {
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+        }
+        input:focus {
+            outline: none;
+            box-shadow: none;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-surface text-on-surface min-h-screen font-body-md flex flex-col">
+<!-- Top App Bar (Manual implementation from JSON) -->
+<header class="flex justify-between items-center w-full px-container-margin-mobile h-16 z-50 bg-surface fixed top-0 left-0">
+<button class="text-primary hover:opacity-80 transition-opacity active:scale-95 duration-150">
+<span class="material-symbols-outlined" data-icon="arrow_back">arrow_back</span>
+</button>
+<h1 class="font-headline-lg-mobile text-headline-lg-mobile font-bold text-primary">Julia Bakery</h1>
+<button class="text-primary hover:opacity-80 transition-opacity active:scale-95 duration-150">
+<span class="material-symbols-outlined" data-icon="close">close</span>
+</button>
+</header>
+<main class="flex-grow pt-24 pb-32 px-container-margin-mobile max-w-lg mx-auto w-full">
+<!-- Editorial Header -->
+<section class="mb-stack-lg">
+<h2 class="font-headline-xl-mobile text-headline-xl-mobile text-primary mb-2">Cobramos con tu tarjeta</h2>
+<p class="text-on-surface-variant font-body-md italic">Completá los datos para hornear tu pedido.</p>
+</section>
+<!-- Payment Form -->
+<form class="space-y-gutter">
+<!-- Card Number -->
+<div class="relative">
+<label class="font-caption-caps text-caption-caps text-on-surface-variant block mb-2">Número de tarjeta</label>
+<div class="relative group">
+<input class="w-full h-[56px] px-4 bg-surface-container-low border border-outline-variant rounded-lg focus:border-primary focus:ring-0 transition-colors placeholder:text-outline" placeholder="0000 0000 0000 0000" type="text"/>
+<span class="absolute right-4 top-1/2 -translate-y-1/2 text-on-surface-variant material-symbols-outlined" data-icon="credit_card">credit_card</span>
+</div>
+</div>
+<!-- Expiry & CVV -->
+<div class="grid grid-cols-2 gap-gutter">
+<div>
+<label class="font-caption-caps text-caption-caps text-on-surface-variant block mb-2">Vencimiento</label>
+<input class="w-full h-[56px] px-4 bg-surface-container-low border border-outline-variant rounded-lg focus:border-primary focus:ring-0 transition-colors placeholder:text-outline" placeholder="MM / AA" type="text"/>
+</div>
+<div>
+<label class="font-caption-caps text-caption-caps text-on-surface-variant block mb-2">CVV</label>
+<div class="relative">
+<input class="w-full h-[56px] px-4 bg-surface-container-low border border-outline-variant rounded-lg focus:border-primary focus:ring-0 transition-colors placeholder:text-outline" placeholder="123" type="password"/>
+<span class="absolute right-4 top-1/2 -translate-y-1/2 text-on-surface-variant material-symbols-outlined" data-icon="help_outline">help_outline</span>
+</div>
+</div>
+</div>
+<!-- Cardholder Name -->
+<div>
+<label class="font-caption-caps text-caption-caps text-on-surface-variant block mb-2">Nombre en la tarjeta</label>
+<input class="w-full h-[56px] px-4 bg-surface-container-low border border-outline-variant rounded-lg focus:border-primary focus:ring-0 transition-colors placeholder:text-outline" placeholder="Como aparece en el plástico" type="text"/>
+</div>
+<!-- Summary Box -->
+<div class="mt-stack-lg p-6 bg-surface-container border border-outline-variant rounded-xl space-y-3">
+<div class="flex justify-between items-center text-on-surface-variant">
+<span class="font-body-md">Productos:</span>
+<span class="font-body-md font-medium">Q120.00</span>
+</div>
+<div class="flex justify-between items-center text-on-surface-variant pb-3 border-b border-outline-variant">
+<span class="font-body-md">IVA (12%):</span>
+<span class="font-body-md font-medium">Q14.40</span>
+</div>
+<div class="flex justify-between items-center pt-2">
+<span class="font-headline-lg font-bold text-primary">Total:</span>
+<span class="font-headline-lg font-bold text-primary tracking-tight">Q134.40</span>
+</div>
+</div>
+</form>
+<!-- Aesthetic Imagery Context -->
+<div class="mt-stack-lg flex items-center gap-4 p-4 rounded-xl bg-secondary-fixed/10 border border-secondary-fixed/20">
+<div class="w-16 h-16 rounded-lg overflow-hidden flex-shrink-0">
+<img class="w-full h-full object-cover" data-alt="A close-up photograph of freshly baked sourdough bread with a deep golden, crackling crust, resting on a rustic linen cloth. The warm, soft morning light creates a cozy and artisanal atmosphere, emphasizing the organic textures of the flour-dusted surface. The background is a soft-focus cream-colored bakery wall, maintaining a premium and welcoming aesthetic consistent with high-end culinary craftsmanship." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCY8AkCsNambLYX_nAM14rhef-xsiIzDWbicFSnHgQm1IBhcdZGsDvnxXSbNwTWX0e-Vq1n20AYOU-AggDlD-LuQSp-yzBg17uOTj-YZ-o93eS_wDen8NelU_SOKdsoIfJf7uNsTmve4gqlhtU2SK29HxzIwSm0k0ItLzg0ba44L0sZKC1mKRNuRvsVfhWkH5YUMzcQ58zODZQaOrZXxV-oIFu1tXSZGLlicKq4fGsQh3qp-nfevkqfV5WUFgSBDS5lfOoQ6mm1--wZ"/>
+</div>
+<div>
+<p class="font-body-md text-secondary leading-tight">Prepararemos tu pedido con masa madre fresca.</p>
+<p class="font-caption-caps text-[10px] text-on-surface-variant mt-1 uppercase">Calidad Julia Garantizada</p>
+</div>
+</div>
+</main>
+<!-- Bottom Action Bar -->
+<footer class="fixed bottom-0 left-0 w-full bg-surface-bright/80 backdrop-blur-premium p-container-margin-mobile flex flex-col items-center gap-4 z-50">
+<button class="w-full h-[56px] bg-primary text-on-primary font-body-lg rounded-full shadow-lg active:scale-[0.98] transition-all hover:opacity-90 flex items-center justify-center gap-2">
+            Pagar Q134.40
+            <span class="material-symbols-outlined" data-icon="lock" style="font-variation-settings: 'FILL' 1;">lock</span>
+</button>
+<div class="flex items-center gap-2 text-[13px] text-on-surface-variant">
+<span class="material-symbols-outlined text-[16px]" data-icon="verified_user">verified_user</span>
+<p>Pago seguro · No guardamos los datos de tu tarjeta</p>
+</div>
+</footer>
+<!-- Bottom Sheet Indicator (Handle) -->
+<div class="fixed top-0 left-1/2 -translate-x-1/2 pt-2 z-[60] md:hidden">
+<div class="w-8 h-1 rounded-full bg-stone-handle opacity-20"></div>
+</div>
+<script>
+        // Subtle interaction for input focus states
+        const inputs = document.querySelectorAll('input');
+        inputs.forEach(input => {
+            input.addEventListener('focus', () => {
+                input.parentElement.closest('div').classList.add('scale-[1.01]');
+            });
+            input.addEventListener('blur', () => {
+                input.parentElement.closest('div').classList.remove('scale-[1.01]');
+            });
+        });
+    </script>
+</body></html>

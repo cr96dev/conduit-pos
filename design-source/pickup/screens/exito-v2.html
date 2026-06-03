@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+
+<html class="light" lang="es"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>¡Pedido Exitoso! - Julia Bakery</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;700&amp;family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "on-tertiary-fixed-variant": "#603e3d",
+                    "tertiary-container": "#845e5d",
+                    "inverse-surface": "#31302c",
+                    "on-primary-fixed-variant": "#930012",
+                    "surface-container-lowest": "#ffffff",
+                    "on-secondary": "#ffffff",
+                    "on-secondary-fixed": "#2c1700",
+                    "inverse-on-surface": "#f4f0e9",
+                    "error": "#ba1a1a",
+                    "on-secondary-fixed-variant": "#614018",
+                    "surface-dim": "#dddad3",
+                    "on-primary-fixed": "#410004",
+                    "on-primary": "#ffffff",
+                    "primary-fixed-dim": "#ffb3ad",
+                    "on-tertiary-container": "#ffe0df",
+                    "on-surface-variant": "#5b403e",
+                    "on-surface": "#1c1c18",
+                    "secondary-fixed-dim": "#efbd8a",
+                    "on-error-container": "#93000a",
+                    "tertiary": "#6a4645",
+                    "inverse-primary": "#ffb3ad",
+                    "on-tertiary": "#ffffff",
+                    "on-background": "#1c1c18",
+                    "outline-variant": "#e4beba",
+                    "surface-bright": "#fdf9f2",
+                    "secondary-container": "#fecb97",
+                    "primary": "#a40016",
+                    "surface-container": "#f1ede6",
+                    "on-error": "#ffffff",
+                    "surface": "#fdf9f2",
+                    "surface-container-highest": "#e6e2db",
+                    "surface-container-high": "#ebe8e1",
+                    "secondary-fixed": "#ffdcbc",
+                    "primary-container": "#c8242a",
+                    "tertiary-fixed-dim": "#ebbbb9",
+                    "background": "#fdf9f2",
+                    "on-tertiary-fixed": "#2e1414",
+                    "error-container": "#ffdad6",
+                    "on-secondary-container": "#79542a",
+                    "surface-container-low": "#f7f3ec",
+                    "tertiary-fixed": "#ffdad8",
+                    "on-primary-container": "#ffe0de",
+                    "outline": "#8f6f6d",
+                    "surface-variant": "#e6e2db",
+                    "secondary": "#7c572d",
+                    "surface-tint": "#ba1822",
+                    "primary-fixed": "#ffdad7",
+                    "sage": "#7A8C70", /* Artisan Sage */
+                    "wheat": "#D4A574",   /* Brand Wheat */
+                    "stone": "#6B6258"    /* Brand Stone */
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "spacing": {
+                    "container-margin-mobile": "20px",
+                    "stack-sm": "8px",
+                    "unit": "4px",
+                    "stack-lg": "48px",
+                    "gutter": "16px",
+                    "stack-md": "24px",
+                    "container-margin-desktop": "48px"
+            },
+            "fontFamily": {
+                    "accent-tag": ["Playfair Display"],
+                    "caption-caps": ["Inter"],
+                    "body-lg": ["Inter"],
+                    "body-md": ["Inter"],
+                    "headline-xl": ["Playfair Display"],
+                    "headline-xl-mobile": ["Playfair Display"],
+                    "price-display": ["Inter"],
+                    "headline-lg": ["Playfair Display"]
+            },
+            "fontSize": {
+                    "accent-tag": ["16px", {"lineHeight": "1", "fontWeight": "400"}],
+                    "caption-caps": ["12px", {"lineHeight": "1", "letterSpacing": "0.1em", "fontWeight": "500"}],
+                    "body-lg": ["18px", {"lineHeight": "1.4", "fontWeight": "600"}],
+                    "body-md": ["15px", {"lineHeight": "1.6", "fontWeight": "400"}],
+                    "headline-xl": ["48px", {"lineHeight": "1.1", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                    "headline-xl-mobile": ["36px", {"lineHeight": "1.1", "fontWeight": "700"}],
+                    "price-display": ["24px", {"lineHeight": "1", "letterSpacing": "-0.01em", "fontWeight": "700"}],
+                    "headline-lg": ["28px", {"lineHeight": "1.2", "fontWeight": "500"}]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .qr-gradient {
+            background-image: radial-gradient(circle at 2px 2px, #D4A574 1px, transparent 0);
+            background-size: 12px 12px;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+    @keyframes fade-in-up {
+        from {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+    .animate-fade-in-up {
+        animation: fade-in-up 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+  </style>
+</head>
+<body class="bg-background text-on-surface min-h-screen flex flex-col overflow-x-hidden">
+<main class="flex-grow flex flex-col items-center justify-center px-container-margin-mobile py-stack-lg max-w-lg mx-auto w-full text-center">
+<div class="mb-stack-md flex flex-col items-center animate-fade-in-up">
+<div class="w-24 h-24 rounded-full bg-surface-bright border border-wheat flex items-center justify-center mb-stack-md shadow-sm">
+<span class="material-symbols-outlined text-[48px] text-sage" data-icon="check_circle">check_circle</span>
+</div>
+<h1 class="font-headline-xl-mobile text-headline-xl-mobile text-on-surface mb-unit">
+                Tu pedido está agendado
+            </h1>
+<p class="font-headline-lg text-[22px] text-secondary italic opacity-90">
+                Pedido #JU-1024
+            </p>
+</div>
+<div class="relative w-full max-w-[280px] aspect-square bg-surface-bright border-2 border-wheat rounded-xl p-6 flex flex-col items-center justify-center mb-stack-md shadow-sm transition-transform hover:scale-[1.02] duration-300">
+<div class="absolute -top-3 left-1/2 -translate-x-1/2 bg-background px-4">
+<span class="font-caption-caps text-caption-caps text-wheat uppercase tracking-widest">Canjeá en tienda</span>
+</div>
+<div class="w-full h-full rounded-lg qr-gradient opacity-20 absolute inset-0 pointer-events-none"></div>
+<div class="relative z-10 w-full h-full flex items-center justify-center">
+<img alt="Order QR Code" class="w-48 h-48 mix-blend-multiply" data-alt="A clean and minimal QR code displayed on a high-quality cream-colored card background. The card has a subtle grainy texture and is framed by a thin wheat-colored border. The lighting is bright and even, reflecting an artisan bakery's premium and warm aesthetic. The overall mood is sophisticated and functional." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBatdtNh9Rb5JiD91LIID5tmr3_4crona-a_crjtN6ORJLbED8zzYOU83vdsjieRUJ7WEKZ8bfVuP-HjJVGHuF4M3r7Tqs8G69KMp4ycRrfpcmnP3oSyUXRI18t6gL3CvuzWIs0KDzoF6i9VrFNW7s5o0IIHlN7uVgYhdtogOc6Nxdrp6YT8iQdPGYjvXcK8hNo_x6vojKow5KpJH2lZZXpTjDep5xOAKtz6leSqZII-ff2UOxcNCbPmr5PF8Og2Eyu-fqQWkARsmVD"/>
+</div>
+</div>
+<div class="mb-stack-lg flex flex-col items-center bg-surface-container-low py-4 px-8 rounded-full border border-outline-variant/30">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-stone text-[20px]" data-icon="schedule">schedule</span>
+<p class="font-body-md text-body-md text-stone">
+                    Listo el <span class="font-bold">viernes a las 7:30 AM</span>
+</p>
+</div>
+</div>
+<div class="w-full space-y-stack-sm flex flex-col">
+<button class="w-full h-14 bg-primary text-white font-body-lg text-body-lg rounded-xl shadow-md hover:bg-primary-container transition-all active:scale-95 duration-150 flex items-center justify-center gap-2">
+<span class="material-symbols-outlined" data-icon="download">download</span>
+                Guardá mi pedido
+            </button>
+<button class="w-full h-14 bg-transparent text-stone font-body-lg text-body-lg rounded-xl hover:bg-surface-container transition-all active:scale-95 duration-150 flex items-center justify-center gap-2">
+<span class="material-symbols-outlined" data-icon="arrow_back">arrow_back</span>
+                Volver al inicio
+            </button>
+</div>
+</main>
+<footer class="mt-auto py-8 text-center opacity-40">
+<p class="font-caption-caps text-[10px] tracking-[0.2em] text-on-surface uppercase">Julia Bakery — Guatemala</p>
+</footer>
+<script>
+        document.addEventListener('DOMContentLoaded', () => {
+            if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
+            const colors = ['#87A878', '#D4A574', '#C8242A'];
+            const particleCount = 45;
+            
+            const createConfetti = () => {
+                for (let i = 0; i < particleCount; i++) {
+                    const confetti = document.createElement('div');
+                    confetti.style.position = 'fixed';
+                    confetti.style.width = (Math.random() * 8 + 4) + 'px';
+                    confetti.style.height = (Math.random() * 12 + 6) + 'px';
+                    confetti.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+                    confetti.style.left = Math.random() * 100 + 'vw';
+                    // Start from the top third
+                    confetti.style.top = (Math.random() * -20 - 10) + 'vh';
+                    confetti.style.opacity = Math.random() * 0.5 + 0.5;
+                    confetti.style.borderRadius = '1px';
+                    confetti.style.zIndex = '5'; // Above background but below content if needed, but here we want it visible but subtle
+                    confetti.style.pointerEvents = 'none';
+                    
+                    document.body.appendChild(confetti);
+                    
+                    const duration = 1500; // 1.5 seconds fixed duration
+                    const drift = (Math.random() - 0.5) * 100;
+                    const rotation = Math.random() * 360;
+                    
+                    confetti.animate([
+                        { transform: 'translateY(0) rotate(0deg)', opacity: confetti.style.opacity },
+                        { transform: `translateY(110vh) translateX(${drift}px) rotate(${rotation}deg)`, opacity: 0 }
+                    ], {
+                        duration: duration,
+                        easing: 'cubic-bezier(0.25, 0.46, 0.45, 0.94)',
+                        fill: 'forwards'
+                    });
+                    
+                    setTimeout(() => confetti.remove(), duration);
+                }
+            };
+            
+            // Trigger animation
+            setTimeout(createConfetti, 100);
+        });
+    </script>
+</body></html>

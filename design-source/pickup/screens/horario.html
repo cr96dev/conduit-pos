@@ -1,0 +1,272 @@
+<!DOCTYPE html><html lang="es"><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;700&amp;family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "on-tertiary-fixed-variant": "#603e3d",
+                        "tertiary-container": "#845e5d",
+                        "inverse-surface": "#31302c",
+                        "on-primary-fixed-variant": "#930012",
+                        "surface-container-lowest": "#ffffff",
+                        "on-secondary": "#ffffff",
+                        "on-secondary-fixed": "#2c1700",
+                        "inverse-on-surface": "#f4f0e9",
+                        "error": "#ba1a1a",
+                        "on-secondary-fixed-variant": "#614018",
+                        "surface-dim": "#dddad3",
+                        "on-primary-fixed": "#410004",
+                        "on-primary": "#ffffff",
+                        "primary-fixed-dim": "#ffb3ad",
+                        "on-tertiary-container": "#ffe0df",
+                        "on-surface-variant": "#5b403e",
+                        "on-surface": "#1c1c18",
+                        "secondary-fixed-dim": "#efbd8a",
+                        "on-error-container": "#93000a",
+                        "tertiary": "#6a4645",
+                        "inverse-primary": "#ffb3ad",
+                        "on-tertiary": "#ffffff",
+                        "on-background": "#1c1c18",
+                        "outline-variant": "#e4beba",
+                        "surface-bright": "#fdf9f2",
+                        "secondary-container": "#fecb97",
+                        "primary": "#a40016",
+                        "surface-container": "#f1ede6",
+                        "on-error": "#ffffff",
+                        "surface": "#fdf9f2",
+                        "surface-container-highest": "#e6e2db",
+                        "surface-container-high": "#ebe8e1",
+                        "secondary-fixed": "#ffdcbc",
+                        "primary-container": "#c8242a",
+                        "tertiary-fixed-dim": "#ebbbb9",
+                        "background": "#fdf9f2",
+                        "on-tertiary-fixed": "#2e1414",
+                        "error-container": "#ffdad6",
+                        "on-secondary-container": "#79542a",
+                        "surface-container-low": "#f7f3ec",
+                        "tertiary-fixed": "#ffdad8",
+                        "on-primary-container": "#ffe0de",
+                        "outline": "#8f6f6d",
+                        "surface-variant": "#e6e2db",
+                        "secondary": "#7c572d",
+                        "surface-tint": "#ba1822",
+                        "primary-fixed": "#ffdad7"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "container-margin-mobile": "20px",
+                        "stack-sm": "8px",
+                        "unit": "4px",
+                        "stack-lg": "48px",
+                        "gutter": "16px",
+                        "stack-md": "24px",
+                        "container-margin-desktop": "48px"
+                    },
+                    "fontFamily": {
+                        "accent-tag": ["Playfair Display"],
+                        "caption-caps": ["Inter"],
+                        "body-lg": ["Inter"],
+                        "body-md": ["Inter"],
+                        "headline-xl": ["Playfair Display"],
+                        "headline-xl-mobile": ["Playfair Display"],
+                        "price-display": ["Inter"],
+                        "headline-lg": ["Playfair Display"]
+                    },
+                    "fontSize": {
+                        "accent-tag": ["16px", {"lineHeight": "1", "fontWeight": "400"}],
+                        "caption-caps": ["12px", {"lineHeight": "1", "letterSpacing": "0.1em", "fontWeight": "500"}],
+                        "body-lg": ["18px", {"lineHeight": "1.4", "fontWeight": "600"}],
+                        "body-md": ["15px", {"lineHeight": "1.6", "fontWeight": "400"}],
+                        "headline-xl": ["48px", {"lineHeight": "1.1", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                        "headline-xl-mobile": ["36px", {"lineHeight": "1.1", "fontWeight": "700"}],
+                        "price-display": ["24px", {"lineHeight": "1", "letterSpacing": "-0.01em", "fontWeight": "700"}],
+                        "headline-lg": ["28px", {"lineHeight": "1.2", "fontWeight": "500"}]
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .time-slot-card {
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .time-slot-card:active {
+            transform: scale(0.96);
+        }
+        .hide-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .hide-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+    </style>
+</head>
+<body class="bg-background text-on-surface min-h-screen flex flex-col font-body-md">
+<!-- TopAppBar (From Shared Components) -->
+<header class="flex justify-between items-center w-full px-container-margin-mobile h-16 z-50 bg-surface dark:bg-surface-dim sticky top-0">
+<button class="hover:opacity-80 transition-opacity active:scale-95 duration-150">
+<span class="material-symbols-outlined text-primary dark:text-inverse-primary" data-icon="menu">menu</span>
+</button>
+<h1 class="font-headline-lg-mobile text-headline-lg-mobile font-bold text-primary dark:text-inverse-primary">Julia Bakery</h1>
+<button class="hover:opacity-80 transition-opacity active:scale-95 duration-150">
+<span class="material-symbols-outlined text-primary dark:text-inverse-primary" data-icon="shopping_bag">shopping_bag</span>
+</button>
+</header>
+<main class="flex-grow flex flex-col px-container-margin-mobile pb-32">
+<!-- Hero Title Section -->
+<section class="mt-stack-md mb-stack-lg">
+<h2 class="font-headline-xl-mobile text-headline-xl-mobile text-primary mb-2">¿A qué hora pasás?</h2>
+<p class="text-on-surface-variant font-body-md">Elegí el momento perfecto para retirar tu pan recién horneado.</p>
+</section>
+<!-- Day Pills Navigation -->
+<section class="mb-stack-md overflow-x-auto hide-scrollbar flex gap-3 pb-2 -mx-5 px-5">
+<button class="flex-shrink-0 px-6 py-2 rounded-full border border-primary bg-primary text-on-primary font-body-lg text-[14px] transition-all duration-300">
+                Hoy
+            </button>
+<button class="flex-shrink-0 px-6 py-2 rounded-full border border-outline-variant bg-surface text-secondary font-body-lg text-[14px] hover:border-primary transition-all duration-300">
+                Mañana
+            </button>
+<button class="flex-shrink-0 px-6 py-2 rounded-full border border-outline-variant bg-surface text-secondary font-body-lg text-[14px] hover:border-primary transition-all duration-300">
+                Sábado
+            </button>
+<button class="flex-shrink-0 px-6 py-2 rounded-full border border-outline-variant bg-surface text-secondary font-body-lg text-[14px] hover:border-primary transition-all duration-300">
+                Domingo
+            </button>
+</section>
+<!-- Time Slot Grid -->
+<section class="grid grid-cols-2 gap-gutter">
+<!-- Available -->
+<div class="time-slot-card p-4 rounded-xl border border-outline-variant bg-surface cursor-pointer flex flex-col items-center justify-center h-24 hover:border-secondary-container">
+<span class="text-tertiary font-price-display text-lg">7:00 AM</span>
+<span class="font-caption-caps text-[10px] text-on-surface-variant mt-1">DISPONIBLE</span>
+</div>
+<!-- Selected -->
+<div class="time-slot-card p-4 rounded-xl bg-primary text-on-primary shadow-lg flex flex-col items-center justify-center h-24 transform scale-105 border-2 border-primary">
+<span class="font-price-display text-lg">7:15 AM</span>
+<span class="font-caption-caps text-[10px] opacity-90 mt-1">SELECCIONADO</span>
+</div>
+<!-- Full/Lleno -->
+<div class="time-slot-card p-4 rounded-xl border border-surface-container-highest bg-surface-container-low opacity-60 flex flex-col items-center justify-center h-24 cursor-not-allowed">
+<span class="text-outline font-price-display text-lg line-through">7:30 AM</span>
+<div class="mt-1 bg-surface-dim px-2 py-0.5 rounded text-[9px] font-caption-caps text-on-surface-variant">LLENO</div>
+</div>
+<div class="time-slot-card p-4 rounded-xl border border-outline-variant bg-surface cursor-pointer flex flex-col items-center justify-center h-24 hover:border-secondary-container">
+<span class="text-tertiary font-price-display text-lg">7:45 AM</span>
+<span class="font-caption-caps text-[10px] text-on-surface-variant mt-1">DISPONIBLE</span>
+</div>
+<div class="time-slot-card p-4 rounded-xl border border-outline-variant bg-surface cursor-pointer flex flex-col items-center justify-center h-24 hover:border-secondary-container">
+<span class="text-tertiary font-price-display text-lg">8:00 AM</span>
+<span class="font-caption-caps text-[10px] text-on-surface-variant mt-1">DISPONIBLE</span>
+</div>
+<div class="time-slot-card p-4 rounded-xl border border-outline-variant bg-surface cursor-pointer flex flex-col items-center justify-center h-24 hover:border-secondary-container">
+<span class="text-tertiary font-price-display text-lg">8:15 AM</span>
+<span class="font-caption-caps text-[10px] text-on-surface-variant mt-1">DISPONIBLE</span>
+</div>
+<!-- Full/Lleno -->
+<div class="time-slot-card p-4 rounded-xl border border-surface-container-highest bg-surface-container-low opacity-60 flex flex-col items-center justify-center h-24 cursor-not-allowed">
+<span class="text-outline font-price-display text-lg line-through">8:30 AM</span>
+<div class="mt-1 bg-surface-dim px-2 py-0.5 rounded text-[9px] font-caption-caps text-on-surface-variant">LLENO</div>
+</div>
+<div class="time-slot-card p-4 rounded-xl border border-outline-variant bg-surface cursor-pointer flex flex-col items-center justify-center h-24 hover:border-secondary-container">
+<span class="text-tertiary font-price-display text-lg">8:45 AM</span>
+<span class="font-caption-caps text-[10px] text-on-surface-variant mt-1">DISPONIBLE</span>
+</div>
+</section>
+<!-- Illustration / Mood space -->
+<section class="mt-stack-lg relative rounded-xl overflow-hidden h-48 group">
+<img alt="Minimalist artisan bakery interior" class="w-full h-full object-cover grayscale-[30%] group-hover:scale-105 transition-transform duration-700" data-alt="Minimalist artisan bakery interior, warm wood textures, golden hour light streaming through a window, blurred background, calm and premium atmosphere." src="https://lh3.googleusercontent.com/aida/AP1WRLvd5oY88SLEV8YguQVYg61Toks5msM9bEHjKFlwmZGgw9QgHhqO2kuMkLlJmEF0MyGe5eE77sBltrMiYDYfL_oWSenVh8KnfGfJCBY_gpiviQQOKtEtZOOPVv8QueScWZ452Qx0epKKNcIfINg2ZMIYXjLqrpPnDHwAVNtQakEPH2Ci4W5t9LMxM8yEpxIOdr0FY2MpvRgrimzjiBw2wxeztj2Elu-e8XhUNo0-wFpBGtL6XebYU8xSjnRo">
+<div class="absolute inset-0 bg-gradient-to-t from-primary/40 to-transparent"></div>
+<div class="absolute bottom-4 left-4">
+<p class="font-accent-tag text-on-primary italic text-lg text-white">Horneamos cada tanda con calma.</p>
+</div>
+</section>
+</main>
+<!-- Sticky Bottom Action -->
+<footer class="fixed bottom-0 left-0 w-full bg-surface/80 backdrop-blur-xl px-container-margin-mobile pt-4 pb-8 border-t border-outline-variant/30 flex flex-col gap-4 z-50">
+<div class="flex justify-between items-center px-2">
+<div>
+<span class="font-caption-caps text-[11px] text-on-surface-variant block uppercase">Tu retiro</span>
+<span class="font-body-lg text-secondary">Hoy, 7:15 AM</span>
+</div>
+<div class="text-right">
+<span class="font-caption-caps text-[11px] text-on-surface-variant block uppercase">Local</span>
+<span class="font-body-lg text-secondary">Zona 14</span>
+</div>
+</div>
+<button class="w-full bg-primary text-white h-[56px] rounded-lg font-body-lg text-lg shadow-xl active:scale-95 transition-all duration-150">
+            Continuar
+        </button>
+</footer>
+<!-- BottomNavBar (Suppressed for focused task per rules: "Success/Confirmation" splash or task-focused sub-pages) -->
+<!-- However, providing the required navigation for top-level flow if user decides to exit -->
+<nav class="fixed bottom-0 left-0 w-full z-40 flex justify-around items-center px-4 py-3 pb-safe bg-surface shadow-lg rounded-t-xl md:hidden opacity-0 pointer-events-none transition-opacity duration-300" id="global-nav">
+<div class="flex flex-col items-center justify-center text-primary font-bold">
+<span class="material-symbols-outlined" data-icon="home">home</span>
+<span class="font-caption-caps text-[10px]">Inicio</span>
+</div>
+<div class="flex flex-col items-center justify-center text-on-surface-variant">
+<span class="material-symbols-outlined" data-icon="bakery_dining">bakery_dining</span>
+<span class="font-caption-caps text-[10px]">Menú</span>
+</div>
+<div class="flex flex-col items-center justify-center text-on-surface-variant">
+<span class="material-symbols-outlined" data-icon="receipt_long">receipt_long</span>
+<span class="font-caption-caps text-[10px]">Mis Pedidos</span>
+</div>
+<div class="flex flex-col items-center justify-center text-on-surface-variant">
+<span class="material-symbols-outlined" data-icon="person">person</span>
+<span class="font-caption-caps text-[10px]">Perfil</span>
+</div>
+</nav>
+<script>
+        // Micro-interaction for slot selection
+        const slots = document.querySelectorAll('.time-slot-card:not(.cursor-not-allowed)');
+        slots.forEach(slot => {
+            slot.addEventListener('click', () => {
+                // Clear previous selection
+                slots.forEach(s => {
+                    s.classList.remove('bg-primary', 'text-on-primary', 'shadow-lg', 'scale-105', 'border-2', 'border-primary');
+                    s.classList.add('bg-surface', 'border-outline-variant');
+                    const label = s.querySelector('.font-caption-caps');
+                    if (label) label.textContent = 'DISPONIBLE';
+                });
+
+                // Apply new selection
+                slot.classList.remove('bg-surface', 'border-outline-variant');
+                slot.classList.add('bg-primary', 'text-on-primary', 'shadow-lg', 'scale-105', 'border-2', 'border-primary');
+                const label = slot.querySelector('.font-caption-caps');
+                if (label) label.textContent = 'SELECCIONADO';
+            });
+        });
+
+        // Day pill selection logic
+        const pills = document.querySelectorAll('section.mb-stack-md button');
+        pills.forEach(pill => {
+            pill.addEventListener('click', () => {
+                pills.forEach(p => {
+                    p.classList.remove('bg-primary', 'text-on-primary', 'border-primary');
+                    p.classList.add('bg-surface', 'text-secondary', 'border-outline-variant');
+                });
+                pill.classList.remove('bg-surface', 'text-secondary', 'border-outline-variant');
+                pill.classList.add('bg-primary', 'text-on-primary', 'border-primary');
+            });
+        });
+    </script>
+
+
+</body></html>

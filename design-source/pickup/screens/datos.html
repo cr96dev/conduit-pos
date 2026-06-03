@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+
+<html lang="es"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;700&amp;family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "on-tertiary-fixed-variant": "#603e3d",
+                        "tertiary-container": "#845e5d",
+                        "inverse-surface": "#31302c",
+                        "on-primary-fixed-variant": "#930012",
+                        "surface-container-lowest": "#ffffff",
+                        "on-secondary": "#ffffff",
+                        "on-secondary-fixed": "#2c1700",
+                        "inverse-on-surface": "#f4f0e9",
+                        "error": "#ba1a1a",
+                        "on-secondary-fixed-variant": "#614018",
+                        "surface-dim": "#dddad3",
+                        "on-primary-fixed": "#410004",
+                        "on-primary": "#ffffff",
+                        "primary-fixed-dim": "#ffb3ad",
+                        "on-tertiary-container": "#ffe0df",
+                        "on-surface-variant": "#5b403e",
+                        "on-surface": "#1c1c18",
+                        "secondary-fixed-dim": "#efbd8a",
+                        "on-error-container": "#93000a",
+                        "tertiary": "#6a4645",
+                        "inverse-primary": "#ffb3ad",
+                        "on-tertiary": "#ffffff",
+                        "on-background": "#1c1c18",
+                        "outline-variant": "#e4beba",
+                        "surface-bright": "#fdf9f2",
+                        "secondary-container": "#fecb97",
+                        "primary": "#a40016",
+                        "surface-container": "#f1ede6",
+                        "on-error": "#ffffff",
+                        "surface": "#fdf9f2",
+                        "surface-container-highest": "#e6e2db",
+                        "surface-container-high": "#ebe8e1",
+                        "secondary-fixed": "#ffdcbc",
+                        "primary-container": "#c8242a",
+                        "tertiary-fixed-dim": "#ebbbb9",
+                        "background": "#fdf9f2",
+                        "on-tertiary-fixed": "#2e1414",
+                        "error-container": "#ffdad6",
+                        "on-secondary-container": "#79542a",
+                        "surface-container-low": "#f7f3ec",
+                        "tertiary-fixed": "#ffdad8",
+                        "on-primary-container": "#ffe0de",
+                        "outline": "#8f6f6d",
+                        "surface-variant": "#e6e2db",
+                        "secondary": "#7c572d",
+                        "surface-tint": "#ba1822",
+                        "primary-fixed": "#ffdad7"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "container-margin-mobile": "20px",
+                        "stack-sm": "8px",
+                        "unit": "4px",
+                        "stack-lg": "48px",
+                        "gutter": "16px",
+                        "stack-md": "24px",
+                        "container-margin-desktop": "48px"
+                    },
+                    "fontFamily": {
+                        "accent-tag": ["Playfair Display"],
+                        "caption-caps": ["Inter"],
+                        "body-lg": ["Inter"],
+                        "body-md": ["Inter"],
+                        "headline-xl": ["Playfair Display"],
+                        "headline-xl-mobile": ["Playfair Display"],
+                        "price-display": ["Inter"],
+                        "headline-lg": ["Playfair Display"]
+                    },
+                    "fontSize": {
+                        "accent-tag": ["16px", {"lineHeight": "1", "fontWeight": "400"}],
+                        "caption-caps": ["12px", {"lineHeight": "1", "letterSpacing": "0.1em", "fontWeight": "500"}],
+                        "body-lg": ["18px", {"lineHeight": "1.4", "fontWeight": "600"}],
+                        "body-md": ["15px", {"lineHeight": "1.6", "fontWeight": "400"}],
+                        "headline-xl": ["48px", {"lineHeight": "1.1", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                        "headline-xl-mobile": ["36px", {"lineHeight": "1.1", "fontWeight": "700"}],
+                        "price-display": ["24px", {"lineHeight": "1", "letterSpacing": "-0.01em", "fontWeight": "700"}],
+                        "headline-lg": ["28px", {"lineHeight": "1.2", "fontWeight": "500"}]
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        
+        input:focus {
+            outline: none !important;
+            box-shadow: none !important;
+        }
+
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background text-on-surface min-h-screen flex flex-col font-body-md selection:bg-primary-container selection:text-on-primary-container">
+<!-- Top Navigation (Shell suppressed for focused task but following identity guidelines) -->
+<header class="bg-surface dark:bg-surface-dim flex justify-between items-center w-full px-container-margin-mobile h-16 z-50 sticky top-0">
+<button class="text-primary dark:text-inverse-primary hover:opacity-80 transition-opacity active:scale-95 duration-150">
+<span class="material-symbols-outlined">arrow_back</span>
+</button>
+<span class="font-headline-lg-mobile text-headline-lg-mobile font-bold text-primary dark:text-inverse-primary">Julia Bakery</span>
+<div class="w-6"></div> <!-- Spacer for centering -->
+</header>
+<main class="flex-grow px-container-margin-mobile pt-stack-md pb-32 max-w-lg mx-auto w-full">
+<!-- Header Section -->
+<header class="mb-stack-lg">
+<h1 class="font-headline-xl-mobile text-headline-xl-mobile text-on-surface mb-2">¿Para quién es?</h1>
+<p class="font-body-md text-on-surface-variant">Ingresá los datos de quien recibirá el pedido para asegurar que todo llegue perfecto.</p>
+</header>
+<!-- Form Section -->
+<form class="space-y-stack-md">
+<!-- Name Input -->
+<div class="group flex flex-col gap-2">
+<label class="font-caption-caps text-caption-caps text-on-surface-variant uppercase tracking-widest px-1" for="name">Nombre</label>
+<input class="h-[52px] w-full px-4 rounded-xl bg-surface border border-outline-variant text-on-surface placeholder:text-outline font-body-md transition-all duration-200 focus:border-primary focus:ring-0 focus:bg-surface-bright" id="name" name="name" placeholder="Carlos R." type="text"/>
+</div>
+<!-- Phone Input -->
+<div class="group flex flex-col gap-2">
+<label class="font-caption-caps text-caption-caps text-on-surface-variant uppercase tracking-widest px-1" for="phone">Teléfono</label>
+<div class="relative">
+<span class="absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant material-symbols-outlined text-xl">phone</span>
+<input class="h-[52px] w-full pl-12 pr-4 rounded-xl bg-surface border border-outline-variant text-on-surface placeholder:text-outline font-body-md transition-all duration-200 focus:border-primary focus:ring-0 focus:bg-surface-bright" id="phone" name="phone" placeholder="5555-5555" type="tel"/>
+</div>
+</div>
+<!-- Email Input -->
+<div class="group flex flex-col gap-2">
+<label class="font-caption-caps text-caption-caps text-on-surface-variant uppercase tracking-widest px-1" for="email">Email</label>
+<input class="h-[52px] w-full px-4 rounded-xl bg-surface border border-outline-variant text-on-surface placeholder:text-outline font-body-md transition-all duration-200 focus:border-primary focus:ring-0 focus:bg-surface-bright" id="email" name="email" placeholder="carlos@email.com" type="email"/>
+</div>
+<!-- NIT Input -->
+<div class="group flex flex-col gap-2">
+<label class="font-caption-caps text-caption-caps text-on-surface-variant uppercase tracking-widest px-1" for="nit">NIT</label>
+<input class="h-[52px] w-full px-4 rounded-xl bg-surface border border-outline-variant text-on-surface placeholder:text-outline font-body-md transition-all duration-200 focus:border-primary focus:ring-0 focus:bg-surface-bright" id="nit" name="nit" placeholder="Opcional · CF si no querés factura" type="text"/>
+</div>
+</form>
+<!-- Aesthetic Divider & Experience Note -->
+<div class="mt-stack-lg p-6 bg-surface-container-low rounded-xl border border-outline-variant/30 text-center relative overflow-hidden">
+<div class="absolute -right-8 -top-8 opacity-5 text-primary rotate-12">
+<span class="material-symbols-outlined text-9xl">bakery_dining</span>
+</div>
+<p class="font-accent-tag text-accent-tag text-secondary relative z-10 italic">
+                "Cuidamos cada detalle de tu entrega como si fuera para nuestra propia mesa."
+            </p>
+</div>
+</main>
+<!-- Sticky Bottom Navigation -->
+<div class="fixed bottom-0 left-0 w-full bg-surface/80 backdrop-blur-xl border-t border-outline-variant/20 p-container-margin-mobile z-50 flex flex-col gap-stack-sm md:items-center">
+<div class="max-w-lg w-full flex flex-col gap-stack-sm">
+<button class="w-full h-14 bg-primary text-white font-body-lg rounded-full shadow-lg shadow-primary/10 hover:opacity-95 active:scale-[0.98] transition-all flex items-center justify-center gap-2">
+                Continuar al pago
+                <span class="material-symbols-outlined">arrow_forward</span>
+</button>
+<p class="text-center font-caption-caps text-caption-caps text-on-surface-variant">
+                Paso 3 de 4: Información de Receptor
+            </p>
+</div>
+</div>
+<!-- Visual Atmosphere: Image Reference (Asymmetric Layout element) -->
+<aside class="hidden lg:fixed lg:right-12 lg:top-1/2 lg:-translate-y-1/2 lg:flex flex-col gap-6 max-w-xs">
+<div class="rounded-2xl overflow-hidden shadow-2xl rotate-2">
+<img alt="Julia Bakery Atmosphere" class="w-full h-64 object-cover" data-alt="A warm, atmospheric photo of a sunlit Guatemalan artisanal bakery counter. Soft morning light catches the golden crust of freshly baked sourdough loaves and rustic pastries arranged on a wooden surface. The scene is shot with a shallow depth of field, emphasizing high-end organic textures and a welcoming, premium boutique feel. The colors are rich creams, wheat browns, and subtle deep reds." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDTnA3rPr2TLrEqGHhw1MDO6BELeJNNkEbHf4raaFLoCTrGTQvaPHMAVUhhZObtDGb2ycYi42vGp_-h194FfIVP8VO_-UuNG36LqBxeXoSyfzyzA9CGN9DJXX9j1AEqcqvKwqlPTikMcBGJ6iz0bRVUP8xSeACb9DgWlMYt0dhQs3EjHHsfyHRNw4SaAfH4T-aacjsx7wCicFHMlHm0JUAGMPJgdVaWdanvhLUIXKYmT_lhKzzojRyx8JQFGtegMqP102WVbsQcRtYq"/>
+</div>
+<div class="p-6 bg-white shadow-xl rounded-2xl -rotate-1 border border-outline-variant/20">
+<span class="font-caption-caps text-caption-caps text-primary uppercase block mb-2">Orgullo Local</span>
+<p class="font-headline-lg text-headline-lg leading-tight">Pan artesanal para el alma.</p>
+</div>
+</aside>
+<script>
+        // Micro-interactions for form focus states
+        const inputs = document.querySelectorAll('input');
+        inputs.forEach(input => {
+            input.addEventListener('focus', () => {
+                input.previousElementSibling?.classList.add('text-primary');
+            });
+            input.addEventListener('blur', () => {
+                input.previousElementSibling?.classList.remove('text-primary');
+            });
+        });
+
+        // Form submission prevention for demo
+        document.querySelector('button').addEventListener('click', (e) => {
+            // Optional visual feedback on click
+            console.log("Procediendo al pago...");
+        });
+    </script>
+</body></html>

@@ -1,0 +1,260 @@
+<!DOCTYPE html><html class="light" lang="es"><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;700&amp;family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "on-tertiary-fixed-variant": "#603e3d",
+                    "tertiary-container": "#845e5d",
+                    "inverse-surface": "#31302c",
+                    "on-primary-fixed-variant": "#930012",
+                    "surface-container-lowest": "#ffffff",
+                    "on-secondary": "#ffffff",
+                    "on-secondary-fixed": "#2c1700",
+                    "inverse-on-surface": "#f4f0e9",
+                    "error": "#ba1a1a",
+                    "on-secondary-fixed-variant": "#614018",
+                    "surface-dim": "#dddad3",
+                    "on-primary-fixed": "#410004",
+                    "on-primary": "#ffffff",
+                    "primary-fixed-dim": "#ffb3ad",
+                    "on-tertiary-container": "#ffe0df",
+                    "on-surface-variant": "#5b403e",
+                    "on-surface": "#1c1c18",
+                    "secondary-fixed-dim": "#efbd8a",
+                    "on-error-container": "#93000a",
+                    "tertiary": "#6a4645",
+                    "inverse-primary": "#ffb3ad",
+                    "on-tertiary": "#ffffff",
+                    "on-background": "#1c1c18",
+                    "outline-variant": "#e4beba",
+                    "surface-bright": "#fdf9f2",
+                    "secondary-container": "#fecb97",
+                    "primary": "#a40016",
+                    "surface-container": "#f1ede6",
+                    "on-error": "#ffffff",
+                    "surface": "#fdf9f2",
+                    "surface-container-highest": "#e6e2db",
+                    "surface-container-high": "#ebe8e1",
+                    "secondary-fixed": "#ffdcbc",
+                    "primary-container": "#c8242a",
+                    "tertiary-fixed-dim": "#ebbbb9",
+                    "background": "#fdf9f2",
+                    "on-tertiary-fixed": "#2e1414",
+                    "error-container": "#ffdad6",
+                    "on-secondary-container": "#79542a",
+                    "surface-container-low": "#f7f3ec",
+                    "tertiary-fixed": "#ffdad8",
+                    "on-primary-container": "#ffe0de",
+                    "outline": "#8f6f6d",
+                    "surface-variant": "#e6e2db",
+                    "secondary": "#7c572d",
+                    "surface-tint": "#ba1822",
+                    "primary-fixed": "#ffdad7",
+                    "stone-custom": "#6B6258",
+                    "wheat-custom": "#D4A574"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "spacing": {
+                    "container-margin-mobile": "20px",
+                    "stack-sm": "8px",
+                    "unit": "4px",
+                    "stack-lg": "48px",
+                    "gutter": "16px",
+                    "stack-md": "24px",
+                    "container-margin-desktop": "48px"
+            },
+            "fontFamily": {
+                    "accent-tag": ["Playfair Display"],
+                    "caption-caps": ["Inter"],
+                    "body-lg": ["Inter"],
+                    "body-md": ["Inter"],
+                    "headline-xl": ["Playfair Display"],
+                    "headline-xl-mobile": ["Playfair Display"],
+                    "price-display": ["Inter"],
+                    "headline-lg": ["Playfair Display"]
+            },
+            "fontSize": {
+                    "accent-tag": ["16px", {"lineHeight": "1", "fontWeight": "400"}],
+                    "caption-caps": ["12px", {"lineHeight": "1", "letterSpacing": "0.1em", "fontWeight": "500"}],
+                    "body-lg": ["18px", {"lineHeight": "1.4", "fontWeight": "600"}],
+                    "body-md": ["15px", {"lineHeight": "1.6", "fontWeight": "400"}],
+                    "headline-xl": ["48px", {"lineHeight": "1.1", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                    "headline-xl-mobile": ["36px", {"lineHeight": "1.1", "fontWeight": "700"}],
+                    "price-display": ["24px", {"lineHeight": "1", "letterSpacing": "-0.01em", "fontWeight": "700"}],
+                    "headline-lg": ["28px", {"lineHeight": "1.2", "fontWeight": "500"}]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            display: inline-block;
+            line-height: 1;
+            text-transform: none;
+            letter-spacing: normal;
+            word-wrap: normal;
+            white-space: nowrap;
+            direction: ltr;
+        }
+        .backdrop-blur-custom {
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+        }
+        .sheet-shadow {
+            box-shadow: 0 -10px 40px rgba(106, 70, 69, 0.1);
+        }
+    </style>
+</head>
+<body class="bg-surface text-on-surface selection:bg-primary-container selection:text-on-primary-container overflow-hidden">
+<!-- Background Content (Simulated Main Screen) -->
+<main class="fixed inset-0 p-container-margin-mobile flex flex-col items-center justify-center opacity-40">
+<h2 class="font-headline-lg text-headline-lg mb-stack-md text-on-surface">Menú Julia Bakery</h2>
+<div class="w-full max-w-md space-y-gutter">
+<div class="h-32 bg-surface-container rounded-xl w-full"></div>
+<div class="h-32 bg-surface-container rounded-xl w-full"></div>
+<div class="h-32 bg-surface-container rounded-xl w-full"></div>
+</div>
+</main>
+<!-- Modal Backdrop -->
+<div class="fixed inset-0 bg-on-surface/20 backdrop-blur-custom z-40"></div>
+<!-- Bottom Sheet -->
+<section class="fixed bottom-0 left-0 right-0 z-50 bg-surface rounded-t-[32px] max-h-[90vh] flex flex-col sheet-shadow transition-transform duration-500 ease-out" id="item-detail-sheet" style="height: 90vh; transform: translateY(0px);">
+<!-- Drag Handle -->
+<div class="flex justify-center pt-4 pb-2 sticky top-0 bg-surface rounded-t-[32px] z-20">
+<div class="w-8 h-1 bg-stone-custom opacity-30 rounded-full"></div>
+</div>
+<!-- Scrollable Content Area -->
+<div class="flex-1 overflow-y-auto pb-32">
+<!-- Hero Image -->
+<div class="relative w-full aspect-video overflow-hidden">
+<img alt="Sourdough artesanal en luz dorada" class="w-full h-full object-cover" data-alt="Macro food photography of a crusty sourdough loaf on a linen cloth, golden hour light, artisan bakery setting." src="https://lh3.googleusercontent.com/aida/AP1WRLsV1ML8o1jBFiKHqatOpYuMXta-4u2bweu7zGdbSIW42AMfGVJK1laHhjeidzC2IE95IeQctVdudEJBeRje9cVbf2o16uDzM5nVu_FoWT7WPH2aMdoKBVDW-scsb-1VKkukv_WnDV4v2qKTUIZxlu67exBrrmxhIXHlUGNBuYXFKTNI5BUKLc3bXN5RcgGLQQ4XW013lAgU8B6qrRAJs8jMvgW0v1yczKHFai4uCuZBwG9hBYOEm5nvIyKQ">
+<button class="absolute top-4 right-4 w-10 h-10 bg-surface/80 backdrop-blur-md rounded-full flex items-center justify-center text-primary transition-transform active:scale-90">
+<span class="material-symbols-outlined">close</span>
+</button>
+</div>
+<!-- Item Information -->
+<div class="px-container-margin-mobile mt-stack-md">
+<div class="flex justify-between items-start mb-stack-sm">
+<h1 class="font-headline-lg text-headline-lg text-primary max-w-[80%] leading-tight">Cesto de Pan Artesanal</h1>
+<span class="bg-secondary-fixed text-on-secondary-container px-3 py-1 rounded-full font-caption-caps text-caption-caps self-start mt-1">Sugerido</span>
+</div>
+<p class="font-body-md text-body-md text-outline mb-stack-md leading-relaxed">
+                    Una selección curada de nuestros panes del día: masa madre, baguettes miniatura y pan de centeno. Horneado cada mañana con harinas locales y fermentación lenta.
+                </p>
+<!-- Quantity Selector Section -->
+<div class="mt-stack-lg">
+<label class="font-caption-caps text-caption-caps text-outline mb-stack-sm block">CANTIDAD</label>
+<div class="flex items-center space-x-gutter">
+<div class="flex items-center border border-wheat-custom rounded-xl overflow-hidden">
+<button class="w-14 h-14 flex items-center justify-center text-on-surface-variant hover:bg-surface-container-low transition-colors active:scale-95" onclick="updateQuantity(-1)">
+<span class="material-symbols-outlined">remove</span>
+</button>
+<span class="w-12 text-center font-price-display text-price-display text-primary" id="quantity-display">1</span>
+<button class="w-14 h-14 flex items-center justify-center text-on-surface-variant hover:bg-surface-container-low transition-colors active:scale-95" onclick="updateQuantity(1)">
+<span class="material-symbols-outlined">add</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Product Details/Tags -->
+<div class="grid grid-cols-2 gap-gutter mt-stack-lg">
+<div class="flex items-center space-x-3 p-4 bg-surface-container-low rounded-xl">
+<span class="material-symbols-outlined text-primary">timer</span>
+<div>
+<p class="font-caption-caps text-caption-caps text-outline">TIEMPO</p>
+<p class="font-body-md text-body-md font-semibold">15-20 min</p>
+</div>
+</div>
+<div class="flex items-center space-x-3 p-4 bg-surface-container-low rounded-xl">
+<span class="material-symbols-outlined text-primary" style="font-variation-settings: 'FILL' 1;">eco</span>
+<div>
+<p class="font-caption-caps text-caption-caps text-outline">ORIGEN</p>
+<p class="font-body-md text-body-md font-semibold">Orgánico</p>
+</div>
+</div>
+</div>
+<!-- Extra Notes -->
+<div class="mt-stack-lg">
+<label class="font-caption-caps text-caption-caps text-outline mb-stack-sm block" for="instructions">¿ALGUNA INSTRUCCIÓN ESPECIAL?</label>
+<textarea class="w-full h-32 bg-surface-container-low border border-wheat-custom rounded-xl p-4 font-body-md text-body-md focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all resize-none" id="instructions" placeholder="Ingresá tus preferencias aquí..."></textarea>
+</div>
+</div>
+</div>
+<!-- Sticky Footer Action -->
+<div class="absolute bottom-0 left-0 right-0 p-container-margin-mobile bg-gradient-to-t from-surface via-surface to-transparent pt-8 pb-10 pointer-events-none">
+<button class="pointer-events-auto w-full h-[56px] bg-primary text-on-primary rounded-xl flex items-center justify-between px-6 shadow-xl transition-all hover:opacity-95 active:scale-[0.98] duration-150">
+<span class="font-body-lg text-body-lg">Agregar al pedido</span>
+<span class="font-price-display text-[20px]" id="price-total">Q35.00</span>
+</button>
+</div>
+</section>
+<script>
+        let quantity = 1;
+        const unitPrice = 35.00;
+        const quantityEl = document.getElementById('quantity-display');
+        const priceEl = document.getElementById('price-total');
+
+        function updateQuantity(delta) {
+            quantity = Math.max(1, quantity + delta);
+            quantityEl.innerText = quantity;
+            const total = (quantity * unitPrice).toFixed(2);
+            priceEl.innerText = `Q${total}`;
+            
+            // Interaction feedback
+            quantityEl.classList.add('scale-110');
+            setTimeout(() => quantityEl.classList.remove('scale-110'), 150);
+        }
+
+        // Entrance animation
+        document.addEventListener('DOMContentLoaded', () => {
+            const sheet = document.getElementById('item-detail-sheet');
+            sheet.style.transform = 'translateY(100%)';
+            setTimeout(() => {
+                sheet.style.transform = 'translateY(0)';
+            }, 50);
+        });
+
+        // Simple Drag Simulation for handle
+        let startY = 0;
+        const sheet = document.getElementById('item-detail-sheet');
+        
+        sheet.addEventListener('touchstart', (e) => {
+            startY = e.touches[0].clientY;
+        }, { passive: true });
+
+        sheet.addEventListener('touchmove', (e) => {
+            const currentY = e.touches[0].clientY;
+            if (currentY > startY && sheet.scrollTop <= 0) {
+                const diff = currentY - startY;
+                sheet.style.transform = `translateY(${diff}px)`;
+            }
+        }, { passive: true });
+
+        sheet.addEventListener('touchend', (e) => {
+            const currentY = e.changedTouches[0].clientY;
+            if (currentY - startY > 150) {
+                sheet.style.transform = 'translateY(100%)';
+                // In a real app, this would trigger navigation back
+            } else {
+                sheet.style.transform = 'translateY(0)';
+            }
+        });
+    </script>
+
+
+</body></html>

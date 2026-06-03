@@ -1,0 +1,238 @@
+<!DOCTYPE html><html class="light" lang="es"><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;700&amp;family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "on-tertiary-fixed-variant": "#603e3d",
+                        "tertiary-container": "#845e5d",
+                        "inverse-surface": "#31302c",
+                        "on-primary-fixed-variant": "#930012",
+                        "surface-container-lowest": "#ffffff",
+                        "on-secondary": "#ffffff",
+                        "on-secondary-fixed": "#2c1700",
+                        "inverse-on-surface": "#f4f0e9",
+                        "error": "#ba1a1a",
+                        "on-secondary-fixed-variant": "#614018",
+                        "surface-dim": "#dddad3",
+                        "on-primary-fixed": "#410004",
+                        "on-primary": "#ffffff",
+                        "primary-fixed-dim": "#ffb3ad",
+                        "on-tertiary-container": "#ffe0df",
+                        "on-surface-variant": "#5b403e",
+                        "on-surface": "#1c1c18",
+                        "secondary-fixed-dim": "#efbd8a",
+                        "on-error-container": "#93000a",
+                        "tertiary": "#6a4645",
+                        "inverse-primary": "#ffb3ad",
+                        "on-tertiary": "#ffffff",
+                        "on-background": "#1c1c18",
+                        "outline-variant": "#e4beba",
+                        "surface-bright": "#fdf9f2",
+                        "secondary-container": "#fecb97",
+                        "primary": "#a40016",
+                        "surface-container": "#f1ede6",
+                        "on-error": "#ffffff",
+                        "surface": "#fdf9f2",
+                        "surface-container-highest": "#e6e2db",
+                        "surface-container-high": "#ebe8e1",
+                        "secondary-fixed": "#ffdcbc",
+                        "primary-container": "#c8242a",
+                        "tertiary-fixed-dim": "#ebbbb9",
+                        "background": "#fdf9f2",
+                        "on-tertiary-fixed": "#2e1414",
+                        "error-container": "#ffdad6",
+                        "on-secondary-container": "#79542a",
+                        "surface-container-low": "#f7f3ec",
+                        "tertiary-fixed": "#ffdad8",
+                        "on-primary-container": "#ffe0de",
+                        "outline": "#8f6f6d",
+                        "surface-variant": "#e6e2db",
+                        "secondary": "#7c572d",
+                        "surface-tint": "#ba1822",
+                        "primary-fixed": "#ffdad7"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "container-margin-mobile": "20px",
+                        "stack-sm": "8px",
+                        "unit": "4px",
+                        "stack-lg": "48px",
+                        "gutter": "16px",
+                        "stack-md": "24px",
+                        "container-margin-desktop": "48px"
+                    },
+                    "fontFamily": {
+                        "accent-tag": ["Playfair Display"],
+                        "caption-caps": ["Inter"],
+                        "body-lg": ["Inter"],
+                        "body-md": ["Inter"],
+                        "headline-xl": ["Playfair Display"],
+                        "headline-xl-mobile": ["Playfair Display"],
+                        "price-display": ["Inter"],
+                        "headline-lg": ["Playfair Display"]
+                    },
+                    "fontSize": {
+                        "accent-tag": ["16px", {"lineHeight": "1", "fontWeight": "400"}],
+                        "caption-caps": ["12px", {"lineHeight": "1", "letterSpacing": "0.1em", "fontWeight": "500"}],
+                        "body-lg": ["18px", {"lineHeight": "1.4", "fontWeight": "600"}],
+                        "body-md": ["15px", {"lineHeight": "1.6", "fontWeight": "400"}],
+                        "headline-xl": ["48px", {"lineHeight": "1.1", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                        "headline-xl-mobile": ["36px", {"lineHeight": "1.1", "fontWeight": "700"}],
+                        "price-display": ["24px", {"lineHeight": "1", "letterSpacing": "-0.01em", "fontWeight": "700"}],
+                        "headline-lg": ["28px", {"lineHeight": "1.2", "fontWeight": "500"}]
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
+</head>
+<body class="bg-background text-on-surface font-body-md selection:bg-primary/20">
+<!-- TopAppBar -->
+<header class="flex justify-between items-center w-full px-container-margin-mobile h-16 z-50 fixed top-0 bg-surface/80 backdrop-blur-md" id="top-app-bar">
+<div class="flex items-center gap-4">
+<button class="hover:opacity-80 transition-opacity active:scale-95 duration-150 text-primary">
+<span class="material-symbols-outlined" data-icon="menu">menu</span>
+</button>
+<h1 class="font-headline-lg-mobile text-headline-lg-mobile font-bold text-primary">Julia Bakery</h1>
+</div>
+<div class="flex items-center gap-4">
+<button class="hover:opacity-80 transition-opacity active:scale-95 duration-150 text-primary">
+<span class="material-symbols-outlined" data-icon="shopping_bag">shopping_bag</span>
+</button>
+</div>
+</header>
+<main class="pt-0">
+<!-- Hero Section -->
+<section class="relative h-[85vh] w-full flex flex-col justify-end overflow-hidden">
+<div class="absolute inset-0 z-0">
+<img class="w-full h-full object-cover" data-alt="Macro food photography of a crusty sourdough loaf on a linen cloth, golden hour light, artisan bakery setting." src="https://lh3.googleusercontent.com/aida/AP1WRLsV1ML8o1jBFiKHqatOpYuMXta-4u2bweu7zGdbSIW42AMfGVJK1laHhjeidzC2IE95IeQctVdudEJBeRje9cVbf2o16uDzM5nVu_FoWT7WPH2aMdoKBVDW-scsb-1VKkukv_WnDV4v2qKTUIZxlu67exBrrmxhIXHlUGNBuYXFKTNI5BUKLc3bXN5RcgGLQQ4XW013lAgU8B6qrRAJs8jMvgW0v1yczKHFai4uCuZBwG9hBYOEm5nvIyKQ">
+<div class="absolute inset-0 bg-gradient-to-t from-on-surface/80 via-on-surface/20 to-transparent"></div>
+</div>
+<div class="relative z-10 px-container-margin-mobile pb-stack-lg max-w-2xl">
+<h2 class="font-headline-xl-mobile text-headline-xl-mobile text-white mb-stack-md leading-tight">
+                    Pan recién horneado, recogé cuando esté listo
+                </h2>
+<div class="flex flex-col gap-stack-md">
+<button class="bg-primary text-white font-body-lg h-14 px-8 rounded-lg flex items-center justify-center shadow-lg active:scale-[0.98] transition-all w-full md:w-fit">
+                        Ordená tu pickup
+                    </button>
+<div class="flex items-center gap-2 text-white/90">
+<span class="material-symbols-outlined text-[20px]" data-icon="schedule">schedule</span>
+<span class="font-caption-caps text-caption-caps">Listo en 20 min · 5a Av 12-34, Z14</span>
+</div>
+</div>
+</div>
+</section>
+<!-- Categories Section -->
+<section class="py-stack-lg bg-background">
+<div class="px-container-margin-mobile mb-stack-md flex justify-between items-end">
+<h3 class="font-headline-lg text-headline-lg text-on-surface">Nuestras Especialidades</h3>
+<a class="text-primary font-caption-caps text-caption-caps border-b border-primary pb-1" href="#">Ver todo</a>
+</div>
+<!-- Horizontal Scroll Container -->
+<div class="flex overflow-x-auto hide-scrollbar gap-gutter px-container-margin-mobile snap-x snap-mandatory">
+<!-- Category Card 1 -->
+<div class="flex-shrink-0 w-48 snap-start group">
+<div class="aspect-[4/5] rounded-xl overflow-hidden mb-3 border border-outline-variant/30 shadow-sm transition-transform duration-300 group-hover:scale-[1.02]">
+<img class="w-full h-full object-cover" data-alt="A close-up shot of various artisanal breads including baguettes and rustic loaves resting on a linen cloth. The lighting is soft and atmospheric, highlighting the flour-dusted crusts and organic shapes. The aesthetic is warm, rustic, and premium, following a sophisticated cream and wheat color palette." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDQX419xXoFOo52Y2ObVG8pS8MK5I8T2EV36y4V3e1X7D3FK_Qv-HpMbNc2UQe6kTkirY7qHmyQk-TvGCZ1NnaEarjpkyogN9G_ulJPSMfR2cv3qg9mT1bVCKgorhEb2l1m7fE0OuFsQjZUcqeXkdvCk6ii5SuTheCgOYFFr_buG0aXXAcIVNHDhc93KjVnv_j8CnlWYF2MaA9LG3DWl95vXlq_80sgJDRlLOw_nxByaF5YlZW2uPiG7nZr6bbzp5osNFVrqCRN8P0E">
+</div>
+<span class="font-body-lg text-on-surface block text-center">Panes</span>
+</div>
+<!-- Category Card 2 -->
+<div class="flex-shrink-0 w-48 snap-start group">
+<div class="aspect-[4/5] rounded-xl overflow-hidden mb-3 border border-outline-variant/30 shadow-sm transition-transform duration-300 group-hover:scale-[1.02]">
+<img class="w-full h-full object-cover" data-alt="Exquisite pastries arranged beautifully on a marble countertop in a high-end bakery. A delicate tart with fresh fruit and a flaky croissant are the focus. The scene is illuminated by bright, soft morning light, creating a clean and luxurious aesthetic with cream tones and soft shadows." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBiCb9DJolwLXbcr3OJkaHaVvuQARgc8ObrY9M7xUza0HzlhQ_CfLooEonEL-adaUMLLp3yvbILmGKhJJrMEz5qYB57JTBbyYW9K_CaPUq1gzs8kamJrjwscAUKOqKehCPj6tEMUgtO3G96eTzQxKirHFn2v5k4EVLfpvEGf85mdkd0taKEQMofBoHxZezwXoIlrnhWB8WSAEZ0IS6tD4RcQz5wOW12GuAwiFri8qDOjd8iATE3jw1vXjvWwzJvPcBZrUit2c84o0Ep">
+</div>
+<span class="font-body-lg text-on-surface block text-center">Pastelería</span>
+</div>
+<!-- Category Card 3 -->
+<div class="flex-shrink-0 w-48 snap-start group">
+<div class="aspect-[4/5] rounded-xl overflow-hidden mb-3 border border-outline-variant/30 shadow-sm transition-transform duration-300 group-hover:scale-[1.02]">
+<img class="w-full h-full object-cover" data-alt="A steaming cup of artisanal coffee with perfect latte art, sitting next to a glass of cold brew. The setting is a minimalist, warm wooden table. The lighting is high-key and modern, emphasizing the rich brown tones of the coffee against a light, cream-colored background." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDsnTIXPNrC0ujN4quAParyBIXTgZIQhlLHPOTZ8K6DWuV-TONha7eNfHkpOyHnZscV2ajnOJOGMd2yIPViHedFjt2_jEKiXk9h_rWe9qd-sSCNtxaBFSAZ8NMicwnGkIs68hdAG5uGOfovIAfgwg_JbM_miSTl2AWd15-xjJ3AYo0xL8Ycm0Z5unf1XgkmznZpx6THeBaDO2p2YXO8peVjR9PZ4ZSp4kc8BuERkJ7rG_Ig-dsa868d1jRUzlrYGSMMP357JkXpBsoz">
+</div>
+<span class="font-body-lg text-on-surface block text-center">Bebidas</span>
+</div>
+<!-- Category Card 4 -->
+<div class="flex-shrink-0 w-48 snap-start group">
+<div class="aspect-[4/5] rounded-xl overflow-hidden mb-3 border border-outline-variant/30 shadow-sm transition-transform duration-300 group-hover:scale-[1.02]">
+<img class="w-full h-full object-cover" data-alt="Handcrafted jars of artisanal jams and preserves arranged on a rustic wooden shelf. The labels are minimal and elegant. Soft, directional light catches the vibrant colors of the fruit preserves, creating a warm, homemade, yet sophisticated boutique atmosphere." src="https://lh3.googleusercontent.com/aida-public/AB6AXuA267PvztZLhWWfPyeOQDbbYf2j0KvkQTqmDqzlMRqCwYzwHDEMw48fPmBhA7kx7FGqVD2hwLddCBK-IbId9ThqGCcv9K8xLyDEBzZOIAZhjpR9nrnwQfxIqsSICXEDyFQAeazo0C2jpLUT4BUO8RDx3e2lGeiiTaaTrd6zDyJ2nRID_3Pd-5iR2DSq0ocaV0sad9y9nUmF6tTeuPPsPrR6oFkR2MUtcmanKfFJ9YRKDWFnmZjIu9XB19av95khb8bt3ndIL3CiewI6">
+</div>
+<span class="font-body-lg text-on-surface block text-center">Conservas</span>
+</div>
+</div>
+</section>
+<!-- Newsletter / Community Section -->
+<section class="mx-container-margin-mobile mb-24 p-8 rounded-2xl bg-surface-container-low border border-outline-variant/20 flex flex-col items-center text-center">
+<span class="material-symbols-outlined text-primary mb-4 text-4xl" data-icon="favorite">favorite</span>
+<h4 class="font-headline-lg text-headline-lg mb-2">Unite a la familia Julia</h4>
+<p class="text-on-surface-variant font-body-md mb-6 max-w-sm">Recibí noticias sobre nuestros lanzamientos de temporada y eventos especiales.</p>
+<div class="w-full max-w-md flex flex-col gap-3">
+<input class="h-12 bg-white border border-outline-variant rounded-lg px-4 focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all" placeholder="Ingresá tu correo" type="email">
+<button class="h-12 bg-secondary text-white font-caption-caps text-caption-caps rounded-lg uppercase tracking-widest active:scale-[0.98] transition-all">Registrate vos también</button>
+</div>
+</section>
+</main>
+<!-- BottomNavBar -->
+<nav class="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-4 py-3 pb-safe bg-surface dark:bg-surface-dim shadow-lg rounded-t-xl border-t border-outline-variant">
+<a class="flex flex-col items-center justify-center text-primary dark:text-inverse-primary font-bold active:scale-90 duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="home" style="font-variation-settings: 'FILL' 1;">home</span>
+<span class="font-caption-caps text-caption-caps mt-1">Inicio</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-outline hover:text-primary transition-colors duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="bakery_dining">bakery_dining</span>
+<span class="font-caption-caps text-caption-caps mt-1">Menú</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-outline hover:text-primary transition-colors duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="receipt_long">receipt_long</span>
+<span class="font-caption-caps text-caption-caps mt-1">Mis Pedidos</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-outline hover:text-primary transition-colors duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="person">person</span>
+<span class="font-caption-caps text-caption-caps mt-1">Perfil</span>
+</a>
+</nav>
+<script>
+        // Micro-interactions and scroll handling
+        const header = document.getElementById('top-app-bar');
+        window.addEventListener('scroll', () => {
+            if (window.scrollY > 50) {
+                header.classList.add('shadow-md');
+                header.classList.remove('bg-surface/80');
+                header.classList.add('bg-surface');
+            } else {
+                header.classList.remove('shadow-md');
+                header.classList.add('bg-surface/80');
+                header.classList.remove('bg-surface');
+            }
+        });
+
+        // Simple cart counter mock
+        const bagBtn = document.querySelector('[data-icon="shopping_bag"]');
+        let count = 0;
+        bagBtn.parentElement.addEventListener('click', () => {
+            // Future interaction
+        });
+    </script>
+
+
+</body></html>
