@@ -22,10 +22,25 @@ export default function PickupExito() {
 
   useEffect(() => {
     if (!id || typeof id !== 'string') return
-    fetch(`/api/pickup/orders/${id}`)
-      .then(r => r.json())
-      .then(j => setPedido(j.order || null))
-      .catch(() => {})
+    let cancelled = false
+    async function flow() {
+      // 1. Confirmar pago en sandbox (en LIVE este endpoint es idempotente)
+      try {
+        await fetch('/api/pickup/confirmar-pago-sandbox', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ order_id: id }),
+        })
+      } catch (_) { /* ignorar — el pedido se lee igual abajo */ }
+      // 2. Cargar pedido (ya con estado actualizado si era sandbox)
+      try {
+        const r = await fetch(`/api/pickup/orders/${id}`)
+        const j = await r.json()
+        if (!cancelled) setPedido(j.order || null)
+      } catch (_) {}
+    }
+    flow()
+    return () => { cancelled = true }
   }, [id])
 
   if (!id) return null
@@ -34,6 +49,11 @@ export default function PickupExito() {
   const slotLabel = pedido?.slot_label || ''
   const dayLabel = pedido?.day_label || ''
   const total = pedido?.total_estimado ? Number(pedido.total_estimado).toFixed(2) : null
+
+  // El QR codifica la URL al detalle del pedido. El cajero la escanea con
+  // cualquier lector y se le abre la página con el resumen + items + total.
+  const baseUrl = typeof window !== 'undefined' ? window.location.origin : ''
+  const qrPayload = `${baseUrl}/pickup/pedido/${id}`
 
   return (
     <PickupShell title="¡Listo! · Julia Bakery">
@@ -71,7 +91,7 @@ export default function PickupExito() {
         <div className="bg-surface border-2 border-outline-variant rounded-2xl p-4 mb-stack-md">
           <img
             alt={`Código QR del pedido ${ref}`}
-            src={qrUrl(ref, 220)}
+            src={qrUrl(qrPayload, 220)}
             width={220}
             height={220}
             className="rounded-lg"

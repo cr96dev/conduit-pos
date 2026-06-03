@@ -62,6 +62,9 @@ export default function PickupPedidoDetalle() {
   const statusIdx = STATUS_TIMELINE.findIndex(s => s.key === status)
   const isLista = status === 'lista'
   const ref = pedido.referencia || `JU-${pedido.id?.slice(0,8).toUpperCase()}`
+  const qrPayload = typeof window !== 'undefined'
+    ? `${window.location.origin}/pickup/pedido/${pedido.id}`
+    : ref
 
   function reordenar() {
     for (const it of (pedido.items || [])) {
@@ -96,7 +99,7 @@ export default function PickupPedidoDetalle() {
             <div className="font-caption-caps text-caption-caps text-on-secondary-container mb-2">
               Mostrá este código en el mostrador
             </div>
-            <img alt="QR del pedido" src={qrUrl(ref, 220)} width={220} height={220} className="rounded-lg bg-white" />
+            <img alt="QR del pedido" src={qrUrl(qrPayload, 220)} width={220} height={220} className="rounded-lg bg-white" />
           </div>
         )}
 
