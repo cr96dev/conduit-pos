@@ -29,7 +29,7 @@ export default async function handler(req, res) {
     .from('pedidos_pendientes')
     .select('id, referencia, estado, pago_simulado, total_estimado')
     .eq('id', id)
-    .in('origen', ['app_pickup', 'kiosko_k2'])
+    .in('origen', ['app_pickup', 'kiosko_k2', 'pos_kiosko'])
     .single()
 
   if (error) {

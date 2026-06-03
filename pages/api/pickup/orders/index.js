@@ -30,9 +30,24 @@ export default async function handler(req, res) {
 async function crear(req, res) {
   const body = req.body || {}
   const { items: itemsBody, receptor, slot_iso, slot_label, pago } = body
-  // Origen del pedido: 'app_pickup' (PWA pickup) o 'kiosko_k2' (Sunmi K2 mini).
+  // Origen del pedido:
+  //   'app_pickup' — PWA pickup en celular del cliente
+  //   'kiosko_k2'  — Sunmi K2 mini en modo armador (flujo /pickup completo)
+  //   'pos_kiosko' — POS modo kiosko (PIN cajero K2): catálogo Loyverse,
+  //                  el cliente elige "QR Recurrente" o "Pagar en caja"
   // Default app_pickup por compatibilidad con clientes existentes.
-  const origen = ['kiosko_k2', 'app_pickup'].includes(body.origen) ? body.origen : 'app_pickup'
+  const origen = ['kiosko_k2', 'app_pickup', 'pos_kiosko'].includes(body.origen) ? body.origen : 'app_pickup'
+
+  // Receptor: el POS kiosko no le pide datos al cliente (es autoservicio rápido).
+  // Default CF / CONSUMIDOR FINAL, email opcional. PWA y kiosko_k2 siguen
+  // requiriendo email + nombre + teléfono como hoy.
+  if (origen === 'pos_kiosko') {
+    body.receptor = body.receptor || {}
+    if (!body.receptor.nombre)   body.receptor.nombre = 'CONSUMIDOR FINAL'
+    if (!body.receptor.nit)      body.receptor.nit = 'CF'
+    if (!body.receptor.telefono) body.receptor.telefono = '-'
+    if (!body.receptor.email)    body.receptor.email = ''
+  }
 
   if (!Array.isArray(itemsBody) || itemsBody.length === 0) {
     return res.status(400).json({ error: 'items[] requerido' })
@@ -40,7 +55,10 @@ async function crear(req, res) {
   if (itemsBody.length > 50) {
     return res.status(400).json({ error: 'Máximo 50 items por pedido' })
   }
-  if (!receptor?.email || !receptor?.telefono || !receptor?.nombre) {
+  // Para origen pos_kiosko ya seteamos defaults arriba (CF). Para PWA y K2
+  // armador exigimos los datos al cliente.
+  const receptorFinal = origen === 'pos_kiosko' ? body.receptor : receptor
+  if (origen !== 'pos_kiosko' && (!receptorFinal?.email || !receptorFinal?.telefono || !receptorFinal?.nombre)) {
     return res.status(400).json({ error: 'receptor.nombre, telefono y email son requeridos' })
   }
 
@@ -102,7 +120,11 @@ async function crear(req, res) {
     .select('id', { count: 'exact', head: true })
     .eq('origen', origen)
     .gte('created_at', yyyyMmDd + 'T00:00:00.000Z')
-  const prefijo = origen === 'kiosko_k2' ? 'K' : 'JU'
+  // Prefijo por origen para identificar visualmente en bandeja:
+  //   K-NNNN  → kiosko_k2 (armador completo, deprecated por ahora)
+  //   P-NNNN  → pos_kiosko (K2 modo POS — la solución actual)
+  //   JU-NNNN → app_pickup (PWA cliente)
+  const prefijo = origen === 'kiosko_k2' ? 'K' : origen === 'pos_kiosko' ? 'P' : 'JU'
   const referencia = `${prefijo}-${String((count || 0) + 1).padStart(4, '0')}`
 
   // Estado inicial:
