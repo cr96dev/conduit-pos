@@ -6,7 +6,7 @@
 // - Cache-first para imágenes del catálogo Loyverse
 // - Cache offline fallback al menú último visto
 
-const CACHE_NAME = 'julia-pickup-v3'
+const CACHE_NAME = 'julia-pickup-v5'
 const STATIC_ASSETS = [
   '/pickup/styles.css',
   '/pickup/logo.png',
@@ -40,6 +40,13 @@ self.addEventListener('activate', (event) => {
       )
     ).then(() => self.clients.claim())
   )
+})
+
+// Skip waiting cuando la app pide actualizar
+self.addEventListener('message', (event) => {
+  if (event.data?.type === 'SKIP_WAITING') {
+    self.skipWaiting()
+  }
 })
 
 self.addEventListener('fetch', (event) => {

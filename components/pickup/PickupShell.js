@@ -13,10 +13,26 @@ export default function PickupShell({ children, title = 'Julia Bakery' }) {
   const [installPrompt, setInstallPrompt] = useState(null)
   const [showIosBanner, setShowIosBanner] = useState(false)
 
-  // Service worker register
+  // Service worker register + force update check on every visit
   useEffect(() => {
     if (typeof navigator === 'undefined' || !('serviceWorker' in navigator)) return
     navigator.serviceWorker.register('/pickup/sw.js', { scope: '/pickup' })
+      .then((reg) => {
+        // Forzar revisión de SW nuevo en cada visita (no esperar a las 24h default)
+        reg.update().catch(() => {})
+        // Si hay un SW nuevo waiting, decirle que tome control inmediatamente
+        if (reg.waiting) reg.waiting.postMessage({ type: 'SKIP_WAITING' })
+        reg.addEventListener('updatefound', () => {
+          const nuevo = reg.installing
+          if (!nuevo) return
+          nuevo.addEventListener('statechange', () => {
+            if (nuevo.state === 'installed' && navigator.serviceWorker.controller) {
+              // Hay versión nueva → reload para tomar el SW nuevo
+              window.location.reload()
+            }
+          })
+        })
+      })
       .catch((e) => console.warn('SW register failed', e))
   }, [])
 
