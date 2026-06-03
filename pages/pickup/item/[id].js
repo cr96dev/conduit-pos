@@ -5,7 +5,7 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/router'
 import Link from 'next/link'
 import PickupShell from '../../../components/pickup/PickupShell'
-import { PickupTopBar, PickupBottomNav } from '../../../components/pickup/Nav'
+import { PickupTopBar } from '../../../components/pickup/Nav'
 import { useCart } from '../../../lib/pickup/cart'
 
 // Reuso del mismo mock del menu para que funcione sin Supabase

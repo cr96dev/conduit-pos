@@ -3,7 +3,7 @@
 
 import Link from 'next/link'
 import PickupShell from '../../components/pickup/PickupShell'
-import { PickupTopBar, PickupBottomNav } from '../../components/pickup/Nav'
+import { PickupTopBar } from '../../components/pickup/Nav'
 import { useCart } from '../../lib/pickup/cart'
 
 export default function PickupCanasta() {
@@ -97,7 +97,6 @@ export default function PickupCanasta() {
         </div>
       )}
 
-      <PickupBottomNav active="menu" />
     </PickupShell>
   )
 }

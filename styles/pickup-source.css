@@ -22,6 +22,12 @@
 
 #pickup-root img { display: block; max-width: 100%; }
 
+/* Safe area iOS/Android para sticky bottoms — evita que home indicator
+   tape los botones "Continuar/Pagar". Tailwind 3 no tiene pb-safe nativo. */
+#pickup-root .pb-safe {
+  padding-bottom: calc(1rem + env(safe-area-inset-bottom, 0px));
+}
+
 /* ============================================================================
    Specificity overrides — el CSS de Tailwind del POS se carga DESPUÉS del
    pickup/styles.css y algunas reglas (especialmente sobre <a> y backgrounds)

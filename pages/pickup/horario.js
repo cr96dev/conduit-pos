@@ -4,7 +4,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/router'
 import PickupShell from '../../components/pickup/PickupShell'
-import { PickupTopBar, PickupBottomNav } from '../../components/pickup/Nav'
+import { PickupTopBar } from '../../components/pickup/Nav'
 import { useCart } from '../../lib/pickup/cart'
 
 const STORAGE_PICKUP = 'julia_pickup_slot_v1'
@@ -152,7 +152,6 @@ export default function PickupHorario() {
         </button>
       </div>
 
-      <PickupBottomNav active="menu" />
     </PickupShell>
   )
 }

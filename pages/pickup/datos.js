@@ -4,7 +4,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/router'
 import PickupShell from '../../components/pickup/PickupShell'
-import { PickupTopBar, PickupBottomNav } from '../../components/pickup/Nav'
+import { PickupTopBar } from '../../components/pickup/Nav'
 import { useCart } from '../../lib/pickup/cart'
 
 const STORAGE_RECEPTOR = 'julia_pickup_receptor_v1'
@@ -118,7 +118,6 @@ export default function PickupDatos() {
         </button>
       </div>
 
-      <PickupBottomNav active="menu" />
     </PickupShell>
   )
 }

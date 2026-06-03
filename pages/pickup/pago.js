@@ -5,7 +5,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/router'
 import PickupShell from '../../components/pickup/PickupShell'
-import { PickupTopBar, PickupBottomNav } from '../../components/pickup/Nav'
+import { PickupTopBar } from '../../components/pickup/Nav'
 import { useCart } from '../../lib/pickup/cart'
 
 function loadStored(key) {
@@ -160,7 +160,6 @@ export default function PickupPago() {
         </button>
       </div>
 
-      <PickupBottomNav active="menu" />
     </PickupShell>
   )
 }
