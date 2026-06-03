@@ -918,8 +918,8 @@ export default function POS({ session }) {
   const [pagosDivididos, setPagosDivididos] = useState(null)  // null | [{metodo, monto, ...}]
   const [mostrarDividirPago, setMostrarDividirPago] = useState(false)
 
-  async function recargarPedidos() {
-    setCargandoPedidos(true)
+  async function recargarPedidos({ silent = false } = {}) {
+    if (!silent) setCargandoPedidos(true)
     try {
       // Traer pedidos en preparación Y los marcados como 'lista' (esperando
       // que el cliente venga a recoger) para que el cajero vea ambos.
@@ -927,9 +927,18 @@ export default function POS({ session }) {
       const j = await r.json()
       if (j.ok) setPedidosPendientes(j.pedidos || [])
     } finally {
-      setCargandoPedidos(false)
+      if (!silent) setCargandoPedidos(false)
     }
   }
+
+  // Auto-refresh: mientras la bandeja esté abierta, refrescamos cada 20s para
+  // que pedidos nuevos (pickup PWA, K2 armador) aparezcan sin que el cajero
+  // tenga que cerrar/abrir el modal. silent=true evita el skeleton flickering.
+  useEffect(() => {
+    if (!mostrarBandeja) return
+    const t = setInterval(() => { recargarPedidos({ silent: true }) }, 20000)
+    return () => clearInterval(t)
+  }, [mostrarBandeja])
 
   // Cargar perfil + catálogo + turno (si cajero)
   useEffect(() => {
