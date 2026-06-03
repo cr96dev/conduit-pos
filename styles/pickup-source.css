@@ -8,8 +8,8 @@
 /* Reset + tipografía base solo dentro del wrapper #pickup-root */
 #pickup-root {
   font-family: 'Inter', system-ui, sans-serif;
-  background: #fdf9f2;
-  color: #1c1c18;
+  background: #fdf9f2 !important;
+  color: #1c1c18 !important;
   min-height: 100vh;
 }
 
@@ -21,3 +21,59 @@
 #pickup-root .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 
 #pickup-root img { display: block; max-width: 100%; }
+
+/* ============================================================================
+   Specificity overrides — el CSS de Tailwind del POS se carga DESPUÉS del
+   pickup/styles.css y algunas reglas (especialmente sobre <a> y backgrounds)
+   ganan por cascade order. Forzamos las clases pickup más usadas con
+   !important para garantizar que el design system Stitch quede intacto.
+   ========================================================================== */
+#pickup-root .bg-background                { background-color: #fdf9f2 !important; }
+#pickup-root .bg-surface                   { background-color: #fdf9f2 !important; }
+#pickup-root .bg-surface-bright            { background-color: #fdf9f2 !important; }
+#pickup-root .bg-surface-dim               { background-color: #dddad3 !important; }
+#pickup-root .bg-surface-container-lowest  { background-color: #ffffff !important; }
+#pickup-root .bg-surface-container-low     { background-color: #f7f3ec !important; }
+#pickup-root .bg-surface-container         { background-color: #f1ede6 !important; }
+#pickup-root .bg-surface-container-high    { background-color: #ebe8e1 !important; }
+#pickup-root .bg-surface-container-highest { background-color: #e6e2db !important; }
+#pickup-root .bg-surface-variant           { background-color: #e6e2db !important; }
+
+#pickup-root .bg-primary                   { background-color: #a40016 !important; }
+#pickup-root .bg-primary-container         { background-color: #c8242a !important; }
+#pickup-root .bg-secondary                 { background-color: #7c572d !important; }
+#pickup-root .bg-secondary-container       { background-color: #fecb97 !important; }
+#pickup-root .bg-tertiary                  { background-color: #6a4645 !important; }
+#pickup-root .bg-tertiary-container        { background-color: #845e5d !important; }
+#pickup-root .bg-error                     { background-color: #ba1a1a !important; }
+#pickup-root .bg-error-container           { background-color: #ffdad6 !important; }
+#pickup-root .bg-white                     { background-color: #ffffff !important; }
+
+#pickup-root .text-primary                 { color: #a40016 !important; }
+#pickup-root .text-on-primary              { color: #ffffff !important; }
+#pickup-root .text-on-secondary            { color: #ffffff !important; }
+#pickup-root .text-on-surface              { color: #1c1c18 !important; }
+#pickup-root .text-on-surface-variant      { color: #5b403e !important; }
+#pickup-root .text-on-background           { color: #1c1c18 !important; }
+#pickup-root .text-on-secondary-container  { color: #79542a !important; }
+#pickup-root .text-on-error-container      { color: #93000a !important; }
+#pickup-root .text-tertiary                { color: #6a4645 !important; }
+#pickup-root .text-secondary               { color: #7c572d !important; }
+#pickup-root .text-error                   { color: #ba1a1a !important; }
+#pickup-root .text-white                   { color: #ffffff !important; }
+
+#pickup-root .border-primary               { border-color: #a40016 !important; }
+#pickup-root .border-outline               { border-color: #8f6f6d !important; }
+#pickup-root .border-outline-variant       { border-color: #e4beba !important; }
+#pickup-root .border-secondary             { border-color: #7c572d !important; }
+
+/* Hover variants críticos */
+#pickup-root .hover\:border-primary:hover  { border-color: #a40016 !important; }
+#pickup-root .hover\:bg-primary:hover      { background-color: #a40016 !important; }
+#pickup-root .hover\:opacity-80:hover      { opacity: 0.8 !important; }
+#pickup-root .hover\:opacity-90:hover      { opacity: 0.9 !important; }
+#pickup-root .hover\:text-primary:hover    { color: #a40016 !important; }
+
+/* Backdrop blur del header — debe quedar semi-transparente */
+#pickup-root .bg-surface\/80               { background-color: rgba(253, 249, 242, 0.8) !important; }
+#pickup-root .backdrop-blur-md             { backdrop-filter: blur(12px) !important; -webkit-backdrop-filter: blur(12px) !important; }
