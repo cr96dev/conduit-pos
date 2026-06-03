@@ -1,6 +1,16 @@
 // pages/pickup/pago.js
-// Resumen del pedido + botón "Pagar con tarjeta" → redirige a Recurrente checkout.
-// Recurrente maneja el formulario de tarjeta seguro (no captamos PAN/CVV nosotros).
+// Resumen del pedido + selección de método de pago.
+//
+// Modo normal (PWA cliente): un solo botón "Pagar con tarjeta" → Recurrente
+//   maneja el formulario seguro y redirige a /pickup/exito.
+//
+// Modo K2 (kiosko armador): dos botones grandes:
+//   1. "Pagar AQUÍ con QR" → crea pedido + checkout → /pickup/qr/[id]
+//      donde el cliente escanea con su celular y paga desde ahí. El K2
+//      hace polling para detectar el pago.
+//   2. "Pagar EN CAJA" → crea pedido con metodo=cobrar_en_caja en estado
+//      pendiente_entrega → /pickup/exito mostrando código grande para
+//      llevar al cajero.
 
 import { useState } from 'react'
 import { useRouter } from 'next/router'
@@ -8,6 +18,7 @@ import PickupShell from '../../components/pickup/PickupShell'
 import { PickupTopBar } from '../../components/pickup/Nav'
 import Ubicacion from '../../components/pickup/Ubicacion'
 import { useCart } from '../../lib/pickup/cart'
+import { useK2Mode } from '../../lib/pickup/k2-mode'
 
 function loadStored(key) {
   if (typeof window === 'undefined') return {}
@@ -19,8 +30,10 @@ export default function PickupPago() {
   const { items, count, total, clear } = useCart()
   const receptor = loadStored('julia_pickup_receptor_v1')
   const slot     = loadStored('julia_pickup_slot_v1')
+  const isK2 = useK2Mode()
 
   const [enviando, setEnviando] = useState(false)
+  const [accionActiva, setAccionActiva] = useState(null)  // 'qr' | 'caja' | null
   const [error, setError] = useState(
     router.query?.cancelled === '1'
       ? 'El pago fue cancelado. Podés intentarlo de nuevo.'
@@ -30,38 +43,56 @@ export default function PickupPago() {
   const ivaDesglose = total > 0 ? Number((total / 1.12 * 0.12).toFixed(2)) : 0
   const itemsListos = items.length > 0 && receptor?.email && slot?.slot_iso
 
+  // Builds the common body for POST /api/pickup/orders
+  function bodyPedido({ metodoPago }) {
+    return {
+      origen: isK2 ? 'kiosko_k2' : 'app_pickup',
+      items: items.map(i => ({
+        variant_id: i.variant_id,
+        descripcion: i.variant_name ? `${i.item_name} (${i.variant_name})` : i.item_name,
+        cantidad: i.cantidad,
+        precio_unitario: i.precio,
+      })),
+      receptor,
+      slot_iso: slot.slot_iso,
+      slot_label: slot.slot_label,
+      day_label: slot.day_label,
+      pago: metodoPago === 'cobrar_en_caja'
+        ? { metodo: 'cobrar_en_caja', simulado: true }
+        : { metodo: 'recurrente', simulado: false },
+    }
+  }
+
+  // Caso 1 — Pagar con QR (K2) o con tarjeta (PWA): crea pedido + checkout + redirect
   async function pagarConRecurrente() {
-    if (!itemsListos) return
+    if (!itemsListos || enviando) return
     setError('')
     setEnviando(true)
+    setAccionActiva('qr')
     try {
-      // Paso 1: crear el pedido_pendiente en estado pendiente_pago
       const r1 = await fetch('/api/pickup/orders', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          items: items.map(i => ({
-            variant_id: i.variant_id,
-            descripcion: i.variant_name ? `${i.item_name} (${i.variant_name})` : i.item_name,
-            cantidad: i.cantidad,
-            precio_unitario: i.precio,
-          })),
-          receptor,
-          slot_iso: slot.slot_iso,
-          slot_label: slot.slot_label,
-          day_label: slot.day_label,
-          pago: { metodo: 'recurrente', simulado: false },
-        }),
+        body: JSON.stringify(bodyPedido({ metodoPago: 'recurrente' })),
       })
       const j1 = await r1.json()
       if (!r1.ok || !j1.ok) {
         setError(j1.error || 'No pudimos crear tu pedido')
         setEnviando(false)
+        setAccionActiva(null)
         return
       }
       const orderId = j1.order.id
 
-      // Paso 2: crear checkout en Recurrente
+      // En modo K2: el QR se renderiza en el propio K2 y el cliente paga desde
+      // su celular. NO redirigimos a checkout_url acá — eso lo hace /qr/[id].
+      if (isK2) {
+        clear()
+        router.replace(`/pickup/qr/${orderId}`)
+        return
+      }
+
+      // Modo PWA normal: redirige al checkout hosted de Recurrente
       const r2 = await fetch('/api/pickup/recurrente-checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -71,15 +102,44 @@ export default function PickupPago() {
       if (!r2.ok || !j2.ok || !j2.checkout_url) {
         setError(j2.error || 'No pudimos iniciar el cobro. Probá de nuevo.')
         setEnviando(false)
+        setAccionActiva(null)
         return
       }
-
-      // Paso 3: limpiar carrito y redirigir al checkout hosted de Recurrente
       clear()
       window.location.href = j2.checkout_url
     } catch (e) {
       setError('Error de red. Verificá tu conexión.')
       setEnviando(false)
+      setAccionActiva(null)
+    }
+  }
+
+  // Caso 2 — Pagar en caja (solo K2): crea pedido en pendiente_entrega y
+  // manda directo a /exito mostrando el código.
+  async function pagarEnCaja() {
+    if (!itemsListos || enviando) return
+    setError('')
+    setEnviando(true)
+    setAccionActiva('caja')
+    try {
+      const r = await fetch('/api/pickup/orders', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(bodyPedido({ metodoPago: 'cobrar_en_caja' })),
+      })
+      const j = await r.json()
+      if (!r.ok || !j.ok) {
+        setError(j.error || 'No pudimos crear tu pedido')
+        setEnviando(false)
+        setAccionActiva(null)
+        return
+      }
+      clear()
+      router.replace(`/pickup/exito/${j.order.id}?modo=k2&caja=1`)
+    } catch (e) {
+      setError('Error de red. Verificá tu conexión.')
+      setEnviando(false)
+      setAccionActiva(null)
     }
   }
 
@@ -87,15 +147,18 @@ export default function PickupPago() {
     <PickupShell title="Pago · Julia Bakery">
       <PickupTopBar cartCount={count} />
 
-      <main className="px-container-margin-mobile pt-stack-md pb-32">
+      <main className="px-container-margin-mobile pt-stack-md pb-40">
         <h1 className="font-headline-lg text-headline-lg text-on-surface mb-2">Resumen del pedido</h1>
         <p className="font-body-md text-on-surface-variant mb-stack-md">
-          Pagás con tarjeta de forma segura en la pasarela de Recurrente.
+          {isK2
+            ? 'Elegí cómo querés pagar. Te damos un código para llevar al mostrador.'
+            : 'Pagás con tarjeta de forma segura en la pasarela de Recurrente.'
+          }
         </p>
 
         {/* Items resumen */}
         <div className="bg-surface border border-outline-variant rounded-xl p-4 mb-4">
-          <div className="font-caption-caps text-caption-caps text-on-surface-variant mb-3">Lo que vas a recoger</div>
+          <div className="font-caption-caps text-caption-caps text-on-surface-variant mb-3">Lo que vas a llevar</div>
           <div className="flex flex-col gap-2">
             {items.map(it => (
               <div key={it.variant_id} className="flex justify-between items-baseline gap-3">
@@ -112,11 +175,13 @@ export default function PickupPago() {
 
         {/* Detalles del pickup */}
         <div className="bg-surface-container-low border border-outline-variant rounded-xl p-4 mb-4">
-          <div className="font-caption-caps text-caption-caps text-on-surface-variant mb-2">Recogés</div>
+          <div className="font-caption-caps text-caption-caps text-on-surface-variant mb-2">
+            {isK2 ? 'Para' : 'Recogés'}
+          </div>
           <div className="font-body-lg text-on-surface">
             {slot?.day_label} a las {slot?.slot_label}
           </div>
-          <div className="mt-2"><Ubicacion variant="inline" /></div>
+          {!isK2 && <div className="mt-2"><Ubicacion variant="inline" /></div>}
           <div className="h-px bg-outline-variant/30 my-3" />
           <div className="font-caption-caps text-caption-caps text-on-surface-variant mb-1">A nombre de</div>
           <div className="font-body-md text-on-surface">{receptor?.nombre}</div>
@@ -151,14 +216,44 @@ export default function PickupPago() {
         </p>
       </main>
 
+      {/* Botones de acción — diseño distinto en K2 vs PWA */}
       <div className="fixed bottom-0 left-0 right-0 z-40 bg-surface border-t border-outline-variant px-container-margin-mobile py-4 pb-safe">
-        <button
-          disabled={!itemsListos || enviando}
-          onClick={pagarConRecurrente}
-          className="w-full h-14 bg-primary text-on-primary rounded-lg font-body-lg flex items-center justify-center active:scale-[0.98] transition-all shadow-lg disabled:opacity-40"
-        >
-          {enviando ? 'Iniciando pago...' : `Pagar Q${total.toFixed(2)} con tarjeta`}
-        </button>
+        {isK2 ? (
+          <div className="flex flex-col gap-3">
+            <button
+              disabled={!itemsListos || enviando}
+              onClick={pagarConRecurrente}
+              className="w-full h-16 bg-primary text-on-primary rounded-2xl text-[18px] font-semibold flex items-center justify-center gap-3 active:scale-[0.98] transition-all shadow-lg disabled:opacity-40"
+            >
+              <span className="text-2xl">📱</span>
+              <span>
+                {enviando && accionActiva === 'qr'
+                  ? 'Generando QR...'
+                  : `Pagar con QR · Q${total.toFixed(2)}`}
+              </span>
+            </button>
+            <button
+              disabled={!itemsListos || enviando}
+              onClick={pagarEnCaja}
+              className="w-full h-16 bg-surface border-2 border-primary text-primary rounded-2xl text-[18px] font-semibold flex items-center justify-center gap-3 active:scale-[0.98] transition-all disabled:opacity-40"
+            >
+              <span className="text-2xl">💵</span>
+              <span>
+                {enviando && accionActiva === 'caja'
+                  ? 'Creando pedido...'
+                  : 'Pagar en caja (efectivo o tarjeta)'}
+              </span>
+            </button>
+          </div>
+        ) : (
+          <button
+            disabled={!itemsListos || enviando}
+            onClick={pagarConRecurrente}
+            className="w-full h-14 bg-primary text-on-primary rounded-lg font-body-lg flex items-center justify-center active:scale-[0.98] transition-all shadow-lg disabled:opacity-40"
+          >
+            {enviando ? 'Iniciando pago...' : `Pagar Q${total.toFixed(2)} con tarjeta`}
+          </button>
+        )}
       </div>
 
     </PickupShell>

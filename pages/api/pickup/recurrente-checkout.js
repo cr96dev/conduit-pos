@@ -27,9 +27,9 @@ export default async function handler(req, res) {
   // Cargar pedido
   const { data: pedido, error: errLoad } = await supabaseAdmin
     .from('pedidos_pendientes')
-    .select('id, referencia, items, total_estimado, receptor_email, receptor_nombre, estado')
+    .select('id, referencia, items, total_estimado, receptor_email, receptor_nombre, estado, origen')
     .eq('id', order_id)
-    .eq('origen', 'app_pickup')
+    .in('origen', ['app_pickup', 'kiosko_k2'])
     .single()
 
   if (errLoad || !pedido) {

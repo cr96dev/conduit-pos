@@ -30,6 +30,9 @@ export default async function handler(req, res) {
 async function crear(req, res) {
   const body = req.body || {}
   const { items: itemsBody, receptor, slot_iso, slot_label, pago } = body
+  // Origen del pedido: 'app_pickup' (PWA pickup) o 'kiosko_k2' (Sunmi K2 mini).
+  // Default app_pickup por compatibilidad con clientes existentes.
+  const origen = ['kiosko_k2', 'app_pickup'].includes(body.origen) ? body.origen : 'app_pickup'
 
   if (!Array.isArray(itemsBody) || itemsBody.length === 0) {
     return res.status(400).json({ error: 'items[] requerido' })
@@ -90,25 +93,30 @@ async function crear(req, res) {
   }
   total = round2(total)
 
-  // Referencia visible: JU-NNNN del día
+  // Referencia visible: JU-NNNN (PWA) o K-NNNN (kiosko K2). Contador por día y
+  // por origen para que ambos canales tengan numeración independiente y se
+  // identifiquen visualmente en la bandeja del POS.
   const yyyyMmDd = new Date().toISOString().slice(0, 10)
   const { count } = await supabaseAdmin
     .from('pedidos_pendientes')
     .select('id', { count: 'exact', head: true })
-    .eq('origen', 'app_pickup')
+    .eq('origen', origen)
     .gte('created_at', yyyyMmDd + 'T00:00:00.000Z')
-  const referencia = `JU-${String((count || 0) + 1).padStart(4, '0')}`
+  const prefijo = origen === 'kiosko_k2' ? 'K' : 'JU'
+  const referencia = `${prefijo}-${String((count || 0) + 1).padStart(4, '0')}`
 
   // Estado inicial:
   //   - 'pendiente_pago'    si el pago va por gateway real (Recurrente) y aún
-  //     no confirmamos: el webhook lo pasará a 'pendiente_entrega'
-  //   - 'pendiente_entrega' si pago_simulado=true o si no hay gateway
+  //     no confirmamos: el webhook (o /confirmar-pago-sandbox) lo pasará a
+  //     'pendiente_entrega'
+  //   - 'pendiente_entrega' si pago_simulado=true, si no hay gateway, o si el
+  //     método es 'cobrar_en_caja' (kiosko K2 — el cliente pagará al cajero)
   const usaGateway = pago?.metodo === 'recurrente' && pago?.simulado === false
   const estadoInicial = usaGateway ? 'pendiente_pago' : 'pendiente_entrega'
 
   const insertData = {
     referencia,
-    origen: 'app_pickup',
+    origen,
     items,
     total_estimado: total,
     receptor_nit: (receptor.nit || 'CF').toString().slice(0, 13),

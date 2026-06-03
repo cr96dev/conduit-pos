@@ -8,10 +8,12 @@
 
 import { useEffect, useState } from 'react'
 import Head from 'next/head'
+import { useK2Mode } from '../../lib/pickup/k2-mode'
 
 export default function PickupShell({ children, title = 'Julia Bakery' }) {
   const [installPrompt, setInstallPrompt] = useState(null)
   const [showIosBanner, setShowIosBanner] = useState(false)
+  const isK2 = useK2Mode()
 
   // Service worker register + force update check on every visit
   useEffect(() => {
@@ -111,8 +113,9 @@ export default function PickupShell({ children, title = 'Julia Bakery' }) {
       <div id="pickup-root">
         {children}
 
-        {/* Banner Android (Chrome) — beforeinstallprompt disponible */}
-        {installPrompt && (
+        {/* Banner Android (Chrome) — beforeinstallprompt disponible
+            (oculto en modo K2: el kiosko ya está "instalado" como tal) */}
+        {installPrompt && !isK2 && (
           <div className="fixed bottom-20 left-4 right-4 z-[70] bg-surface border border-outline-variant rounded-2xl shadow-2xl p-4 flex items-center gap-3 animate-pulse-once">
             <img src="/pickup/icon-96.png" alt="" className="w-12 h-12 rounded-xl" />
             <div className="flex-grow min-w-0">
@@ -134,8 +137,8 @@ export default function PickupShell({ children, title = 'Julia Bakery' }) {
           </div>
         )}
 
-        {/* Banner iOS Safari — instrucciones manuales */}
-        {showIosBanner && (
+        {/* Banner iOS Safari — instrucciones manuales (oculto en modo K2) */}
+        {showIosBanner && !isK2 && (
           <div className="fixed bottom-20 left-4 right-4 z-[70] bg-surface border border-outline-variant rounded-2xl shadow-2xl p-4 animate-pulse-once">
             <div className="flex items-center gap-3 mb-2">
               <img src="/pickup/icon-96.png" alt="" className="w-10 h-10 rounded-xl" />
