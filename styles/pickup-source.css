@@ -1,0 +1,23 @@
+/* styles/pickup-source.css — fuente para Tailwind standalone de /pickup
+ * Se compila a /public/pickup/styles.css */
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Reset + tipografía base solo dentro del wrapper #pickup-root */
+#pickup-root {
+  font-family: 'Inter', system-ui, sans-serif;
+  background: #fdf9f2;
+  color: #1c1c18;
+  min-height: 100vh;
+}
+
+#pickup-root .material-symbols-outlined {
+  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+}
+
+#pickup-root .hide-scrollbar::-webkit-scrollbar { display: none; }
+#pickup-root .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+#pickup-root img { display: block; max-width: 100%; }

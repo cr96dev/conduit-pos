@@ -3,8 +3,9 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
+    "dev": "npm run build:pickup-css && next dev",
+    "build:pickup-css": "npx tailwindcss -c tailwind.pickup.config.js -i styles/pickup-source.css -o public/pickup/styles.css --minify",
+    "build": "npm run build:pickup-css && next build",
     "start": "next start",
     "migrate": "node scripts/migrate.js",
     "migrate:list": "node scripts/migrate.js --list",
