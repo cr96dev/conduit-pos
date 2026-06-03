@@ -1,0 +1,27 @@
+// Build script raiz del proyecto Kinpos Bridge.
+// App separada del wrapper Sunmi: corre en la PAX A920 como servicio HTTP
+// que media entre nuestro /pos webview y SmartPOS (com.kinpos.BASEA920).
+
+buildscript {
+    repositories {
+        google()
+        mavenCentral()
+    }
+    dependencies {
+        classpath 'com.android.tools.build:gradle:8.4.0'
+        classpath 'org.jetbrains.kotlin:kotlin-gradle-plugin:1.9.24'
+    }
+}
+
+allprojects {
+    repositories {
+        google()
+        mavenCentral()
+        // Para resolver el AAR local de Kinpos
+        flatDir { dirs 'libs' }
+    }
+}
+
+tasks.register('clean', Delete) {
+    delete rootProject.layout.buildDirectory
+}

@@ -1,54 +1,68 @@
 // pages/pickup/index.js
-//
-// Home de la app pickup de Julia Bakery. Diseño generado en Stitch
-// (design-source/pickup/screens/inicio.html) y adaptado a React.
-//
-// Imágenes de hero/categorías sirven desde /public/pickup/images/. URLs
-// originales de Google Storage están mapeadas en
-// design-source/pickup/img-manifest.json.
+// Home de la app pickup de Julia Bakery.
 
+import { useEffect } from 'react'
 import Link from 'next/link'
 import PickupShell from '../../components/pickup/PickupShell'
+import { PickupBottomNav } from '../../components/pickup/Nav'
+import { useCart } from '../../lib/pickup/cart'
 
 const CATEGORIAS_DESTACADAS = [
-  { slug: 'panes', label: 'Panes', img: '/pickup/images/img_010.jpg' },
-  { slug: 'pasteleria', label: 'Pastelería', img: '/pickup/images/img_011.jpg' },
-  { slug: 'bebidas', label: 'Bebidas', img: '/pickup/images/img_012.jpg' },
-  { slug: 'conservas', label: 'Conservas', img: '/pickup/images/img_013.jpg' },
+  { slug: 'panes',     label: 'Panes',      img: '/pickup/images/img_010.jpg' },
+  { slug: 'pasteleria',label: 'Pastelería', img: '/pickup/images/img_011.jpg' },
+  { slug: 'bebidas',   label: 'Bebidas',    img: '/pickup/images/img_012.jpg' },
+  { slug: 'conservas', label: 'Conservas',  img: '/pickup/images/img_013.jpg' },
 ]
 
 export default function PickupHome() {
+  const { count } = useCart()
+
+  useEffect(() => {
+    const header = document.getElementById('top-app-bar-home')
+    if (!header) return
+    const onScroll = () => {
+      if (window.scrollY > 50) {
+        header.classList.add('shadow-md', 'bg-surface')
+        header.classList.remove('bg-surface/80')
+      } else {
+        header.classList.remove('shadow-md', 'bg-surface')
+        header.classList.add('bg-surface/80')
+      }
+    }
+    window.addEventListener('scroll', onScroll)
+    return () => window.removeEventListener('scroll', onScroll)
+  }, [])
+
   return (
-    <PickupShell title="Julia Bakery — Pan recién horneado, recogé cuando esté listo">
-      {/* TopAppBar */}
+    <PickupShell title="Julia Bakery — Pan recién horneado">
       <header
-        id="top-app-bar"
-        className="flex justify-between items-center w-full px-container-margin-mobile h-16 z-50 fixed top-0 bg-surface/80 backdrop-blur-md"
+        id="top-app-bar-home"
+        className="flex justify-between items-center w-full px-container-margin-mobile h-16 z-50 fixed top-0 bg-surface/80 backdrop-blur-md transition-all"
       >
         <div className="flex items-center gap-4">
           <button className="hover:opacity-80 transition-opacity active:scale-95 duration-150 text-primary">
             <span className="material-symbols-outlined">menu</span>
           </button>
-          <h1 className="font-headline-lg text-headline-lg font-bold text-primary">
-            Julia Bakery
-          </h1>
+          <h1 className="font-headline-lg text-headline-lg font-bold text-primary">Julia Bakery</h1>
         </div>
-        <div className="flex items-center gap-4">
-          <Link href="/pickup/canasta" className="hover:opacity-80 transition-opacity active:scale-95 duration-150 text-primary">
-            <span className="material-symbols-outlined">shopping_bag</span>
-          </Link>
-        </div>
+        <Link
+          href="/pickup/canasta"
+          className="text-primary hover:opacity-80 transition-opacity active:scale-95 duration-150 relative"
+        >
+          <span className="material-symbols-outlined">shopping_bag</span>
+          {count > 0 && (
+            <span className="absolute -top-1 -right-1 w-5 h-5 bg-secondary text-white text-[10px] font-bold rounded-full flex items-center justify-center">
+              {count}
+            </span>
+          )}
+        </Link>
       </header>
 
       <main className="pt-0 pb-24">
-        {/* Hero Section */}
+        {/* Hero */}
         <section className="relative h-[85vh] w-full flex flex-col justify-end overflow-hidden">
           <div className="absolute inset-0 z-0">
-            <img
-              className="w-full h-full object-cover"
-              alt="Macro de pan de masa madre con corteza crujiente sobre lino, luz dorada, ambiente artesanal"
-              src="/pickup/images/img_002.jpg"
-            />
+            <img className="w-full h-full object-cover" alt="Pan de masa madre recién horneado" src="/pickup/images/img_002.jpg" />
             <div className="absolute inset-0 bg-gradient-to-t from-on-surface/80 via-on-surface/20 to-transparent" />
           </div>
           <div className="relative z-10 px-container-margin-mobile pb-stack-lg max-w-2xl">
@@ -64,24 +78,17 @@ export default function PickupHome() {
               </Link>
               <div className="flex items-center gap-2 text-white/90">
                 <span className="material-symbols-outlined text-[20px]">schedule</span>
-                <span className="font-caption-caps text-caption-caps">
-                  Listo en 20 min · 5a Av 12-34, Z14
-                </span>
+                <span className="font-caption-caps text-caption-caps">Listo en 20 min · 5a Av 12-34, Z14</span>
               </div>
             </div>
           </div>
         </section>
 
-        {/* Categorías Destacadas */}
+        {/* Categorías */}
         <section className="py-stack-lg bg-background">
           <div className="px-container-margin-mobile mb-stack-md flex justify-between items-end">
-            <h3 className="font-headline-lg text-headline-lg text-on-surface">
-              Nuestras Especialidades
-            </h3>
-            <Link
-              href="/pickup/menu"
-              className="text-primary font-caption-caps text-caption-caps border-b border-primary pb-1"
-            >
+            <h3 className="font-headline-lg text-headline-lg text-on-surface">Nuestras Especialidades</h3>
+            <Link href="/pickup/menu" className="text-primary font-caption-caps text-caption-caps border-b border-primary pb-1">
               Ver todo
             </Link>
           </div>
@@ -93,21 +100,15 @@ export default function PickupHome() {
                 className="flex-shrink-0 w-48 snap-start group block"
               >
                 <div className="aspect-[4/5] rounded-xl overflow-hidden mb-3 border border-outline-variant/30 shadow-sm transition-transform duration-300 group-hover:scale-[1.02]">
-                  <img
-                    className="w-full h-full object-cover"
-                    alt={`Categoría ${cat.label} — Julia Bakery`}
-                    src={cat.img}
-                  />
+                  <img className="w-full h-full object-cover" alt={cat.label} src={cat.img} />
                 </div>
-                <span className="font-body-lg text-on-surface block text-center">
-                  {cat.label}
-                </span>
+                <span className="font-body-lg text-on-surface block text-center">{cat.label}</span>
               </Link>
             ))}
           </div>
         </section>
 
-        {/* Newsletter / Familia */}
+        {/* Newsletter */}
         <section className="mx-container-margin-mobile mb-8 p-8 rounded-2xl bg-surface-container-low border border-outline-variant/20 flex flex-col items-center text-center">
           <span className="material-symbols-outlined text-primary mb-4 text-4xl">favorite</span>
           <h4 className="font-headline-lg text-headline-lg mb-2">Unite a la familia Julia</h4>
@@ -118,8 +119,7 @@ export default function PickupHome() {
             className="w-full max-w-md flex flex-col gap-3"
             onSubmit={(e) => {
               e.preventDefault()
-              // TODO: conectar a newsletter
-              alert('Pronto: te avisamos cuando esté listo')
+              alert('¡Listo! Te avisamos cuando arranquemos con la newsletter.')
             }}
           >
             <input
@@ -138,67 +138,7 @@ export default function PickupHome() {
         </section>
       </main>
 
-      {/* BottomNavBar */}
-      <BottomNav active="inicio" />
-
-      {/* Micro-interactions */}
-      <script
-        dangerouslySetInnerHTML={{
-          __html: `
-            (function(){
-              var header = document.getElementById('top-app-bar');
-              if (!header) return;
-              window.addEventListener('scroll', function(){
-                if (window.scrollY > 50) {
-                  header.classList.add('shadow-md');
-                  header.classList.remove('bg-surface/80');
-                  header.classList.add('bg-surface');
-                } else {
-                  header.classList.remove('shadow-md');
-                  header.classList.add('bg-surface/80');
-                  header.classList.remove('bg-surface');
-                }
-              });
-            })();
-          `,
-        }}
-      />
+      <PickupBottomNav active="inicio" />
     </PickupShell>
-  )
-}
-
-// BottomNav — barra de navegación inferior persistente
-function BottomNav({ active = 'inicio' }) {
-  const items = [
-    { key: 'inicio', href: '/pickup', icon: 'home', label: 'Inicio' },
-    { key: 'menu', href: '/pickup/menu', icon: 'bakery_dining', label: 'Menú' },
-    { key: 'pedidos', href: '/pickup/mis-pedidos', icon: 'receipt_long', label: 'Mis Pedidos' },
-    { key: 'perfil', href: '/pickup/perfil', icon: 'person', label: 'Perfil' },
-  ]
-  return (
-    <nav className="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-4 py-3 bg-surface shadow-lg rounded-t-xl border-t border-outline-variant">
-      {items.map((it) => {
-        const isActive = it.key === active
-        return (
-          <Link
-            key={it.key}
-            href={it.href}
-            className={
-              isActive
-                ? 'flex flex-col items-center justify-center text-primary font-bold active:scale-90 duration-200'
-                : 'flex flex-col items-center justify-center text-on-surface-variant hover:text-primary transition-colors duration-200'
-            }
-          >
-            <span
-              className="material-symbols-outlined"
-              style={isActive ? { fontVariationSettings: "'FILL' 1" } : undefined}
-            >
-              {it.icon}
-            </span>
-            <span className="font-caption-caps text-caption-caps mt-1">{it.label}</span>
-          </Link>
-        )
-      })}
-    </nav>
   )
 }
