@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/router'
 import Link from 'next/link'
 import PickupShell from '../../../components/pickup/PickupShell'
+import Ubicacion from '../../../components/pickup/Ubicacion'
 import { PickupTopBar, PickupBottomNav } from '../../../components/pickup/Nav'
 import { useCart } from '../../../lib/pickup/cart'
 
@@ -92,9 +93,9 @@ export default function PickupPedidoDetalle() {
             <span className="material-symbols-outlined text-secondary text-[40px] mb-2 block">check_circle</span>
             <div className="font-headline-lg text-headline-lg text-on-secondary-container">¡Tu pedido está listo!</div>
             <div className="font-body-md text-on-secondary-container/80 mt-1">
-              Pasá a recogerlo a Julia Bakery, 5a Av 12-34 Z14.<br/>
               Mostrá tu pedido <strong>{ref}</strong> en el mostrador.
             </div>
+            <div className="mt-3"><Ubicacion variant="inline" /></div>
           </div>
         )}
 

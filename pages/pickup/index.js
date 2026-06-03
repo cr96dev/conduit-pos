@@ -5,6 +5,7 @@ import { useEffect } from 'react'
 import Link from 'next/link'
 import PickupShell from '../../components/pickup/PickupShell'
 import { PickupBottomNav } from '../../components/pickup/Nav'
+import Ubicacion from '../../components/pickup/Ubicacion'
 import { useCart } from '../../lib/pickup/cart'
 
 const CATEGORIAS_DESTACADAS = [
@@ -76,9 +77,20 @@ export default function PickupHome() {
               >
                 Ordená tu pickup
               </Link>
-              <div className="flex items-center gap-2 text-white/90">
-                <span className="material-symbols-outlined text-[20px]">schedule</span>
-                <span className="font-caption-caps text-caption-caps">Listo en 20 min · 5a Av 12-34, Z14</span>
+              <div className="flex items-center gap-3 text-white/90">
+                <span className="inline-flex items-center gap-1.5">
+                  <span className="material-symbols-outlined text-[18px]">schedule</span>
+                  <span className="font-caption-caps text-caption-caps">Listo en 20 min</span>
+                </span>
+                <span className="text-white/40">·</span>
+                <a
+                  href="https://www.google.com/maps/place/julia+bakery/data=!4m2!3m1!1s0x8589a32272f6004d:0x88fdc9b818be06f6"
+                  target="_blank" rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 active:scale-95 transition-transform"
+                >
+                  <span className="material-symbols-outlined text-[18px]">place</span>
+                  <span className="font-caption-caps text-caption-caps underline underline-offset-2">2 Av 11-08, Zona 10</span>
+                </a>
               </div>
             </div>
           </div>

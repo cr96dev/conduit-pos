@@ -6,6 +6,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/router'
 import PickupShell from '../../components/pickup/PickupShell'
 import { PickupTopBar } from '../../components/pickup/Nav'
+import Ubicacion from '../../components/pickup/Ubicacion'
 import { useCart } from '../../lib/pickup/cart'
 
 function loadStored(key) {
@@ -115,7 +116,7 @@ export default function PickupPago() {
           <div className="font-body-lg text-on-surface">
             {slot?.day_label} a las {slot?.slot_label}
           </div>
-          <div className="text-[13px] text-tertiary mt-1">5a Av 12-34, Zona 14</div>
+          <div className="mt-2"><Ubicacion variant="inline" /></div>
           <div className="h-px bg-outline-variant/30 my-3" />
           <div className="font-caption-caps text-caption-caps text-on-surface-variant mb-1">A nombre de</div>
           <div className="font-body-md text-on-surface">{receptor?.nombre}</div>

@@ -9,6 +9,7 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/router'
 import Link from 'next/link'
 import PickupShell from '../../../components/pickup/PickupShell'
+import Ubicacion from '../../../components/pickup/Ubicacion'
 
 export default function PickupExito() {
   const router = useRouter()
@@ -99,7 +100,7 @@ export default function PickupExito() {
             <div className="font-headline-lg text-[28px] text-on-surface leading-tight">
               {dayLabel} a las {slotLabel}
             </div>
-            <div className="text-[13px] text-on-surface-variant mt-2">5a Av 12-34, Zona 14</div>
+            <div className="mt-3"><Ubicacion variant="inline" /></div>
           </div>
         )}
 
