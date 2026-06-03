@@ -60,17 +60,17 @@ function buildSlots(day, maxPrepMin) {
 
 export default function PickupHorario() {
   const router = useRouter()
-  const { items, count, maxPrepMin } = useCart()
+  const { items, count, maxPrepMin, ready } = useCart()
   const days = useMemo(() => buildDays(4), [])
   const [activeDayIso, setActiveDayIso] = useState(days[0].iso)
   const [selectedSlot, setSelectedSlot] = useState(null)
 
-  // Si la canasta está vacía → volver al menú
+  // Si la canasta está vacía (DESPUÉS de cargar localStorage) → volver al menú
   useEffect(() => {
-    if (items.length === 0 && typeof window !== 'undefined') {
+    if (ready && items.length === 0 && typeof window !== 'undefined') {
       router.replace('/pickup/menu')
     }
-  }, [items.length, router])
+  }, [ready, items.length, router])
 
   const activeDay = days.find(d => d.iso === activeDayIso) || days[0]
   const slots = useMemo(() => buildSlots(activeDay, maxPrepMin || 0), [activeDay, maxPrepMin])
