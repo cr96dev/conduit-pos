@@ -14,11 +14,11 @@ import Head from 'next/head'
 const APK_LATEST = {
   filename: 'julia-pos-0.5.3.apk',
   version: '0.5.3',
-  size: '~6 MB',
+  size: '1.6 MB',
   changes: [
     'Cashbox: cascada de comandos para asegurar apertura del cajón',
     'Wrapper drawer + soporte K2 mini',
-    'Modo armador K2 (web, sin recompile)',
+    'Soporte modo armador K2 (carga /pickup?modo=k2 desde el navegador)',
   ],
 }
 
