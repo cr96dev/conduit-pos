@@ -940,6 +940,20 @@ export default function POS({ session }) {
     return () => clearInterval(t)
   }, [mostrarBandeja])
 
+  // Modo Armador K2: si este device fue marcado previamente como K2 mini
+  // (botón "Modo armador" en /cajero-login), el boot de la APK que carga
+  // /pos lo redirige inmediato a /pickup?modo=k2. El flag vive en
+  // localStorage del device, así que solo afecta a las tablets que lo tienen
+  // activado — las P3 Mix de cajero quedan en /pos normal.
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    try {
+      if (window.localStorage.getItem('julia_modo_k2_v1') === '1') {
+        router.replace('/pickup?modo=k2')
+      }
+    } catch (_) {}
+  }, [router])
+
   // Cargar perfil + catálogo + turno (si cajero)
   useEffect(() => {
     // Sin sesion: en kiosko (wrapper Sunmi) -> PIN del cajero. En desktop ->
