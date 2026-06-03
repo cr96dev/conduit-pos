@@ -6,7 +6,7 @@
 // - Cache-first para imágenes del catálogo Loyverse
 // - Cache offline fallback al menú último visto
 
-const CACHE_NAME = 'julia-pickup-v5'
+const CACHE_NAME = 'julia-pickup-v6'
 const STATIC_ASSETS = [
   '/pickup/styles.css',
   '/pickup/logo.png',
