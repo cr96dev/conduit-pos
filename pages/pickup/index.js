@@ -43,7 +43,7 @@ export default function PickupHome() {
           <span className="material-symbols-outlined">menu</span>
         </button>
         <Link href="/pickup" className="flex items-center hover:opacity-80 transition-opacity">
-          <img src="/logo.svg" alt="Julia Bakery" className="h-9 w-auto drop-shadow-sm" />
+          <img src="/logo.png" alt="Julia Bakery" className="h-10 w-auto drop-shadow-sm" />
         </Link>
         <Link
           href="/pickup/canasta"

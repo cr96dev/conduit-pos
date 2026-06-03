@@ -11,7 +11,7 @@ export function PickupTopBar({ cartCount = 0 }) {
         <span className="material-symbols-outlined">menu</span>
       </Link>
       <Link href="/pickup" className="flex items-center hover:opacity-80 transition-opacity">
-        <img src="/logo.svg" alt="Julia Bakery" className="h-9 w-auto" />
+        <img src="/logo.png" alt="Julia Bakery" className="h-9 w-auto" />
       </Link>
       <Link href="/pickup/canasta" className="text-primary hover:opacity-80 transition-opacity active:scale-95 duration-150 relative">
         <span className="material-symbols-outlined">shopping_bag</span>
