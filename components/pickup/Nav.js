@@ -4,13 +4,15 @@
 
 import Link from 'next/link'
 
-export function PickupTopBar({ title = 'Julia Bakery', cartCount = 0 }) {
+export function PickupTopBar({ cartCount = 0 }) {
   return (
     <header className="bg-surface sticky top-0 flex justify-between items-center w-full px-container-margin-mobile h-16 z-50">
       <Link href="/pickup" className="text-primary hover:opacity-80 transition-opacity active:scale-95 duration-150">
         <span className="material-symbols-outlined">menu</span>
       </Link>
-      <h1 className="font-headline-lg text-headline-lg font-bold text-primary">{title}</h1>
+      <Link href="/pickup" className="flex items-center hover:opacity-80 transition-opacity">
+        <img src="/logo.svg" alt="Julia Bakery" className="h-9 w-auto" />
+      </Link>
       <Link href="/pickup/canasta" className="text-primary hover:opacity-80 transition-opacity active:scale-95 duration-150 relative">
         <span className="material-symbols-outlined">shopping_bag</span>
         {cartCount > 0 && (

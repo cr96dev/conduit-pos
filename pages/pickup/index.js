@@ -39,12 +39,12 @@ export default function PickupHome() {
         id="top-app-bar-home"
         className="flex justify-between items-center w-full px-container-margin-mobile h-16 z-50 fixed top-0 bg-surface/80 backdrop-blur-md transition-all"
       >
-        <div className="flex items-center gap-4">
-          <button className="hover:opacity-80 transition-opacity active:scale-95 duration-150 text-primary">
-            <span className="material-symbols-outlined">menu</span>
-          </button>
-          <h1 className="font-headline-lg text-headline-lg font-bold text-primary">Julia Bakery</h1>
-        </div>
+        <button className="hover:opacity-80 transition-opacity active:scale-95 duration-150 text-primary">
+          <span className="material-symbols-outlined">menu</span>
+        </button>
+        <Link href="/pickup" className="flex items-center hover:opacity-80 transition-opacity">
+          <img src="/logo.svg" alt="Julia Bakery" className="h-9 w-auto drop-shadow-sm" />
+        </Link>
         <Link
           href="/pickup/canasta"
           className="text-primary hover:opacity-80 transition-opacity active:scale-95 duration-150 relative"
