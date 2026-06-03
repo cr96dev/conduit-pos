@@ -168,19 +168,6 @@ export default function CajeroLogin({ session }) {
           Ingresar como administrador
         </button>
 
-        {/* Modo Armador K2 — un toque activa el flag de localStorage y
-            redirige al armador. De ahí en adelante /pos también detecta el
-            flag y redirige automáticamente, así que el boot de la APK queda
-            anclado al modo armador hasta que se desactive desde dentro. */}
-        <button
-          onClick={() => {
-            try { localStorage.setItem('julia_modo_k2_v1', '1') } catch (_) {}
-            router.push('/pickup?modo=k2')
-          }}
-          className="mt-3 text-2xs text-ink-subtle hover:text-julia-red font-medium uppercase tracking-wider transition-colors">
-          🛒 Modo armador (K2 mini)
-        </button>
-
         <style jsx global>{`
           @keyframes shake {
             0%, 100% { transform: translateX(0); }
