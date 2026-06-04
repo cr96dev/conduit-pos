@@ -1064,11 +1064,16 @@ export default function POS({ session }) {
   async function facturarPedidoKioskoTrasQR(orderId) {
     let datosImprimir = null
     try {
+      // Receptor: si el cajero/cliente ingresó NIT real, usarlo. Si no,
+      // CF default. Antes estaba hardcoded a CF y se perdía el NIT.
+      const receptorParaFacturar = (receptor?.nit && receptor.nit !== 'CF' && receptor.nombre?.trim())
+        ? { nit: receptor.nit, nombre: receptor.nombre.trim(), email: receptor.email || '' }
+        : { nit: 'CF', nombre: 'CONSUMIDOR FINAL' }
       const r = await apiFetch(`/api/pos/pedidos/${orderId}/facturar`, {
         method: 'POST',
         body: JSON.stringify({
           metodo_pago: 'tarjeta',  // recurrente = tarjeta para QBO/contabilidad
-          receptor: { nit: 'CF', nombre: 'CONSUMIDOR FINAL' },
+          receptor: receptorParaFacturar,
         }),
       })
       const j = await r.json()
@@ -1389,6 +1394,11 @@ export default function POS({ session }) {
   async function cobrarKioskoEnCaja() {
     setEnviando(true)
     try {
+      // Receptor: usa el NIT ingresado por el cajero/cliente si hay uno
+      // real; si está como CF (default), va CONSUMIDOR FINAL.
+      const receptorParaPedido = (receptor?.nit && receptor.nit !== 'CF' && receptor.nombre?.trim())
+        ? { nit: receptor.nit, nombre: receptor.nombre.trim(), email: receptor.email || '', telefono: '-' }
+        : { nit: 'CF', nombre: 'CONSUMIDOR FINAL', email: '', telefono: '-' }
       const body = {
         origen: 'pos_kiosko',
         items: carrito.map(l => ({
@@ -1397,7 +1407,7 @@ export default function POS({ session }) {
           cantidad: Number(l.cantidad),
           precio_unitario: Number(l.precio_unitario),
         })),
-        receptor: { nit: 'CF', nombre: 'CONSUMIDOR FINAL' },
+        receptor: receptorParaPedido,
         pago: { metodo: 'cobrar_en_caja', simulado: true },
       }
       const r = await fetch('/api/pickup/orders', {
@@ -1437,6 +1447,10 @@ export default function POS({ session }) {
   async function cobrarKioskoQR() {
     setEnviando(true)
     try {
+      // Receptor: usa NIT real del cajero/cliente si lo ingresó; si no, CF
+      const receptorParaPedido = (receptor?.nit && receptor.nit !== 'CF' && receptor.nombre?.trim())
+        ? { nit: receptor.nit, nombre: receptor.nombre.trim(), email: receptor.email || '', telefono: '-' }
+        : { nit: 'CF', nombre: 'CONSUMIDOR FINAL', email: '', telefono: '-' }
       // 1) Crear pedido pendiente con origen pos_kiosko
       const r1 = await fetch('/api/pickup/orders', {
         method: 'POST',
@@ -1449,7 +1463,7 @@ export default function POS({ session }) {
             cantidad: Number(l.cantidad),
             precio_unitario: Number(l.precio_unitario),
           })),
-          receptor: { nit: 'CF', nombre: 'CONSUMIDOR FINAL' },
+          receptor: receptorParaPedido,
           pago: { metodo: 'recurrente', simulado: false },
         }),
       })
