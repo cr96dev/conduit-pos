@@ -20,6 +20,7 @@ export default function Productos({ session }) {
   const [busqueda, setBusqueda] = useState('')
   const [tab, setTab] = useState('productos')
   const [imagenCat, setImagenCat] = useState(null)  // { loyverse_id, name, image_url? } cuando modal abierto
+  const [productoEditando, setProductoEditando] = useState(null)  // { nuevo: true } | producto a editar
 
   useEffect(() => {
     if (!session) { router.push('/'); return }
@@ -118,13 +119,26 @@ export default function Productos({ session }) {
 
         {tab === 'productos' && (
           <>
-            <input
-              type="text"
-              placeholder="Buscar producto..."
-              value={busqueda}
-              onChange={e => setBusqueda(e.target.value)}
-              className="w-full md:w-80 px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-julia-red mb-4"
-            />
+            <div className="flex items-center justify-between gap-3 mb-4 flex-wrap">
+              <input
+                type="text"
+                placeholder="Buscar producto..."
+                value={busqueda}
+                onChange={e => setBusqueda(e.target.value)}
+                className="w-full md:w-80 px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-julia-red"
+              />
+              {esAdmin && (
+                <button
+                  onClick={() => setProductoEditando({ nuevo: true })}
+                  className="bg-julia-red text-white text-sm px-4 py-2 rounded-lg font-semibold hover:opacity-90 flex items-center gap-2"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+                  </svg>
+                  Nuevo producto
+                </button>
+              )}
+            </div>
 
             <div className="card-julia overflow-hidden">
               <table className="w-full text-sm">
@@ -132,26 +146,43 @@ export default function Productos({ session }) {
                   <tr>
                     <th className="text-left text-xs text-gray-400 font-normal px-4 py-2">Producto</th>
                     <th className="text-left text-xs text-gray-400 font-normal px-4 py-2">Categoría</th>
-                    <th className="text-left text-xs text-gray-400 font-normal px-4 py-2">Variantes</th>
+                    <th className="text-right text-xs text-gray-400 font-normal px-4 py-2">Precio</th>
                     <th className="text-right text-xs text-gray-400 font-normal px-4 py-2">Stock</th>
+                    {esAdmin && <th className="text-right text-xs text-gray-400 font-normal px-4 py-2 w-32">Acciones</th>}
                   </tr>
                 </thead>
                 <tbody>
                   {loading ? (
-                    <>{[1,2,3,4,5].map(i => <tr key={i}><td colSpan={4}><SkeletonRow /></td></tr>)}</>
+                    <>{[1,2,3,4,5].map(i => <tr key={i}><td colSpan={5}><SkeletonRow /></td></tr>)}</>
                   ) : filtrados.length === 0 ? (
-                    <tr><td colSpan={4} className="text-center text-xs text-gray-400 py-8">Sin productos.</td></tr>
+                    <tr><td colSpan={5} className="text-center text-xs text-gray-400 py-8">Sin productos.</td></tr>
                   ) : (
                     filtrados.map(i => {
-                      const numVariants = Array.isArray(i.variants) ? i.variants.length : 0
+                      const precio = i.variants?.[0]?.stores?.[0]?.price ?? i.variants?.[0]?.default_price
+                      const esManual = String(i.loyverse_id || '').startsWith('manual-')
                       return (
                         <tr key={i.loyverse_id} className="border-t border-gray-50 hover:bg-gray-50">
-                          <td className="px-4 py-2.5 text-gray-700">{i.item_name || '—'}</td>
+                          <td className="px-4 py-2.5 text-gray-700">
+                            {i.item_name || '—'}
+                            {esManual && <span className="ml-2 text-[10px] bg-violet-100 text-violet-700 px-1.5 py-0.5 rounded">manual</span>}
+                          </td>
                           <td className="px-4 py-2.5 text-xs text-gray-500">{catMap[i.category_id] || '—'}</td>
-                          <td className="px-4 py-2.5 text-xs text-gray-500">{numVariants}</td>
+                          <td className="px-4 py-2.5 text-right tabular-nums font-medium">
+                            {precio != null ? 'Q ' + Number(precio).toFixed(2) : '—'}
+                          </td>
                           <td className="px-4 py-2.5 text-right text-xs text-gray-500">
                             {i.track_stock ? 'inventario' : '—'}
                           </td>
+                          {esAdmin && (
+                            <td className="px-4 py-2.5 text-right">
+                              <button
+                                onClick={() => setProductoEditando({ ...i, precio_actual: precio })}
+                                className="text-xs text-julia-red hover:underline"
+                              >
+                                editar
+                              </button>
+                            </td>
+                          )}
                         </tr>
                       )
                     })
@@ -251,7 +282,175 @@ export default function Productos({ session }) {
           }}
         />
       )}
+
+      {productoEditando && (
+        <ModalProducto
+          producto={productoEditando}
+          categorias={categorias}
+          onClose={() => setProductoEditando(null)}
+          onSaved={() => { setProductoEditando(null); cargar() }}
+        />
+      )}
     </Layout>
+  )
+}
+
+// ============================================================================
+// Modal nuevo / editar producto
+// ============================================================================
+
+function ModalProducto({ producto, categorias, onClose, onSaved }) {
+  const esNuevo = !!producto.nuevo
+  const [nombre, setNombre]      = useState(esNuevo ? '' : (producto.item_name || ''))
+  const [precio, setPrecio]      = useState(esNuevo ? '' : (producto.precio_actual ?? ''))
+  const [categoria, setCategoria] = useState(esNuevo ? '' : (producto.category_id || ''))
+  const [trackStock, setTrackStock] = useState(esNuevo ? false : !!producto.track_stock)
+  const [imageUrl, setImageUrl]   = useState(esNuevo ? '' : (producto.image_url || ''))
+  const [guardando, setGuardando] = useState(false)
+  const [borrando, setBorrando]   = useState(false)
+  const [err, setErr] = useState('')
+
+  async function guardar() {
+    setErr('')
+    if (!nombre.trim()) return setErr('Nombre requerido')
+    const precioNum = Number(precio)
+    if (!(precioNum >= 0)) return setErr('Precio inválido')
+    setGuardando(true)
+    try {
+      const body = {
+        item_name: nombre.trim(),
+        category_id: categoria || null,
+        precio: precioNum,
+        track_stock: trackStock,
+        image_url: imageUrl?.trim() || null,
+      }
+      const url = esNuevo
+        ? '/api/productos'
+        : `/api/productos/${encodeURIComponent(producto.loyverse_id)}`
+      const method = esNuevo ? 'POST' : 'PATCH'
+      const r = await apiFetch(url, { method, body: JSON.stringify(body) })
+      const j = await r.json()
+      if (!j.ok) throw new Error(j.error || 'Falla al guardar')
+      onSaved()
+    } catch (e) {
+      setErr(e?.message || String(e))
+    } finally {
+      setGuardando(false)
+    }
+  }
+
+  async function borrar() {
+    if (!confirm(`¿Eliminar el producto "${nombre}"? Lo podés volver a crear después si fue por error.`)) return
+    setBorrando(true)
+    try {
+      const r = await apiFetch(`/api/productos/${encodeURIComponent(producto.loyverse_id)}`, { method: 'DELETE' })
+      const j = await r.json()
+      if (!j.ok) throw new Error(j.error || 'Falla al borrar')
+      onSaved()
+    } catch (e) {
+      setErr(e?.message || String(e))
+    } finally {
+      setBorrando(false)
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4" onClick={onClose}>
+      <div className="bg-white rounded-2xl max-w-md w-full" onClick={e => e.stopPropagation()}>
+
+        <div className="px-6 py-4 border-b flex items-center justify-between">
+          <h2 className="text-lg font-bold text-gray-900">
+            {esNuevo ? 'Nuevo producto' : 'Editar producto'}
+          </h2>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-700 text-2xl leading-none">×</button>
+        </div>
+
+        <div className="p-6 space-y-4">
+          <div>
+            <label className="block text-xs uppercase tracking-wider text-ink-subtle mb-1">Nombre *</label>
+            <input
+              value={nombre}
+              onChange={e => setNombre(e.target.value)}
+              placeholder="DANESA DE CARPACCIO"
+              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm uppercase"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs uppercase tracking-wider text-ink-subtle mb-1">Precio (IVA incluido) *</label>
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-gray-500">Q</span>
+              <input
+                type="number" step="0.01" min={0}
+                value={precio}
+                onChange={e => setPrecio(e.target.value)}
+                placeholder="30.00"
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm tabular-nums"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-xs uppercase tracking-wider text-ink-subtle mb-1">Categoría</label>
+            <select
+              value={categoria}
+              onChange={e => setCategoria(e.target.value)}
+              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white"
+            >
+              <option value="">(sin categoría)</option>
+              {categorias.map(c => (
+                <option key={c.loyverse_id} value={c.loyverse_id}>{c.name}</option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-xs uppercase tracking-wider text-ink-subtle mb-1">URL imagen (opcional)</label>
+            <input
+              value={imageUrl}
+              onChange={e => setImageUrl(e.target.value)}
+              placeholder="https://..."
+              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm"
+            />
+          </div>
+
+          <label className="flex items-center gap-2 text-sm text-gray-700">
+            <input
+              type="checkbox"
+              checked={trackStock}
+              onChange={e => setTrackStock(e.target.checked)}
+              className="rounded"
+            />
+            Lleva inventario (descuenta stock al vender)
+          </label>
+
+          {err && <div className="bg-rose-50 text-rose-700 px-3 py-2 rounded-lg text-sm">{err}</div>}
+        </div>
+
+        <div className="px-6 py-4 border-t flex items-center justify-between gap-2">
+          {!esNuevo ? (
+            <button
+              onClick={borrar}
+              disabled={borrando}
+              className="text-sm text-rose-600 hover:underline disabled:opacity-40"
+            >
+              {borrando ? 'Borrando…' : 'Eliminar'}
+            </button>
+          ) : <span />}
+          <div className="flex items-center gap-2">
+            <button onClick={onClose} className="text-sm text-gray-600 hover:text-gray-900 px-4 py-2 font-semibold">Cancelar</button>
+            <button
+              onClick={guardar}
+              disabled={guardando}
+              className="bg-julia-red text-white px-5 py-2 rounded-lg font-semibold hover:opacity-90 disabled:opacity-40 text-sm"
+            >
+              {guardando ? 'Guardando…' : (esNuevo ? 'Crear producto' : 'Guardar cambios')}
+            </button>
+          </div>
+        </div>
+
+      </div>
+    </div>
   )
 }
 
