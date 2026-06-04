@@ -1603,6 +1603,13 @@ export default function POS({ session }) {
     }
     setResultado(json)
 
+    // ⚠️ Fallback Infile: si la venta entró en cola de certificación
+    // (Infile caído), avisamos al cajero con toast claro. La factura va
+    // a salir automáticamente cuando Infile vuelva.
+    if (json.pendiente_certificacion) {
+      flashToast('⚠️ Venta guardada — Infile caído, factura se certifica sola al volver')
+    }
+
     // Imprimir ticket cliente en la termica del Sunmi (si esta el bridge nativo).
     // Best-effort: si falla, la venta sigue OK; el cajero puede re-imprimir
     // manual mas tarde.
@@ -1610,6 +1617,7 @@ export default function POS({ session }) {
       if (typeof window !== 'undefined' && window.JuliaPOS && window.JuliaPOS.printTicket) {
         const f = json.factura
         const e = emisor || {}
+        const enCertificacion = !!json.pendiente_certificacion
         // Direccion completa del emisor en una linea
         const direccion = [
           e.direccion,
@@ -1639,17 +1647,19 @@ export default function POS({ session }) {
           totalGravado: Math.round((Number(f.total) / 1.12) * 100) / 100,
           iva: Number(f.iva),
           total: Number(f.total),
-          // CERTIFICADOR (Infile)
-          uuidSat: f.uuid_sat,
-          serieSat: f.serie_sat,
-          numeroSat: f.numero_sat,
-          certificadorNombre: 'INFILE, S.A.',
-          certificadorNit: '12521329',
+          // CERTIFICADOR (Infile) — solo si está certificada de verdad
+          uuidSat: enCertificacion ? null : f.uuid_sat,
+          serieSat: enCertificacion ? null : f.serie_sat,
+          numeroSat: enCertificacion ? null : f.numero_sat,
+          certificadorNombre: enCertificacion ? 'PENDIENTE CERTIFICACIÓN' : 'INFILE, S.A.',
+          certificadorNit: enCertificacion ? null : '12521329',
           fechaCertificacion: f.fecha_certificacion
             ? new Date(f.fecha_certificacion).toLocaleString('es-GT')
             : null,
-          // Footer regulatorio
-          textoFooter: 'Sujeto a pago directo ISR (5111420251235387 - 01/04/2025)',
+          // Footer: si está en cola, advertencia al cliente
+          textoFooter: enCertificacion
+            ? '*** COMPROBANTE NO FISCAL ***\nInfile no disponible al momento de la venta.\nFactura electrónica se enviará por email al certificar.\nConservar este comprobante como respaldo.'
+            : 'Sujeto a pago directo ISR (5111420251235387 - 01/04/2025)',
         }
         const r = await window.JuliaPOS.printTicket(payload)
         console.log('[POS] printTicket result:', r)

@@ -15,6 +15,10 @@
     {
       "path": "/api/cron/neonet-settlement",
       "schedule": "0 5 * * *"
+    },
+    {
+      "path": "/api/cron/reintentar-fel",
+      "schedule": "*/5 * * * *"
     }
   ],
   "functions": {
@@ -28,6 +32,9 @@
       "maxDuration": 60
     },
     "pages/api/cron/neonet-settlement.js": {
+      "maxDuration": 60
+    },
+    "pages/api/cron/reintentar-fel.js": {
       "maxDuration": 60
     },
     "pages/api/neonet/settlement.js": {

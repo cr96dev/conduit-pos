@@ -323,7 +323,65 @@ export default async function handler(req, res) {
       correoCopia: receptor.email || '',
     })
   } catch (e) {
-    // Borrar borrador para que el operador pueda corregir y reintentar limpio.
+    // ======================================================================
+    // FALLBACK INFILE — vender y certificar después
+    //
+    // Si el error es de RED o HTTP 5xx (Infile caído / sobrecargado), NO
+    // borramos el borrador: lo guardamos en estado 'pendiente_certificacion'
+    // con el XML listo. El cron /api/cron/reintentar-fel cada 5 min lo va
+    // a procesar cuando Infile vuelva. Cliente sigue cobrando, la cola
+    // sigue avanzando. La factura sale por email automáticamente cuando
+    // la certificación termine.
+    //
+    // Si el error es 4xx o validación local (XML mal armado, NIT inválido,
+    // etc), Infile dijo NO conscientemente — no tiene sentido reintentar.
+    // Borramos el borrador y devolvemos error como antes.
+    // ======================================================================
+    const esCaida = !(e instanceof InfileError)
+      ? true   // error de runtime/red → fallback
+      : (e.status == null || e.status >= 500)   // sin status (network) o 5xx
+    const esFirma502 = (e instanceof InfileError) && e.etapa === 'firma' && e.status >= 500
+    const debeReintentarse = esCaida || esFirma502
+
+    if (debeReintentarse) {
+      console.warn('[ventas] Infile caído — marcando pendiente_certificacion:', e.message)
+      await auth.admin.from('facturas_fel')
+        .update({
+          estado: 'pendiente_certificacion',
+          xml_pendiente: xmlInfo.xml,
+          intentos_certificacion: 1,
+          ultimo_intento_at: new Date().toISOString(),
+          error_ultimo_intento: e.message,
+          pendiente_desde: new Date().toISOString(),
+        })
+        .eq('id', facturaBorrador.id)
+
+      // Devolvemos 200 con flag pendiente_certificacion: el front del POS
+      // imprime ticket NO FISCAL ("En certificación") y permite seguir
+      // operando. La factura se certifica sola en el cron.
+      return res.status(200).json({
+        ok: true,
+        certificada: false,
+        pendiente_certificacion: true,
+        factura: {
+          id: facturaBorrador.id,
+          serie_sat: null,
+          numero_sat: null,
+          uuid_sat: null,
+          total: facturaBorrador.total,
+          iva: facturaBorrador.iva,
+          metodo_pago: facturaBorrador.metodo_pago,
+          receptor_nit: facturaBorrador.receptor_nit,
+          receptor_nombre: facturaBorrador.receptor_nombre,
+          fecha_certificacion: null,
+        },
+        descuento: null,
+        asiento: null,
+        warning: 'Infile no responde — venta guardada en cola de certificación. Se certifica automáticamente al volver.',
+      })
+    }
+
+    // Caso "rechazo legítimo": borrar borrador y devolver error como siempre.
     await auth.admin.from('facturas_fel_items').delete().eq('factura_id', facturaBorrador.id)
     await auth.admin.from('facturas_fel').delete().eq('id', facturaBorrador.id)
     if (e instanceof InfileError) {
