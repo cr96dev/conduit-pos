@@ -62,9 +62,12 @@ async function getHandler(req, res, auth) {
   if (estado === 'activos') q = q.in('estado', ['pendiente_entrega', 'lista'])
   else if (estado !== 'all') q = q.eq('estado', estado)
   // Filtro de turno: incluir el turno actual del cajero Y los pedidos
-  // públicos sin turno (origen='app_pickup' creados desde la PWA, sin
-  // sesión, por eso turno_id=null). Admin sin turno_id ve todos.
-  if (turnoId) q = q.or(`turno_id.eq.${turnoId},and(turno_id.is.null,origen.eq.app_pickup)`)
+  // públicos sin turno — son los creados desde canales sin sesión:
+  //   app_pickup  (PWA del cliente)
+  //   pos_kiosko  (K2 mini autoservicio — QR Recurrente / pagar en caja)
+  //   kiosko_k2   (modo armador K2 deprecated pero sigue soportado)
+  // Admin sin turno_id ve todos.
+  if (turnoId) q = q.or(`turno_id.eq.${turnoId},and(turno_id.is.null,origen.in.(app_pickup,pos_kiosko,kiosko_k2))`)
 
   const { data, error } = await q
   if (error) return res.status(500).json({ ok: false, error: error.message })
