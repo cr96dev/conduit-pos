@@ -324,9 +324,19 @@ function ModalGuardarPedido({ totalEstimado, cantItems, onClose, onGuardar }) {
 // Bandeja: lista los pedidos pendientes del turno actual con accion
 // Continuar (carga al carrito + permite editar y cobrar) y Cancelar.
 // Auto-refresca al abrir.
-function ModalBandejaPedidos({ pedidos, cargando, onClose, onContinuar, onCancelar, onMarcarListo, onRefresh }) {
+function ModalBandejaPedidos({ pedidos, cargando, onClose, onContinuar, onCancelar, onMarcarListo, onMarcarEntregado, onRefresh }) {
   const [cancelandoId, setCancelandoId] = useState(null)
   const [marcandoListoId, setMarcandoListoId] = useState(null)
+  const [marcandoEntregadoId, setMarcandoEntregadoId] = useState(null)
+
+  async function marcarEntregado(p) {
+    setMarcandoEntregadoId(p.id)
+    try {
+      await onMarcarEntregado(p.id)
+    } finally {
+      setMarcandoEntregadoId(null)
+    }
+  }
   const [motivos, setMotivos] = useState({})
 
   async function cancelar(p) {
@@ -424,10 +434,12 @@ function ModalBandejaPedidos({ pedidos, cargando, onClose, onContinuar, onCancel
                 {p.pagado_at && (
                   <div className="mb-3 px-3 py-2 rounded-lg bg-emerald-100 border border-emerald-300 flex items-center justify-between gap-2">
                     <div className="text-sm font-bold text-emerald-900">
-                      ✅ PAGADO · {p.origen === 'pos_kiosko' ? 'K2 QR Recurrente' : 'tarjeta'}
+                      {p.factura_id
+                        ? '✅ PAGADO + FACTURADO'
+                        : `✅ PAGADO · ${p.origen === 'pos_kiosko' ? 'K2 QR Recurrente' : 'tarjeta'}`}
                     </div>
                     <div className="text-xs text-emerald-800 font-medium">
-                      Cobrá NO — entregá y facturá
+                      {p.factura_id ? 'Solo entregá el producto' : 'Cobrá NO — entregá y facturá'}
                     </div>
                   </div>
                 )}
@@ -456,7 +468,13 @@ function ModalBandejaPedidos({ pedidos, cargando, onClose, onContinuar, onCancel
 
                 <div className="grid grid-cols-2 gap-2.5">
                   {/* Botón principal cambia según estado, origen y si está pagado */}
-                  {p.pagado_at ? (
+                  {p.pagado_at && p.factura_id ? (
+                    /* Ya pagado Y ya facturado → solo confirmar entrega física */
+                    <button onClick={() => marcarEntregado(p)} disabled={marcandoEntregadoId === p.id}
+                      className="py-4 bg-emerald-600 text-white font-bold rounded-xl hover:bg-emerald-700 text-base shadow disabled:opacity-50">
+                      {marcandoEntregadoId === p.id ? 'Marcando...' : '📦 Marcar entregado'}
+                    </button>
+                  ) : p.pagado_at ? (
                     /* Ya pagado vía QR → solo entregar + facturar */
                     <button onClick={() => onContinuar(p)}
                       className="py-4 bg-emerald-600 text-white font-bold rounded-xl hover:bg-emerald-700 text-base shadow">
@@ -1844,6 +1862,20 @@ export default function POS({ session }) {
     recargarPedidos()
   }
 
+  // Para pedidos que YA tienen factura emitida (caso K2 auto-facturado
+  // del flow viejo). Solo cierra el estado a entregado_facturado, no
+  // emite factura nueva.
+  async function marcarPedidoEntregado(pedidoId) {
+    const r = await apiFetch(`/api/pos/pedidos/${pedidoId}/marcar-entregado`, { method: 'POST' })
+    const j = await r.json()
+    if (!r.ok || !j.ok) {
+      flashToast(`Error: ${j.error || 'no se pudo marcar entregado'}`)
+      return
+    }
+    flashToast('📦 Pedido marcado como entregado')
+    recargarPedidos()
+  }
+
   // Cantidades por variant_id en el carrito — para mostrar badge en cards.
   // OJO: este hook DEBE estar antes de cualquier early return; si quedaba
   // despues, React tiraba "Rendered fewer hooks than expected" (error #300).
@@ -1925,6 +1957,7 @@ export default function POS({ session }) {
           onContinuar={continuarPedido}
           onCancelar={cancelarPedido}
           onMarcarListo={marcarPedidoListo}
+          onMarcarEntregado={marcarPedidoEntregado}
           onRefresh={recargarPedidos}
         />
       )}
