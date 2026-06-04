@@ -40,23 +40,9 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: 'Body inválido' })
   }
 
-  // Verificar signature
+  // Verificar signature (Svix HMAC-SHA256 base64)
   if (!verificarWebhookSignature(req, rawBody)) {
-    // DEBUG temporal: loggear todos los headers + tamaño del body + estado
-    // del secret, para identificar el formato exacto que usa Recurrente.
-    // Quitar cuando el webhook esté funcionando.
-    const headers = Object.fromEntries(
-      Object.entries(req.headers).filter(([k]) =>
-        /sign|secret|recur|webhook|stripe/i.test(k) || k.startsWith('x-')
-      )
-    )
-    console.warn('[recurrente-webhook] signature inválida', {
-      headers,
-      bodyLength: rawBody.length,
-      bodyPreview: rawBody.slice(0, 200),
-      hasSecret: !!process.env.RECURRENTE_WEBHOOK_SECRET,
-      configuredHeader: (process.env.RECURRENTE_WEBHOOK_SIGNATURE_HEADER || 'x-recurrente-signature').toLowerCase(),
-    })
+    console.warn('[recurrente-webhook] signature inválida — rechazando')
     return res.status(401).json({ error: 'Signature inválida' })
   }
 
