@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useMemo, useState } from 'react'
+import { Fragment, useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/router'
 import { supabase } from '../lib/supabase'
 import Layout from '../components/Layout'
@@ -576,22 +576,11 @@ function ModalReceta({ recetaId, loyverseItems, insumos, recetas, onClose, onSav
                         ) : <span className="text-gray-300 text-xs">—</span>}
                       </td>
                       <td className="px-2 py-1">
-                        <select value={l.componente_id} onChange={e => setLin(i, 'componente_id', e.target.value)}
-                          className="w-full border border-gray-200 rounded px-1 py-1 text-xs">
-                          <option value="">— elegir —</option>
-                          <optgroup label="Insumos">
-                            {opcionesComponente.filter(o => o.tipo === 'insumo').map(o =>
-                              <option key={o.value} value={o.value}>
-                                {o.label}{o.sin_costo ? ' (sin costo)' : ''}
-                              </option>)}
-                          </optgroup>
-                          <optgroup label="Sub-recetas">
-                            {opcionesComponente.filter(o => o.tipo === 'receta').map(o =>
-                              <option key={o.value} value={o.value}>
-                                {o.label} · rinde {o.rinde} {o.unidad}
-                              </option>)}
-                          </optgroup>
-                        </select>
+                        <SelectorComponente
+                          valor={l.componente_id}
+                          opciones={opcionesComponente}
+                          onChange={(val) => setLin(i, 'componente_id', val)}
+                        />
                       </td>
                       <td className="px-2 py-1">
                         <input type="number" step="any" value={l.cantidad} onChange={e => setLin(i, 'cantidad', e.target.value)}
@@ -723,6 +712,146 @@ function Campo({ label, required, children }) {
         {label}{required && <span className="text-julia-red ml-0.5">*</span>}
       </label>
       {children}
+    </div>
+  )
+}
+
+// ============================================================================
+// SelectorComponente — autocomplete con sugerencias filtradas
+//
+// Reemplaza el <select> con optgroups por un input buscable que filtra
+// insumos + sub-recetas mientras se teclea. UX similar a Linear / Notion.
+// ============================================================================
+
+function SelectorComponente({ valor, opciones, onChange }) {
+  const elegido = opciones.find(o => o.value === valor)
+  const [query, setQuery] = useState('')
+  const [abierto, setAbierto] = useState(false)
+  const [indiceActivo, setIndiceActivo] = useState(0)
+  const wrapRef = useRef(null)
+  const inputRef = useRef(null)
+
+  // Cerrar al click fuera
+  useEffect(() => {
+    if (!abierto) return
+    function onClick(e) {
+      if (wrapRef.current && !wrapRef.current.contains(e.target)) {
+        setAbierto(false)
+      }
+    }
+    document.addEventListener('mousedown', onClick)
+    return () => document.removeEventListener('mousedown', onClick)
+  }, [abierto])
+
+  // Cuando abre, foco al input y reset
+  useEffect(() => {
+    if (abierto) {
+      setQuery('')
+      setIndiceActivo(0)
+      setTimeout(() => inputRef.current?.focus(), 0)
+    }
+  }, [abierto])
+
+  // Filtrado case-insensitive: busca el query en cualquier parte del label.
+  // Si q está vacío, mostramos las primeras 50 opciones (insumos primero).
+  const filtradas = (() => {
+    const q = query.trim().toLowerCase()
+    const orden = [...opciones].sort((a, b) => {
+      if (a.tipo !== b.tipo) return a.tipo === 'insumo' ? -1 : 1
+      return a.label.localeCompare(b.label, 'es', { sensitivity: 'base' })
+    })
+    if (!q) return orden.slice(0, 50)
+    return orden.filter(o => o.label.toLowerCase().includes(q)).slice(0, 50)
+  })()
+
+  function elegir(op) {
+    onChange(op.value)
+    setAbierto(false)
+    setQuery('')
+  }
+
+  function onKeyDown(e) {
+    if (e.key === 'ArrowDown') {
+      e.preventDefault()
+      setIndiceActivo(i => Math.min(filtradas.length - 1, i + 1))
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault()
+      setIndiceActivo(i => Math.max(0, i - 1))
+    } else if (e.key === 'Enter') {
+      e.preventDefault()
+      if (filtradas[indiceActivo]) elegir(filtradas[indiceActivo])
+    } else if (e.key === 'Escape') {
+      e.preventDefault()
+      setAbierto(false)
+    }
+  }
+
+  return (
+    <div ref={wrapRef} className="relative">
+      {!abierto && (
+        <button
+          type="button"
+          onClick={() => setAbierto(true)}
+          className="w-full border border-gray-200 rounded px-1.5 py-1 text-xs text-left bg-white hover:bg-gray-50 truncate"
+        >
+          {elegido ? (
+            <span className="flex items-center gap-1.5 truncate">
+              <span className={`text-[9px] px-1 py-0.5 rounded font-medium flex-shrink-0 ${
+                elegido.tipo === 'receta' ? 'bg-violet-100 text-violet-700' : 'bg-blue-50 text-blue-700'
+              }`}>{elegido.tipo === 'receta' ? 'sub-rec' : 'insumo'}</span>
+              <span className="truncate">{elegido.label}</span>
+            </span>
+          ) : (
+            <span className="text-gray-400">— elegir o tipear nombre —</span>
+          )}
+        </button>
+      )}
+
+      {abierto && (
+        <div className="absolute top-0 left-0 z-30 w-72 bg-white border border-gray-300 rounded-md shadow-lg">
+          <input
+            ref={inputRef}
+            type="text"
+            value={query}
+            onChange={(e) => { setQuery(e.target.value); setIndiceActivo(0) }}
+            onKeyDown={onKeyDown}
+            placeholder="Buscar insumo o sub-receta..."
+            className="w-full px-2 py-1.5 text-xs border-b border-gray-200 outline-none"
+          />
+          <div className="max-h-64 overflow-y-auto">
+            {filtradas.length === 0 ? (
+              <div className="px-2 py-3 text-xs text-gray-400 text-center">
+                Sin resultados para "{query}"
+              </div>
+            ) : filtradas.map((o, idx) => (
+              <button
+                key={o.value}
+                type="button"
+                onClick={() => elegir(o)}
+                onMouseEnter={() => setIndiceActivo(idx)}
+                className={`w-full text-left px-2 py-1.5 text-xs flex items-center gap-2 border-b border-gray-50 last:border-0 ${
+                  idx === indiceActivo ? 'bg-gray-100' : 'hover:bg-gray-50'
+                }`}
+              >
+                <span className={`text-[9px] px-1 py-0.5 rounded font-medium flex-shrink-0 ${
+                  o.tipo === 'receta' ? 'bg-violet-100 text-violet-700' : 'bg-blue-50 text-blue-700'
+                }`}>{o.tipo === 'receta' ? 'sub-rec' : 'insumo'}</span>
+                <span className="flex-1 truncate">{o.label}</span>
+                {o.tipo === 'receta' && o.rinde && (
+                  <span className="text-[10px] text-gray-400 flex-shrink-0">rinde {o.rinde} {o.unidad}</span>
+                )}
+                {o.tipo === 'insumo' && o.sin_costo && (
+                  <span className="text-[10px] text-amber-600 flex-shrink-0">sin costo</span>
+                )}
+              </button>
+            ))}
+          </div>
+          <div className="px-2 py-1 text-[10px] text-gray-400 bg-gray-50 border-t border-gray-100 flex items-center justify-between">
+            <span>↑↓ navegar · Enter elegir · Esc cerrar</span>
+            <span>{filtradas.length} resultado{filtradas.length !== 1 ? 's' : ''}</span>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
