@@ -56,7 +56,12 @@ export default async function handler(req, res) {
   ) {
     try {
       const checkout = await consultarCheckout(data.pago_auth_code)
-      if (checkoutEstaPagado(checkout)) {
+      const pagado = checkoutEstaPagado(checkout)
+      // Log condicional: si confirmamos pago, registramos para auditoría;
+      // si NO confirmamos pero el cliente reportó pagar, este log nos da
+      // el shape exacto del checkout para entender qué campo verificar.
+      console.log(`[pedido-status] ${data.referencia} checkout ${data.pago_auth_code}: pagado=${pagado}`, JSON.stringify(checkout).slice(0, 1500))
+      if (pagado) {
         // Pagado en Recurrente — actualizar estado
         const { data: updated, error: errUpd } = await supabaseAdmin
           .from('pedidos_pendientes')
