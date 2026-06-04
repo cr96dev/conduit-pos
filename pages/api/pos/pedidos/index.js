@@ -52,6 +52,7 @@ async function getHandler(req, res, auth) {
       receptor_nit, receptor_nombre, receptor_email, receptor_telefono,
       estado, factura_id, motivo_cancelacion, notas,
       slot_pickup_at, slot_label, day_label,
+      pago_metodo, pagado_at,
       created_at, updated_at, facturado_at, cancelado_at
     `)
     .order('created_at', { ascending: estado === 'pendiente_entrega' })

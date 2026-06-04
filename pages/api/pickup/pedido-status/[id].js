@@ -62,10 +62,15 @@ export default async function handler(req, res) {
       // el shape exacto del checkout para entender qué campo verificar.
       console.log(`[pedido-status] ${data.referencia} checkout ${data.pago_auth_code}: pagado=${pagado}`, JSON.stringify(checkout).slice(0, 1500))
       if (pagado) {
-        // Pagado en Recurrente — actualizar estado
+        // Pagado en Recurrente — actualizar estado + marcar pagado_at
+        const now = new Date().toISOString()
         const { data: updated, error: errUpd } = await supabaseAdmin
           .from('pedidos_pendientes')
-          .update({ estado: 'pendiente_entrega', updated_at: new Date().toISOString() })
+          .update({
+            estado: 'pendiente_entrega',
+            pagado_at: now,
+            updated_at: now,
+          })
           .eq('id', id)
           .eq('estado', 'pendiente_pago')  // guard contra race con webhook
           .select('id, estado')

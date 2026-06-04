@@ -420,6 +420,18 @@ function ModalBandejaPedidos({ pedidos, cargando, onClose, onContinuar, onCancel
                   </div>
                 )}
 
+                {/* Badge PAGADO: pedido del kiosko K2 ya cobrado vía QR Recurrente */}
+                {p.pagado_at && (
+                  <div className="mb-3 px-3 py-2 rounded-lg bg-emerald-100 border border-emerald-300 flex items-center justify-between gap-2">
+                    <div className="text-sm font-bold text-emerald-900">
+                      ✅ PAGADO · {p.origen === 'pos_kiosko' ? 'K2 QR Recurrente' : 'tarjeta'}
+                    </div>
+                    <div className="text-xs text-emerald-800 font-medium">
+                      Cobrá NO — entregá y facturá
+                    </div>
+                  </div>
+                )}
+
                 {/* Badge especial si es pickup app */}
                 {p.origen === 'app_pickup' && (
                   <div className={`mb-3 px-3 py-2 rounded-lg flex items-center justify-between gap-2 ${
@@ -443,8 +455,14 @@ function ModalBandejaPedidos({ pedidos, cargando, onClose, onContinuar, onCancel
                 )}
 
                 <div className="grid grid-cols-2 gap-2.5">
-                  {/* Botón principal cambia según estado y origen */}
-                  {p.origen === 'app_pickup' && p.estado === 'pendiente_entrega' ? (
+                  {/* Botón principal cambia según estado, origen y si está pagado */}
+                  {p.pagado_at ? (
+                    /* Ya pagado vía QR → solo entregar + facturar */
+                    <button onClick={() => onContinuar(p)}
+                      className="py-4 bg-emerald-600 text-white font-bold rounded-xl hover:bg-emerald-700 text-base shadow">
+                      📥 Entregar y facturar
+                    </button>
+                  ) : p.origen === 'app_pickup' && p.estado === 'pendiente_entrega' ? (
                     <button onClick={() => marcarListo(p)} disabled={marcandoListoId === p.id}
                       className="py-4 bg-amber-500 text-white font-bold rounded-xl hover:bg-amber-600 text-base shadow disabled:opacity-50">
                       {marcandoListoId === p.id ? 'Avisando...' : '🔔 Marcar listo (avisa al cliente)'}
@@ -1006,9 +1024,13 @@ export default function POS({ session }) {
         const j = await r.json()
         if (cancel) return
         if (j.ok && (j.estado === 'pendiente_entrega' || j.estado === 'lista')) {
-          setModalQR(m => m ? { ...m, estado: 'pagado' } : null)
-          // Pago confirmado → emitir factura del pedido
-          setTimeout(() => facturarPedidoKioskoTrasQR(modalQR.orderId).catch(() => {}), 800)
+          // Pago confirmado. El pedido queda en pendiente_entrega con
+          // pagado_at seteado en BD. El cajero P3 Mix lo verá en su bandeja
+          // con badge PAGADO y podrá facturar cuando entregue. NO facturamos
+          // automáticamente desde acá — la factura la emite el cajero al
+          // entregar el producto.
+          setModalQR(m => m ? { ...m, estado: 'pagado', referencia: j.referencia } : null)
+          setTimeout(() => mostrarConfirmacionPagoKioskoQR(modalQR.orderId).catch(() => {}), 800)
         }
       } catch (_) {}
     }
@@ -1061,85 +1083,75 @@ export default function POS({ session }) {
   // IMPORTANTE: los items para el ticket NO los tomamos del state `carrito`
   // (que puede haber cambiado durante el polling de 3s+) sino del pedido
   // devuelto por el endpoint — es la fuente de verdad.
-  async function facturarPedidoKioskoTrasQR(orderId) {
+  async function mostrarConfirmacionPagoKioskoQR(orderId) {
+    // NUEVO flujo: el K2 NO factura más. Solo confirma pago al cliente +
+    // imprime comprobante no fiscal con el número de pedido. El cajero
+    // P3 Mix ve el pedido en bandeja con badge PAGADO y emite el FEL
+    // cuando el cliente llega a recoger (botón "Entregar y facturar").
+    //
+    // Acá solo:
+    //   1. Obtener datos del pedido para el ticket
+    //   2. Imprimir comprobante no fiscal "Pasá al mostrador"
+    //   3. flashToast confirmando + reset del POS
     let datosImprimir = null
     try {
-      // Receptor: si el cajero/cliente ingresó NIT real, usarlo. Si no,
-      // CF default. Antes estaba hardcoded a CF y se perdía el NIT.
-      const receptorParaFacturar = (receptor?.nit && receptor.nit !== 'CF' && receptor.nombre?.trim())
-        ? { nit: receptor.nit, nombre: receptor.nombre.trim(), email: receptor.email || '' }
-        : { nit: 'CF', nombre: 'CONSUMIDOR FINAL' }
-      const r = await apiFetch(`/api/pos/pedidos/${orderId}/facturar`, {
-        method: 'POST',
-        body: JSON.stringify({
-          metodo_pago: 'tarjeta',  // recurrente = tarjeta para QBO/contabilidad
-          receptor: receptorParaFacturar,
-        }),
-      })
+      const r = await fetch(`/api/pickup/orders/${orderId}`)
       const j = await r.json()
-      if (!r.ok || !j.ok) {
-        console.error('[kiosko-qr] facturar falló:', j.error || j)
-        flashToast('Pago OK pero la factura falló — avisá al cajero')
+      if (j.ok && j.order) {
+        datosImprimir = { pedido: j.order }
+        flashToast(`✅ Pago confirmado · ${j.order.referencia} · Pasá al mostrador`)
       } else {
-        datosImprimir = { factura: j.factura, pedido: j.pedido }
-        console.log('[kiosko-qr] facturado OK:', j.factura?.serie_sat, j.factura?.numero_sat)
-        flashToast('✅ Pago confirmado y facturado')
+        flashToast('✅ Pago confirmado · Pasá al mostrador')
       }
     } catch (e) {
-      console.error('[kiosko-qr] exc:', e)
+      console.error('[kiosko-qr] exc al cargar pedido:', e)
+      flashToast('✅ Pago confirmado')
     }
 
-    // Print del ticket en la térmica del Sunmi (best-effort, no rompe flow)
+    // Print COMPROBANTE NO FISCAL en la térmica del K2 (best-effort).
+    // Sin datos SAT — solo pedido + total + instrucción "Pasá al mostrador".
+    // La factura FEL se emite cuando el cajero P3 Mix entrega la orden.
     if (datosImprimir && typeof window !== 'undefined' && window.JuliaPOS?.printTicket) {
       try {
-        const f = datosImprimir.factura
-        const items = Array.isArray(datosImprimir.pedido?.items) ? datosImprimir.pedido.items : []
+        const pedido = datosImprimir.pedido
+        const items = Array.isArray(pedido?.items) ? pedido.items : []
         if (items.length === 0) {
-          console.warn('[kiosko-qr] pedido sin items — no imprimo ticket vacío')
+          console.warn('[kiosko-qr] pedido sin items — no imprimo')
         } else {
           const e = emisor || {}
-          const direccion = [
-            e.direccion,
-            [e.municipio, e.departamento].filter(Boolean).join(', '),
-          ].filter(Boolean).join(' ')
           const payload = {
             merchantName: e.nombre_comercial || 'Julia Bakery',
-            razonSocial: e.razon_social || 'Julia Bakery',
-            direccion: direccion || '2 Avenida 11-08, Zona 10',
-            nitEmisor: e.nit_emisor || '',
-            receptorNit: f.receptor_nit || 'CF',
-            receptorNombre: f.receptor_nombre || 'CONSUMIDOR FINAL',
-            fecha: new Date(f.fecha_certificacion || Date.now()).toLocaleString('es-GT'),
+            razonSocial: pedido.referencia || 'COMPROBANTE DE PAGO',
+            direccion: '2 Avenida 11-08, Zona 10',
+            nitEmisor: null,
+            receptorNit: null,
+            receptorNombre: pedido.receptor_nombre || 'CONSUMIDOR FINAL',
+            fecha: new Date().toLocaleString('es-GT'),
             cajeroNombre: 'K2 · QR Recurrente',
-            metodoPago: 'Tarjeta (QR Recurrente)',
+            metodoPago: 'PAGADO con tarjeta vía QR',
             items: items.map(l => ({
               descripcion: String(l.descripcion || ''),
               cantidad: String(l.cantidad || 1),
               precioUnitario: Number(l.precio_unitario || 0),
               subtotal: Math.round(Number(l.cantidad || 0) * Number(l.precio_unitario || 0) * 100) / 100,
             })),
-            totalGravado: Math.round((Number(f.total || 0) / 1.12) * 100) / 100,
-            iva: Number(f.iva || 0),
-            total: Number(f.total || 0),
-            uuidSat: f.uuid_sat || '',
-            serieSat: f.serie_sat || '',
-            numeroSat: String(f.numero_sat || ''),
-            certificadorNombre: 'INFILE, S.A.',
-            certificadorNit: '12521329',
-            fechaCertificacion: f.fecha_certificacion
-              ? new Date(f.fecha_certificacion).toLocaleString('es-GT')
-              : new Date().toLocaleString('es-GT'),
-            textoFooter: 'Sujeto a pago directo ISR (5111420251235387 - 01/04/2025)',
+            totalGravado: null,
+            iva: null,
+            total: Number(pedido.total_estimado || 0),
+            uuidSat: null,
+            serieSat: null,
+            numeroSat: null,
+            certificadorNombre: null,
+            certificadorNit: null,
+            fechaCertificacion: null,
+            textoFooter: `*** COMPROBANTE NO FISCAL ***\nTu pedido ${pedido.referencia} está PAGADO.\nPasá al mostrador para recogerlo.\nLa factura electrónica se entrega ahí.`,
           }
-          console.log('[kiosko-qr] payload print:', JSON.stringify(payload).slice(0, 400))
           const pr = await window.JuliaPOS.printTicket(payload)
           console.log('[kiosko-qr] printTicket result:', pr)
         }
       } catch (e) {
         console.warn('[kiosko-qr] printTicket falló:', e?.message || e)
       }
-    } else if (datosImprimir) {
-      console.warn('[kiosko-qr] sin bridge JuliaPOS.printTicket — no imprime')
     }
 
     // Reset del POS pase lo que pase
@@ -1787,7 +1799,13 @@ export default function POS({ session }) {
       nombre: pedido.receptor_nombre || 'CONSUMIDOR FINAL',
       email: pedido.receptor_email || '',
     })
-    setMetodoPago('pedidos_ya')
+    // Si el pedido ya viene PAGADO (K2 QR Recurrente), preseleccionamos
+    // tarjeta. El cajero solo confirma y se factura — el cobro ya pasó.
+    if (pedido.pagado_at) {
+      setMetodoPago('tarjeta')
+    } else {
+      setMetodoPago('pedidos_ya')
+    }
     setPedidoEditando({ id: pedido.id, referencia: pedido.referencia })
     setMostrarBandeja(false)
     setMostrarCarritoMobile(true)
