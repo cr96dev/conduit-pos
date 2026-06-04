@@ -79,6 +79,7 @@ export default async function handler(req, res) {
     let query = supabaseAdmin.from('pedidos_pendientes')
       .update({
         estado: 'pendiente_entrega',
+        pagado_at: new Date().toISOString(),
         pago_auth_code: checkoutId || undefined,
       })
       .in('origen', ['app_pickup', 'kiosko_k2', 'pos_kiosko'])
