@@ -753,15 +753,17 @@ function SelectorComponente({ valor, opciones, onChange }) {
   }, [abierto])
 
   // Filtrado case-insensitive: busca el query en cualquier parte del label.
-  // Si q está vacío, mostramos las primeras 50 opciones (insumos primero).
+  // Si q está vacío, mostramos las primeras 100 opciones (insumos primero,
+  // alfabético) para no abrumar al abrir. Si hay query, mostramos TODOS los
+  // que matcheen — sin tope, así no se pierden insumos cuando hay 130+.
   const filtradas = (() => {
     const q = query.trim().toLowerCase()
     const orden = [...opciones].sort((a, b) => {
       if (a.tipo !== b.tipo) return a.tipo === 'insumo' ? -1 : 1
       return a.label.localeCompare(b.label, 'es', { sensitivity: 'base' })
     })
-    if (!q) return orden.slice(0, 50)
-    return orden.filter(o => o.label.toLowerCase().includes(q)).slice(0, 50)
+    if (!q) return orden.slice(0, 100)
+    return orden.filter(o => o.label.toLowerCase().includes(q))
   })()
 
   function elegir(op) {
