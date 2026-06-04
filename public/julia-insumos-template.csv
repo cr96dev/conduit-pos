@@ -1,0 +1,30 @@
+nombre,categoria,unidad,stock_inicial,stock_minimo,unidad_compra,cantidad_por_unidad_compra,costo_compra,costo_unitario,proveedor,notas
+HARINA DE TRIGO LA NACIONAL,harinas,kg,250,50,saco,50,275,,Molino Excelsior,Saco de 50 kg
+HARINA DE ALMENDRAS BLANQUEADA,harinas,kg,4,1,bolsa,1,180,,Importadora ABC,Bolsa 1 kg
+AZUCAR ESTANDAR EN COSTAL,azucares,kg,127.8,25,costal,50,310,,La Casa del Azucar,Costal 50 kg
+AZUCAR GLAS,azucares,kg,1.44,0.5,bolsa,1,42,,Distribuidora La Espiga,
+LEVADURA SECA INSTANTANEA ROJA,levaduras,g,2000,500,bolsa,500,45,,Distribuidora La Espiga,Bolsa 500 g
+COCOA,cacao,kg,7.28,2,bolsa,1,80,,Importadora ABC,
+CHOCOLATE LUKER ROJADAS,chocolates,kg,20,5,caja,1,650,,Luker,Caja 1 kg
+PISTACHO TOSTADO CON SAL,frutos secos,kg,6,1,bolsa,1,180,,,Bolsa 1 kg
+PECANAS EN MITAD SIN CASCARA,frutos secos,kg,5,1,bolsa,1,200,,,
+CANELA CASSIA,especias,kg,3,0.5,bolsa,1,90,,,
+PIMIENTA NEGRA,especias,g,500,100,bolsa,500,45,,,Bolsa 500 g
+JAMON SELVA NEGRA,embutidos,kg,18,2,paquete,1,90,,Selva Negra,Refrigerado
+TOCINO AHUMADO ASTORIA,embutidos,kg,18,2,paquete,1,75,,Astoria,Refrigerado
+LECHE DE VACA CORONADO ENTERA,lacteos,L,24,10,botella,1,12,,Coronado,Botella 1 litro
+LECHE DE VACA CORONADO SIN LACTOSA,lacteos,L,111,20,botella,1,13,,Coronado,Botella 1 litro
+CREMA PARA BATIR ANCHOR,lacteos,L,16,3,caja,12,540,,Anchor,Caja 12 cartones de 1 L
+NUTELLA CREMA AVELLANAS,coberturas,kg,7,2,frasco,3,210,,Nutella,Frasco 3 kg
+LE TIROP DE MONIN VANILLA,jarabes,unidad,3,1,botella,1,180,,Monin GT,Botella 750 ml — se cuenta por botella
+LE TIROP DE MONIN CARAMEL,jarabes,unidad,3,1,botella,1,180,,Monin GT,Botella 750 ml
+MATCHA NAOKI,bebidas,kg,7,2,bolsa,1,450,,,
+COCA COLA,bebidas,unidad,37,12,caja,24,144,,Coca Cola GT,Caja 24 latas
+AGUA PURA SALVAVIDAS,bebidas,unidad,70,24,paquete,12,54,,Salvavidas,Paquete 12 botellas
+BOLSAS BLANCAS JULIA BAKERY,packaging,unidad,500,100,paquete,500,400,,,
+CAJAS GRANDES JULIA BAKERY,packaging,unidad,1163,200,paquete,100,950,,,
+PAPEL BLANCO PARA HORNEAR,packaging,unidad,1446,200,rollo,200,180,,,Rollo 200 hojas
+VASOS TRANSPARENTES JULIA BAKERY,packaging,unidad,1800,300,paquete,50,75,,,
+JABON PARA TRASTES AXION,limpieza,unidad,10,3,botella,1,18,,,
+DETERGENTE EN POLVO,limpieza,kg,3.52,1,bolsa,1,28,,,Bolsa 1 kg
+GUANTES DESECHABLES MULTIUSO,limpieza,unidad,1500,200,caja,100,42,,,
