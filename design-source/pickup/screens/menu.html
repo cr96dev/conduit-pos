@@ -1,0 +1,313 @@
+<!DOCTYPE html><html lang="es" style=""><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;700&amp;family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "on-tertiary-fixed-variant": "#603e3d",
+                        "tertiary-container": "#845e5d",
+                        "inverse-surface": "#31302c",
+                        "on-primary-fixed-variant": "#930012",
+                        "surface-container-lowest": "#ffffff",
+                        "on-secondary": "#ffffff",
+                        "on-secondary-fixed": "#2c1700",
+                        "inverse-on-surface": "#f4f0e9",
+                        "error": "#ba1a1a",
+                        "on-secondary-fixed-variant": "#614018",
+                        "surface-dim": "#dddad3",
+                        "on-primary-fixed": "#410004",
+                        "on-primary": "#ffffff",
+                        "primary-fixed-dim": "#ffb3ad",
+                        "on-tertiary-container": "#ffe0df",
+                        "on-surface-variant": "#5b403e",
+                        "on-surface": "#1c1c18",
+                        "secondary-fixed-dim": "#efbd8a",
+                        "on-error-container": "#93000a",
+                        "tertiary": "#6a4645",
+                        "inverse-primary": "#ffb3ad",
+                        "on-tertiary": "#ffffff",
+                        "on-background": "#1c1c18",
+                        "outline-variant": "#e4beba",
+                        "surface-bright": "#fdf9f2",
+                        "secondary-container": "#fecb97",
+                        "primary": "#a40016",
+                        "surface-container": "#f1ede6",
+                        "on-error": "#ffffff",
+                        "surface": "#fdf9f2",
+                        "surface-container-highest": "#e6e2db",
+                        "surface-container-high": "#ebe8e1",
+                        "secondary-fixed": "#ffdcbc",
+                        "primary-container": "#c8242a",
+                        "tertiary-fixed-dim": "#ebbbb9",
+                        "background": "#fdf9f2",
+                        "on-tertiary-fixed": "#2e1414",
+                        "error-container": "#ffdad6",
+                        "on-secondary-container": "#79542a",
+                        "surface-container-low": "#f7f3ec",
+                        "tertiary-fixed": "#ffdad8",
+                        "on-primary-container": "#ffe0de",
+                        "outline": "#8f6f6d",
+                        "surface-variant": "#e6e2db",
+                        "secondary": "#7c572d",
+                        "surface-tint": "#ba1822",
+                        "primary-fixed": "#ffdad7"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "container-margin-mobile": "20px",
+                        "stack-sm": "8px",
+                        "unit": "4px",
+                        "stack-lg": "48px",
+                        "gutter": "16px",
+                        "stack-md": "24px",
+                        "container-margin-desktop": "48px"
+                    },
+                    "fontFamily": {
+                        "accent-tag": ["Playfair Display"],
+                        "caption-caps": ["Inter"],
+                        "body-lg": ["Inter"],
+                        "body-md": ["Inter"],
+                        "headline-xl": ["Playfair Display"],
+                        "headline-xl-mobile": ["Playfair Display"],
+                        "price-display": ["Inter"],
+                        "headline-lg": ["Playfair Display"]
+                    },
+                    "fontSize": {
+                        "accent-tag": ["16px", { "lineHeight": "1", "fontWeight": "400" }],
+                        "caption-caps": ["12px", { "lineHeight": "1", "letterSpacing": "0.1em", "fontWeight": "500" }],
+                        "body-lg": ["18px", { "lineHeight": "1.4", "fontWeight": "600" }],
+                        "body-md": ["15px", { "lineHeight": "1.6", "fontWeight": "400" }],
+                        "headline-xl": ["48px", { "lineHeight": "1.1", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+                        "headline-xl-mobile": ["36px", { "lineHeight": "1.1", "fontWeight": "700" }],
+                        "price-display": ["24px", { "lineHeight": "1", "letterSpacing": "-0.01em", "fontWeight": "700" }],
+                        "headline-lg": ["28px", { "lineHeight": "1.2", "fontWeight": "500" }]
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .hide-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .hide-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+    </style>
+</head>
+<body class="bg-background text-on-background font-body-md min-h-screen pb-24">
+<!-- TopAppBar -->
+<header class="bg-surface sticky top-0 flex justify-between items-center w-full px-container-margin-mobile h-16 z-50">
+<button class="text-primary hover:opacity-80 transition-opacity active:scale-95 duration-150">
+<span class="material-symbols-outlined" data-icon="menu">menu</span>
+</button>
+<h1 class="font-headline-lg-mobile text-headline-lg-mobile font-bold text-primary">Julia Bakery</h1>
+<button class="text-primary hover:opacity-80 transition-opacity active:scale-95 duration-150">
+<span class="material-symbols-outlined" data-icon="shopping_bag">shopping_bag</span>
+</button>
+</header>
+<!-- Category Tabs -->
+<nav class="sticky top-16 bg-surface z-40 border-b border-outline-variant overflow-x-auto hide-scrollbar">
+<div class="flex whitespace-nowrap px-container-margin-mobile">
+<button class="px-4 py-4 text-primary font-bold border-b-2 border-primary transition-colors">
+                Panes
+            </button>
+<button class="px-4 py-4 text-on-surface-variant hover:text-primary transition-colors">
+                Pastelería dulce
+            </button>
+<button class="px-4 py-4 text-on-surface-variant hover:text-primary transition-colors">
+                Pastelería salada
+            </button>
+<button class="px-4 py-4 text-on-surface-variant hover:text-primary transition-colors">
+                Bebidas
+            </button>
+<button class="px-4 py-4 text-on-surface-variant hover:text-primary transition-colors">
+                Conservas
+            </button>
+</div>
+</nav>
+<!-- Main Content: Menu List -->
+<main class="px-container-margin-mobile pt-stack-md flex flex-col gap-gutter">
+<!-- Item Card 1 -->
+<article class="bg-surface rounded-xl p-3 flex gap-4 transition-all duration-200 active:scale-[0.98] border border-outline-variant/30 shadow-sm">
+<div class="w-24 h-24 flex-shrink-0 bg-surface-container rounded-xl overflow-hidden">
+<img alt="Croissant de Almendra" class="w-full h-full object-cover" data-alt="A macro photography shot of a perfectly laminated almond croissant with golden-brown flaky layers. The pastry is dusted with fine powdered sugar and topped with sliced toasted almonds. The lighting is soft and natural, emphasizing the artisanal texture and warm honey tones against a minimalist cream background in a high-end bakery aesthetic." src="https://lh3.googleusercontent.com/aida/AP1WRLsw6LInmEcP2qPWdDwea2veycIektor71Cnv6Kfzzsm7u8HpmuhivN1sLUJSzmsfrLnJUlqkzC579catyjqjtv04Hw_xQ_2vEoNqzMujvop-kxYQDPR5f0PS6bXgciDeOphEb09jfVjmR08RGxScW8gdVL8rY120MCQ-ufTcdb5R_GNheUdKfZdvB_JnL5inKmcQJRRuPz1X5j_keMkp51dY0Y4EntBt1e77EwqVwOoYHXWSapCCsqWe19c">
+</div>
+<div class="flex-grow flex flex-col justify-between">
+<div>
+<h2 class="font-body-lg text-body-lg text-on-surface">Croissant de Almendra</h2>
+<p class="text-[13px] text-tertiary leading-tight mt-1">Mantequilla pura, almendras tostadas y azúcar glass.</p>
+</div>
+<div class="flex items-center gap-1 mt-2 text-on-surface-variant opacity-70">
+<span class="material-symbols-outlined text-[16px]" data-icon="schedule">schedule</span>
+<span class="text-[12px] font-medium uppercase tracking-wider">20 min</span>
+</div>
+</div>
+<div class="flex flex-col items-end justify-between">
+<span class="font-price-display text-price-display text-on-surface tabular-nums">Q25.00</span>
+<button class="w-11 h-11 bg-primary text-on-primary rounded-full flex items-center justify-center shadow-lg hover:opacity-90 active:scale-90 transition-all">
+<span class="material-symbols-outlined" data-icon="add">add</span>
+</button>
+</div>
+</article>
+<!-- Item Card 2 -->
+<article class="bg-surface rounded-xl p-3 flex gap-4 transition-all duration-200 active:scale-[0.98] border border-outline-variant/30 shadow-sm">
+<div class="w-24 h-24 flex-shrink-0 bg-surface-container rounded-xl overflow-hidden">
+<img alt="Baguette Tradicional" class="w-full h-full object-cover" data-alt="A close-up of a traditional sourdough baguette with a deep golden, crackly crust and flour dusting. The bread is shown on a rustic wooden board within a sunlit, premium bakery setting. The overall mood is warm and artisanal, utilizing a palette of rich ochres, wheats, and creams to highlight the handcrafted quality of the bread." src="https://lh3.googleusercontent.com/aida/AP1WRLsV1ML8o1jBFiKHqatOpYuMXta-4u2bweu7zGdbSIW42AMfGVJK1laHhjeidzC2IE95IeQctVdudEJBeRje9cVbf2o16uDzM5nVu_FoWT7WPH2aMdoKBVDW-scsb-1VKkukv_WnDV4v2qKTUIZxlu67exBrrmxhIXHlUGNBuYXFKTNI5BUKLc3bXN5RcgGLQQ4XW013lAgU8B6qrRAJs8jMvgW0v1yczKHFai4uCuZBwG9hBYOEm5nvIyKQ">
+</div>
+<div class="flex-grow flex flex-col justify-between">
+<div>
+<h2 class="font-body-lg text-body-lg text-on-surface">Baguette Tradicional</h2>
+<p class="text-[13px] text-tertiary leading-tight mt-1">Corteza crujiente, miga aireada y fermentación natural.</p>
+</div>
+<div class="flex items-center gap-1 mt-2 text-on-surface-variant opacity-70">
+<span class="material-symbols-outlined text-[16px]" data-icon="schedule">schedule</span>
+<span class="text-[12px] font-medium uppercase tracking-wider">15 min</span>
+</div>
+</div>
+<div class="flex flex-col items-end justify-between">
+<span class="font-price-display text-price-display text-on-surface tabular-nums">Q18.00</span>
+<button class="w-11 h-11 bg-primary text-on-primary rounded-full flex items-center justify-center shadow-lg hover:opacity-90 active:scale-90 transition-all">
+<span class="material-symbols-outlined" data-icon="add">add</span>
+</button>
+</div>
+</article>
+<!-- Item Card 3 -->
+<article class="bg-surface rounded-xl p-3 flex gap-4 transition-all duration-200 active:scale-[0.98] border border-outline-variant/30 shadow-sm">
+<div class="w-24 h-24 flex-shrink-0 bg-surface-container rounded-xl overflow-hidden">
+<img alt="Pan de Masa Madre" class="w-full h-full object-cover" data-alt="A whole loaf of dark, artisan sourdough bread with an intricate leaf pattern scored into the top. The loaf is perfectly baked with a robust, dark crust. It is placed on a cream-colored ceramic plate in a bright, modern studio environment. The lighting creates soft shadows, emphasizing the organic texture and the premium, handmade nature of the product." src="https://lh3.googleusercontent.com/aida/AP1WRLsV1ML8o1jBFiKHqatOpYuMXta-4u2bweu7zGdbSIW42AMfGVJK1laHhjeidzC2IE95IeQctVdudEJBeRje9cVbf2o16uDzM5nVu_FoWT7WPH2aMdoKBVDW-scsb-1VKkukv_WnDV4v2qKTUIZxlu67exBrrmxhIXHlUGNBuYXFKTNI5BUKLc3bXN5RcgGLQQ4XW013lAgU8B6qrRAJs8jMvgW0v1yczKHFai4uCuZBwG9hBYOEm5nvIyKQ">
+</div>
+<div class="flex-grow flex flex-col justify-between">
+<div>
+<h2 class="font-body-lg text-body-lg text-on-surface">Masa Madre Integral</h2>
+<p class="text-[13px] text-tertiary leading-tight mt-1">Trigo integral orgánico, hidratación alta, 24h reposo.</p>
+</div>
+<div class="flex items-center gap-1 mt-2 text-on-surface-variant opacity-70">
+<span class="material-symbols-outlined text-[16px]" data-icon="schedule">schedule</span>
+<span class="text-[12px] font-medium uppercase tracking-wider">30 min</span>
+</div>
+</div>
+<div class="flex flex-col items-end justify-between">
+<span class="font-price-display text-price-display text-on-surface tabular-nums">Q45.00</span>
+<button class="w-11 h-11 bg-primary text-on-primary rounded-full flex items-center justify-center shadow-lg hover:opacity-90 active:scale-90 transition-all">
+<span class="material-symbols-outlined" data-icon="add">add</span>
+</button>
+</div>
+</article>
+<!-- Item Card 4 -->
+<article class="bg-surface rounded-xl p-3 flex gap-4 transition-all duration-200 active:scale-[0.98] border border-outline-variant/30 shadow-sm">
+<div class="w-24 h-24 flex-shrink-0 bg-surface-container rounded-xl overflow-hidden">
+<img alt="Brioche de Cardamomo" class="w-full h-full object-cover" data-alt="Soft, golden brioche buns flavored with aromatic cardamom, arranged in a minimalist aesthetic. The buns have a glossy egg-wash finish and a light sprinkle of coarse sugar. The background is a soft artisan cream, and the lighting is airy and bright, evoking the comfort and premium quality of a specialty boutique bakery." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDViYPXHPcumWRMWBJwDe1RBwDo4EWHuuCWdZHGJt9HU6papO0flHQkLsJlftC1bLJaQPMYnwUntHfwwlzVowFtDz8g_UZaVBFEfQrJ6Wf63uR0ZtG6gg5fT9U4Z4FgR8T8VzokmNm8EEed-OvT2z8qcaj_bj4gSHr1gR4IlNqRtEWrLv9STAwc0kxYpteI-PVT8R0b3t34O6WuMQmGWVrbDAWZEfngBN7RO1OaSw_OEY0bXaFKQO2xZL0VG7DFED-bBqK6Jzy1L7un">
+</div>
+<div class="flex-grow flex flex-col justify-between">
+<div>
+<h2 class="font-body-lg text-body-lg text-on-surface">Brioche Cardamomo</h2>
+<p class="text-[13px] text-tertiary leading-tight mt-1">Suave y esponjoso, con infusión de semillas reales.</p>
+</div>
+<div class="flex items-center gap-1 mt-2 text-on-surface-variant opacity-70">
+<span class="material-symbols-outlined text-[16px]" data-icon="schedule">schedule</span>
+<span class="text-[12px] font-medium uppercase tracking-wider">25 min</span>
+</div>
+</div>
+<div class="flex flex-col items-end justify-between">
+<span class="font-price-display text-price-display text-on-surface tabular-nums">Q12.00</span>
+<button class="w-11 h-11 bg-primary text-on-primary rounded-full flex items-center justify-center shadow-lg hover:opacity-90 active:scale-90 transition-all">
+<span class="material-symbols-outlined" data-icon="add">add</span>
+</button>
+</div>
+</article>
+<!-- Item Card 5 -->
+<article class="bg-surface rounded-xl p-3 flex gap-4 transition-all duration-200 active:scale-[0.98] border border-outline-variant/30 shadow-sm mb-8">
+<div class="w-24 h-24 flex-shrink-0 bg-surface-container rounded-xl overflow-hidden">
+<img alt="Pain au Chocolat" class="w-full h-full object-cover" data-alt="A buttery Pain au Chocolat showing its cross-section of perfectly defined chocolate batons and countless flaky layers. The pastry is golden-brown and glistening. It's presented in a modern, clean-lined bakery display. The lighting is focused and warm, highlighting the high-quality dark chocolate and the tactile richness of the artisan pastry." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBn9mdryQPmhs6jU8XIs4URCnMdQ3fJxRfPt18u7cvB9FqqnRLGVWC1PU5Syj2xwSG6rtMIumbYkmxF-rAmdO7taezXf8SMLFHuEm1MM2SQBUqddaSmnfRp6kC7R_ArkVqFfh7Iyw3JLW93kbJkegqTZ03xrjpEGEThn4PshMypaJNxAPN70RTdo3uVaqLY5NHZFuFWTdJTH_XCK88c9KnhJXieEHUmsOOx3i4636LKI0Zr80kTrE12TXgkkLM_oI2hlv_jmquI-glf">
+</div>
+<div class="flex-grow flex flex-col justify-between">
+<div>
+<h2 class="font-body-lg text-body-lg text-on-surface">Pain au Chocolat</h2>
+<p class="text-[13px] text-tertiary leading-tight mt-1">Chocolate belga al 70% envuelto en masa de hojaldre.</p>
+</div>
+<div class="flex items-center gap-1 mt-2 text-on-surface-variant opacity-70">
+<span class="material-symbols-outlined text-[16px]" data-icon="schedule">schedule</span>
+<span class="text-[12px] font-medium uppercase tracking-wider">20 min</span>
+</div>
+</div>
+<div class="flex flex-col items-end justify-between">
+<span class="font-price-display text-price-display text-on-surface tabular-nums">Q22.00</span>
+<button class="w-11 h-11 bg-primary text-on-primary rounded-full flex items-center justify-center shadow-lg hover:opacity-90 active:scale-90 transition-all">
+<span class="material-symbols-outlined" data-icon="add">add</span>
+</button>
+</div>
+</article>
+</main>
+<!-- Cart FAB -->
+<div class="fixed bottom-24 right-6 z-[55]">
+<button class="w-16 h-16 bg-primary text-on-primary rounded-full flex items-center justify-center shadow-2xl active:scale-90 transition-transform relative">
+<span class="material-symbols-outlined text-[28px]" data-icon="shopping_bag">shopping_bag</span>
+<div class="absolute -top-1 -right-1 w-6 h-6 bg-secondary text-white text-[11px] font-bold rounded-full flex items-center justify-center border-2 border-background">
+                3
+            </div>
+</button>
+</div>
+<!-- BottomNavBar -->
+<footer class="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-4 py-3 pb-safe bg-surface shadow-lg rounded-t-xl border-t border-outline-variant">
+<a class="flex flex-col items-center justify-center text-on-surface-variant hover:text-primary transition-colors active:scale-90 duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="home">home</span>
+<span class="font-caption-caps text-caption-caps mt-1">Inicio</span>
+</a>
+<a class="flex flex-col items-center justify-center text-primary font-bold active:scale-90 duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="bakery_dining" style="font-variation-settings: 'FILL' 1;">bakery_dining</span>
+<span class="font-caption-caps text-caption-caps mt-1">Menú</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant hover:text-primary transition-colors active:scale-90 duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="receipt_long">receipt_long</span>
+<span class="font-caption-caps text-caption-caps mt-1">Mis Pedidos</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant hover:text-primary transition-colors active:scale-90 duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="person">person</span>
+<span class="font-caption-caps text-caption-caps mt-1">Perfil</span>
+</a>
+</footer>
+<script>
+        // Simple micro-interaction for category tabs
+        const tabs = document.querySelectorAll('nav button');
+        tabs.forEach(tab => {
+            tab.addEventListener('click', () => {
+                tabs.forEach(t => {
+                    t.classList.remove('text-primary', 'font-bold', 'border-b-2', 'border-primary');
+                    t.classList.add('text-on-surface-variant');
+                });
+                tab.classList.remove('text-on-surface-variant');
+                tab.classList.add('text-primary', 'font-bold', 'border-b-2', 'border-primary');
+            });
+        });
+
+        // Add to cart animation feedback
+        const addButtons = document.querySelectorAll('button:has([data-icon="add"])');
+        addButtons.forEach(btn => {
+            btn.addEventListener('click', () => {
+                btn.classList.add('bg-secondary');
+                setTimeout(() => {
+                    btn.classList.remove('bg-secondary');
+                }, 400);
+            });
+        });
+    </script>
+
+
+</body></html>

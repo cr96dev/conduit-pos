@@ -1,0 +1,31 @@
+{
+  "name": "Julia Bakery — Pickup",
+  "short_name": "Julia",
+  "description": "Pedí tu pan recién horneado y recogelo cuando esté listo.",
+  "start_url": "/pickup",
+  "scope": "/pickup",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#fdf9f2",
+  "theme_color": "#c8242a",
+  "lang": "es-GT",
+  "categories": ["food", "shopping", "lifestyle"],
+  "icons": [
+    { "src": "/pickup/icon-48.png",   "sizes": "48x48",   "type": "image/png" },
+    { "src": "/pickup/icon-72.png",   "sizes": "72x72",   "type": "image/png" },
+    { "src": "/pickup/icon-96.png",   "sizes": "96x96",   "type": "image/png" },
+    { "src": "/pickup/icon-144.png",  "sizes": "144x144", "type": "image/png" },
+    { "src": "/pickup/icon-192.png",  "sizes": "192x192", "type": "image/png" },
+    { "src": "/pickup/icon-512.png",  "sizes": "512x512", "type": "image/png" },
+    { "src": "/pickup/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "screenshots": [
+    {
+      "src": "/pickup/images/img_002.jpg",
+      "sizes": "390x844",
+      "type": "image/jpeg",
+      "form_factor": "narrow",
+      "label": "Pan de masa madre recién horneado"
+    }
+  ]
+}

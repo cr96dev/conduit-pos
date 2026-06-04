@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+
+<html lang="es"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Playfair+Display:wght@400;500;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "on-tertiary-fixed-variant": "#603e3d",
+                    "tertiary-container": "#845e5d",
+                    "inverse-surface": "#31302c",
+                    "on-primary-fixed-variant": "#930012",
+                    "surface-container-lowest": "#ffffff",
+                    "on-secondary": "#ffffff",
+                    "on-secondary-fixed": "#2c1700",
+                    "inverse-on-surface": "#f4f0e9",
+                    "error": "#ba1a1a",
+                    "on-secondary-fixed-variant": "#614018",
+                    "surface-dim": "#dddad3",
+                    "on-primary-fixed": "#410004",
+                    "on-primary": "#ffffff",
+                    "primary-fixed-dim": "#ffb3ad",
+                    "on-tertiary-container": "#ffe0df",
+                    "on-surface-variant": "#5b403e",
+                    "on-surface": "#1c1c18",
+                    "secondary-fixed-dim": "#efbd8a",
+                    "on-error-container": "#93000a",
+                    "tertiary": "#6a4645",
+                    "inverse-primary": "#ffb3ad",
+                    "on-tertiary": "#ffffff",
+                    "on-background": "#1c1c18",
+                    "outline-variant": "#e4beba",
+                    "surface-bright": "#fdf9f2",
+                    "secondary-container": "#fecb97",
+                    "primary": "#a40016",
+                    "surface-container": "#f1ede6",
+                    "on-error": "#ffffff",
+                    "surface": "#fdf9f2",
+                    "surface-container-highest": "#e6e2db",
+                    "surface-container-high": "#ebe8e1",
+                    "secondary-fixed": "#ffdcbc",
+                    "primary-container": "#c8242a",
+                    "tertiary-fixed-dim": "#ebbbb9",
+                    "background": "#fdf9f2",
+                    "on-tertiary-fixed": "#2e1414",
+                    "error-container": "#ffdad6",
+                    "on-secondary-container": "#79542a",
+                    "surface-container-low": "#f7f3ec",
+                    "tertiary-fixed": "#ffdad8",
+                    "on-primary-container": "#ffe0de",
+                    "outline": "#8f6f6d",
+                    "surface-variant": "#e6e2db",
+                    "secondary": "#7c572d",
+                    "surface-tint": "#ba1822",
+                    "primary-fixed": "#ffdad7"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "spacing": {
+                    "container-margin-mobile": "20px",
+                    "stack-sm": "8px",
+                    "unit": "4px",
+                    "stack-lg": "48px",
+                    "gutter": "16px",
+                    "stack-md": "24px",
+                    "container-margin-desktop": "48px"
+            },
+            "fontFamily": {
+                    "accent-tag": ["Playfair Display"],
+                    "caption-caps": ["Inter"],
+                    "body-lg": ["Inter"],
+                    "body-md": ["Inter"],
+                    "headline-xl": ["Playfair Display"],
+                    "headline-xl-mobile": ["Playfair Display"],
+                    "price-display": ["Inter"],
+                    "headline-lg": ["Playfair Display"]
+            },
+            "fontSize": {
+                    "accent-tag": ["16px", {"lineHeight": "1", "fontWeight": "400"}],
+                    "caption-caps": ["12px", {"lineHeight": "1", "letterSpacing": "0.1em", "fontWeight": "500"}],
+                    "body-lg": ["18px", {"lineHeight": "1.4", "fontWeight": "600"}],
+                    "body-md": ["15px", {"lineHeight": "1.6", "fontWeight": "400"}],
+                    "headline-xl": ["48px", {"lineHeight": "1.1", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                    "headline-xl-mobile": ["36px", {"lineHeight": "1.1", "fontWeight": "700"}],
+                    "price-display": ["24px", {"lineHeight": "1", "letterSpacing": "-0.01em", "fontWeight": "700"}],
+                    "headline-lg": ["28px", {"lineHeight": "1.2", "fontWeight": "500"}]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            display: inline-block;
+            line-height: 1;
+            text-transform: none;
+            letter-spacing: normal;
+            word-wrap: normal;
+            white-space: nowrap;
+            direction: ltr;
+        }
+        body {
+            background-color: #fdf9f2; /* Cream */
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="min-h-screen text-on-surface">
+<!-- TopAppBar -->
+<header class="flex justify-between items-center w-full px-container-margin-mobile h-16 z-50 bg-surface dark:bg-surface-dim sticky top-0">
+<div class="flex items-center gap-4">
+<button class="hover:opacity-80 transition-opacity active:scale-95 duration-150 text-primary dark:text-inverse-primary">
+<span class="material-symbols-outlined" data-icon="menu">menu</span>
+</button>
+<h1 class="font-headline-lg-mobile text-headline-lg-mobile font-bold text-primary dark:text-inverse-primary">Julia Bakery</h1>
+</div>
+<button class="hover:opacity-80 transition-opacity active:scale-95 duration-150 text-primary dark:text-inverse-primary">
+<span class="material-symbols-outlined" data-icon="shopping_bag">shopping_bag</span>
+</button>
+</header>
+<main class="max-w-7xl mx-auto px-container-margin-mobile md:px-container-margin-desktop py-stack-lg">
+<!-- Intro Header -->
+<header class="mb-stack-lg border-b border-outline-variant pb-stack-md">
+<h2 class="font-headline-xl-mobile md:font-headline-xl text-headline-xl-mobile md:text-headline-xl text-primary mb-2">Sistema de Diseño — Julia Bakery</h2>
+<p class="font-body-md text-body-md text-on-surface-variant max-w-2xl">Guía de estilo premium artesanal que define la identidad visual de Julia Bakery. Un balance entre la calidez tradicional guatemalteca y la precisión editorial moderna.</p>
+</header>
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-stack-lg">
+<!-- Typography Section -->
+<section class="lg:col-span-12">
+<h3 class="font-caption-caps text-caption-caps text-outline mb-stack-md">TIPOGRAFÍA Y JERARQUÍA</h3>
+<div class="space-y-stack-md bg-surface-container-low p-8 rounded-xl">
+<div class="flex flex-col md:flex-row md:items-baseline gap-4">
+<span class="font-headline-xl text-headline-xl text-on-surface w-48">H1 Headline</span>
+<p class="font-body-md text-body-md text-on-surface-variant">Playfair Display 48px - Editorial &amp; Bold</p>
+</div>
+<div class="flex flex-col md:flex-row md:items-baseline gap-4">
+<span class="font-headline-lg text-headline-lg text-on-surface w-48">H2 Headline</span>
+<p class="font-body-md text-body-md text-on-surface-variant">Playfair Display 28px - Refined Presence</p>
+</div>
+<div class="flex flex-col md:flex-row md:items-baseline gap-4">
+<span class="font-body-lg text-body-lg text-on-surface w-48">Body Large</span>
+<p class="font-body-md text-body-md text-on-surface-variant">Inter 18px - Strong &amp; Semibold</p>
+</div>
+<div class="flex flex-col md:flex-row md:items-baseline gap-4">
+<span class="font-body-md text-body-md text-on-surface w-48">Body Medium</span>
+<p class="font-body-md text-body-md text-on-surface-variant">Inter 15px - Core UI Reading</p>
+</div>
+<div class="flex flex-col md:flex-row md:items-baseline gap-4">
+<span class="font-price-display text-price-display text-primary w-48">Q 125.00</span>
+<p class="font-body-md text-body-md text-on-surface-variant">Inter 24px - Numerical Highlighting</p>
+</div>
+<div class="flex flex-col md:flex-row md:items-baseline gap-4">
+<span class="font-caption-caps text-caption-caps text-on-surface-variant w-48">CAPTION CAPS</span>
+<p class="font-body-md text-body-md text-on-surface-variant">Inter 12px - Spaced &amp; Refined</p>
+</div>
+</div>
+</section>
+<!-- Colors Section -->
+<section class="lg:col-span-12">
+<h3 class="font-caption-caps text-caption-caps text-outline mb-stack-md">PALETA DE COLORES</h3>
+<div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-4">
+<div class="flex flex-col gap-2">
+<div class="h-24 w-full bg-surface-bright border border-outline-variant rounded-xl"></div>
+<span class="font-caption-caps text-caption-caps">Cream</span>
+</div>
+<div class="flex flex-col gap-2">
+<div class="h-24 w-full bg-tertiary rounded-xl"></div>
+<span class="font-caption-caps text-caption-caps">Bordeaux</span>
+</div>
+<div class="flex flex-col gap-2">
+<div class="h-24 w-full bg-primary rounded-xl"></div>
+<span class="font-caption-caps text-caption-caps">Julia Red</span>
+</div>
+<div class="flex flex-col gap-2">
+<div class="h-24 w-full bg-secondary-container rounded-xl"></div>
+<span class="font-caption-caps text-caption-caps">Wheat</span>
+</div>
+<div class="flex flex-col gap-2">
+<div class="h-24 w-full bg-on-tertiary-fixed-variant rounded-xl opacity-20"></div>
+<span class="font-caption-caps text-caption-caps text-on-surface">Sage (Ref)</span>
+</div>
+<div class="flex flex-col gap-2">
+<div class="h-24 w-full bg-primary-container rounded-xl"></div>
+<span class="font-caption-caps text-caption-caps">Brick</span>
+</div>
+<div class="flex flex-col gap-2">
+<div class="h-24 w-full bg-outline rounded-xl"></div>
+<span class="font-caption-caps text-caption-caps">Stone</span>
+</div>
+</div>
+</section>
+<!-- Buttons & Inputs -->
+<section class="lg:col-span-6 space-y-stack-md">
+<h3 class="font-caption-caps text-caption-caps text-outline">BOTONES Y CAMPOS</h3>
+<div class="space-y-4 bg-white p-8 rounded-xl border border-outline-variant">
+<button class="w-full h-[56px] bg-primary text-white font-body-lg text-body-lg rounded-lg hover:opacity-90 transition-all active:scale-95">
+                        Pedí ahora
+                    </button>
+<button class="w-full h-[56px] border border-secondary-container text-tertiary font-body-lg text-body-lg rounded-lg hover:bg-surface-container-low transition-all">
+                        Ver Mapa
+                    </button>
+<button class="w-full text-outline font-body-md text-body-md py-2 hover:text-on-surface transition-colors">
+                        Omitir por ahora
+                    </button>
+<div class="pt-stack-md space-y-6">
+<div class="space-y-2">
+<label class="font-caption-caps text-caption-caps text-on-surface-variant">Default</label>
+<input class="w-full h-[52px] bg-surface-bright border border-secondary-container rounded-lg px-4 focus:outline-none font-body-md text-body-md" placeholder="Ingresá tu dirección" type="text"/>
+</div>
+<div class="space-y-2">
+<label class="font-caption-caps text-caption-caps text-primary">Focus State</label>
+<input class="w-full h-[52px] bg-white border-2 border-primary rounded-lg px-4 focus:outline-none font-body-md text-body-md text-tertiary" type="text" value="Avenida Las Américas 15-40"/>
+</div>
+</div>
+</div>
+</section>
+<!-- Badges & Card -->
+<section class="lg:col-span-6 space-y-stack-md">
+<h3 class="font-caption-caps text-caption-caps text-outline">COMPONENTES DE ESTADO</h3>
+<div class="grid grid-cols-1 gap-stack-md">
+<!-- Badges -->
+<div class="flex flex-wrap gap-4 p-8 bg-surface-container-highest rounded-xl">
+<span class="px-3 py-1 bg-[#E8F5E9] text-[#2E7D32] rounded-lg font-caption-caps text-caption-caps">DISPONIBLE</span>
+<span class="px-3 py-1 bg-secondary-fixed text-on-secondary-container rounded-lg font-caption-caps text-caption-caps">EN PROCESO</span>
+<span class="px-3 py-1 bg-surface-dim text-outline rounded-lg font-caption-caps text-caption-caps">ENTREGADO</span>
+<span class="px-3 py-1 bg-error-container text-error rounded-lg font-caption-caps text-caption-caps">AGOTADO</span>
+</div>
+<!-- Product Card -->
+<div class="bg-surface-bright border border-outline-variant p-4 rounded-[16px] group transition-all hover:shadow-[0_20px_40px_rgba(106,70,69,0.04)]">
+<div class="relative w-full aspect-square rounded-xl overflow-hidden mb-4">
+<img class="w-full h-full object-cover" data-alt="A close-up photograph of a rustic, artisan sourdough bread loaf with a perfectly dusted flour crust and intricate scoring. The lighting is warm and natural, suggesting a sunlit kitchen in the early morning. The background is softly blurred, focusing entirely on the golden, crunchy texture of the bread. The aesthetic is clean and premium, evoking a sense of high-quality craftsmanship." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCYkdlgTOZV6tpBkRsTIO8vOXB2X9D17mFLHWE4DIRw-JDRidaxyJbu6mrMv7Oe08tepwMAdSyfPIg-EdGhLcrnDvkIIfA1LTMkws5HmdUOeDTTVu_OgBNki_UW0Eu8QL-G9KA13jh2vemjQNJGPazD1sZaA5kKHdgi1a09ad8OUNj9oP4BYhBccrlnQUalq4N5fArg-OvdoXr0xanfG2Q3Y3KEGlsm5ZP6FnExsrNLG20QMgkRKvIwfVNkkxzpMyIM1Wr1SIOwzn62"/>
+</div>
+<div class="space-y-1">
+<div class="flex justify-between items-start">
+<h4 class="font-body-lg text-body-lg text-on-surface">Pan de Masa Madre</h4>
+<span class="font-price-display text-price-display text-primary">Q 45</span>
+</div>
+<p class="font-body-md text-body-md text-on-surface-variant">Fermentación natural de 24 horas.</p>
+</div>
+</div>
+</div>
+</section>
+<!-- Bottom Sheet Preview -->
+<section class="lg:col-span-12">
+<h3 class="font-caption-caps text-caption-caps text-outline mb-stack-md">ESTRUCTURA DE HOJA (BOTTOM SHEET)</h3>
+<div class="max-w-md mx-auto relative h-64 bg-surface-dim rounded-t-[32px] overflow-hidden border-t border-outline-variant shadow-2xl">
+<div class="absolute inset-0 bg-surface/80 backdrop-blur-xl"></div>
+<div class="relative z-10 flex flex-col items-center pt-3">
+<div class="w-8 h-1 bg-outline rounded-full mb-6"></div>
+<div class="w-full px-8 space-y-4">
+<h4 class="font-headline-lg text-headline-lg text-on-surface text-center">Detalles de tu Pedido</h4>
+<div class="h-32 border-2 border-dashed border-outline-variant rounded-xl flex items-center justify-center">
+<span class="font-caption-caps text-caption-caps text-outline">Espacio de Contenido</span>
+</div>
+</div>
+</div>
+</div>
+</section>
+</div>
+</main>
+<!-- BottomNavBar -->
+<nav class="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-4 py-3 pb-safe bg-surface dark:bg-surface-dim border-t border-outline-variant shadow-lg rounded-t-xl">
+<a class="flex flex-col items-center justify-center text-primary dark:text-inverse-primary font-bold active:scale-90 duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="home" style="font-variation-settings: 'FILL' 1;">home</span>
+<span class="font-caption-caps text-caption-caps">Inicio</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-outline hover:text-primary dark:hover:text-inverse-primary" href="#">
+<span class="material-symbols-outlined" data-icon="bakery_dining">bakery_dining</span>
+<span class="font-caption-caps text-caption-caps">Menú</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-outline hover:text-primary dark:hover:text-inverse-primary" href="#">
+<span class="material-symbols-outlined" data-icon="receipt_long">receipt_long</span>
+<span class="font-caption-caps text-caption-caps">Mis Pedidos</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-outline hover:text-primary dark:hover:text-inverse-primary" href="#">
+<span class="material-symbols-outlined" data-icon="person">person</span>
+<span class="font-caption-caps text-caption-caps">Perfil</span>
+</a>
+</nav>
+<!-- Spacer for fixed nav -->
+<div class="h-24"></div>
+<script>
+        // Example micro-interaction for cards
+        document.querySelectorAll('.group').forEach(card => {
+            card.addEventListener('mousedown', () => {
+                card.style.transform = 'scale(0.98)';
+            });
+            card.addEventListener('mouseup', () => {
+                card.style.transform = 'scale(1)';
+            });
+            card.addEventListener('mouseleave', () => {
+                card.style.transform = 'scale(1)';
+            });
+        });
+    </script>
+</body></html>

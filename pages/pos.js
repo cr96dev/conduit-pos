@@ -7,6 +7,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/router'
 import Head from 'next/head'
+import { QRCodeSVG } from 'qrcode.react'
 import { supabase } from '../lib/supabase'
 import Layout from '../components/Layout'
 import { SkeletonRow } from '../components/Skeleton'
@@ -21,28 +22,69 @@ function POSChrome({ perfil, kiosko, turno, onMostrarHistorial, onMostrarBandeja
   // queremos perder el sidebar.) Solo en kiosko o si rol=cajero mostramos
   // el chrome minimo con cajero/turno + Cerrar caja + Mis turnos.
   const esCajero = perfil?.rol === 'cajero'
+  const esKioskoCajero = !!perfil?.es_kiosko
   if (!kiosko && !esCajero) return <Layout perfil={perfil}>{children}</Layout>
+
+  // Modo K2 autoservicio: ocultamos todo lo administrativo (cerrar caja,
+  // historial, bandeja, salir, nombre cajero, estado turno). Triple tap en
+  // el logo abre "modo admin temporal" por 60s — suficiente para que el
+  // dueño/admin haga Cerrar Caja al final del día sin reiniciar la app.
+  const [adminOverride, setAdminOverride] = useState(false)
+  const tapsRef = useRef([])
+  function onTapLogo() {
+    if (!esKioskoCajero) return
+    const now = Date.now()
+    tapsRef.current = tapsRef.current.filter(t => now - t < 800)
+    tapsRef.current.push(now)
+    if (tapsRef.current.length >= 3) {
+      tapsRef.current = []
+      if (window.confirm('¿Activar modo admin temporal? (60s)')) {
+        setAdminOverride(true)
+        setTimeout(() => setAdminOverride(false), 60000)
+      }
+    }
+  }
+  const ocultarAdmin = esKioskoCajero && !adminOverride
 
   return (
     <div className="min-h-screen bg-surface-2 flex flex-col">
       <header className="bg-white border-b border-gray-100 px-4 py-2.5 flex items-center justify-between flex-shrink-0 gap-2 shadow-xs">
         <div className="flex items-center gap-3 min-w-0">
-          <img src="/logo.png" alt="" className="h-9 w-auto flex-shrink-0" />
+          <img
+            src="/logo.png"
+            alt=""
+            className="h-9 w-auto flex-shrink-0"
+            onClick={onTapLogo}
+            style={esKioskoCajero ? { cursor: 'pointer' } : undefined}
+          />
           <div className="min-w-0">
-            <div className="text-base font-bold text-gray-900 truncate leading-tight">
-              {perfil?.nombre_completo || 'Cajero'}
-            </div>
-            {turno && (
-              <button onClick={() => window.location.href = '/mis-turnos'}
-                className="text-2xs font-mono text-ink-subtle hover:text-julia-red transition-colors flex items-center gap-1 leading-tight mt-0.5">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block animate-pulse" />
-                Caja abierta · {new Date(turno.fecha_apertura).toLocaleTimeString('es-GT', { hour: '2-digit', minute: '2-digit' })}
-              </button>
+            {ocultarAdmin ? (
+              <div className="text-base font-bold text-gray-900 truncate leading-tight">
+                Julia Bakery
+              </div>
+            ) : (
+              <>
+                <div className="text-base font-bold text-gray-900 truncate leading-tight">
+                  {perfil?.nombre_completo || 'Cajero'}
+                  {adminOverride && (
+                    <span className="ml-2 text-2xs uppercase tracking-wider text-julia-red font-semibold">
+                      · modo admin
+                    </span>
+                  )}
+                </div>
+                {turno && (
+                  <button onClick={() => window.location.href = '/mis-turnos'}
+                    className="text-2xs font-mono text-ink-subtle hover:text-julia-red transition-colors flex items-center gap-1 leading-tight mt-0.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block animate-pulse" />
+                    Caja abierta · {new Date(turno.fecha_apertura).toLocaleTimeString('es-GT', { hour: '2-digit', minute: '2-digit' })}
+                  </button>
+                )}
+              </>
             )}
           </div>
         </div>
         <div className="flex items-center gap-1.5 flex-shrink-0">
-          {turno && onMostrarBandeja && (
+          {!ocultarAdmin && turno && onMostrarBandeja && (
             <button onClick={onMostrarBandeja}
               className={`text-sm px-3.5 py-2.5 rounded-lg font-bold flex items-center gap-2 transition-all ${
                 pedidosPendientesCount > 0
@@ -61,7 +103,7 @@ function POSChrome({ perfil, kiosko, turno, onMostrarHistorial, onMostrarBandeja
               )}
             </button>
           )}
-          {turno && onMostrarHistorial && (
+          {!ocultarAdmin && turno && onMostrarHistorial && (
             <button onClick={onMostrarHistorial}
               className="text-sm bg-blue-50 text-blue-700 hover:bg-blue-100 px-3.5 py-2.5 rounded-lg font-bold flex items-center gap-2">
               <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
@@ -70,7 +112,7 @@ function POSChrome({ perfil, kiosko, turno, onMostrarHistorial, onMostrarBandeja
               Historial
             </button>
           )}
-          {esCajero && (
+          {!ocultarAdmin && esCajero && (
             <>
               <button onClick={() => window.location.href = '/mis-turnos'}
                 className="text-sm text-ink-muted hover:text-julia-red hover:bg-gray-50 px-3 py-2.5 font-semibold rounded-lg transition-colors">
@@ -87,17 +129,19 @@ function POSChrome({ perfil, kiosko, turno, onMostrarHistorial, onMostrarBandeja
               )}
             </>
           )}
-          <button
-            onClick={async () => {
-              await supabase.auth.signOut()
-              window.location.href = esCajero ? '/cajero-login' : '/'
-            }}
-            className="text-sm text-ink-subtle hover:text-red-500 hover:bg-gray-50 px-3 py-2.5 font-semibold rounded-lg transition-colors flex items-center gap-1.5">
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-            </svg>
-            Salir
-          </button>
+          {!ocultarAdmin && (
+            <button
+              onClick={async () => {
+                await supabase.auth.signOut()
+                window.location.href = esCajero ? '/cajero-login' : '/'
+              }}
+              className="text-sm text-ink-subtle hover:text-red-500 hover:bg-gray-50 px-3 py-2.5 font-semibold rounded-lg transition-colors flex items-center gap-1.5">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+              </svg>
+              Salir
+            </button>
+          )}
         </div>
       </header>
       <main className="flex-1 min-h-0">{children}</main>
@@ -280,8 +324,9 @@ function ModalGuardarPedido({ totalEstimado, cantItems, onClose, onGuardar }) {
 // Bandeja: lista los pedidos pendientes del turno actual con accion
 // Continuar (carga al carrito + permite editar y cobrar) y Cancelar.
 // Auto-refresca al abrir.
-function ModalBandejaPedidos({ pedidos, cargando, onClose, onContinuar, onCancelar, onRefresh }) {
+function ModalBandejaPedidos({ pedidos, cargando, onClose, onContinuar, onCancelar, onMarcarListo, onRefresh }) {
   const [cancelandoId, setCancelandoId] = useState(null)
+  const [marcandoListoId, setMarcandoListoId] = useState(null)
   const [motivos, setMotivos] = useState({})
 
   async function cancelar(p) {
@@ -291,6 +336,15 @@ function ModalBandejaPedidos({ pedidos, cargando, onClose, onContinuar, onCancel
       await onCancelar(p.id, motivo || 'Sin motivo especificado')
     } finally {
       setCancelandoId(null)
+    }
+  }
+
+  async function marcarListo(p) {
+    setMarcandoListoId(p.id)
+    try {
+      await onMarcarListo(p.id)
+    } finally {
+      setMarcandoListoId(null)
     }
   }
 
@@ -366,11 +420,41 @@ function ModalBandejaPedidos({ pedidos, cargando, onClose, onContinuar, onCancel
                   </div>
                 )}
 
+                {/* Badge especial si es pickup app */}
+                {p.origen === 'app_pickup' && (
+                  <div className={`mb-3 px-3 py-2 rounded-lg flex items-center justify-between gap-2 ${
+                    p.estado === 'lista'
+                      ? 'bg-amber-100 border border-amber-300'
+                      : 'bg-blue-50 border border-blue-200'
+                  }`}>
+                    <div className="text-sm font-bold">
+                      {p.estado === 'lista' ? (
+                        <span className="text-amber-900">🔔 Listo · cliente notificado</span>
+                      ) : (
+                        <span className="text-blue-900">📱 Pickup app · {p.receptor_email}</span>
+                      )}
+                    </div>
+                    {p.slot_label && (
+                      <div className="text-xs text-gray-700 font-medium">
+                        {p.day_label} {p.slot_label}
+                      </div>
+                    )}
+                  </div>
+                )}
+
                 <div className="grid grid-cols-2 gap-2.5">
-                  <button onClick={() => onContinuar(p)}
-                    className="py-4 bg-emerald-600 text-white font-bold rounded-xl hover:bg-emerald-700 text-base shadow">
-                    📥 Cobrar / Continuar
-                  </button>
+                  {/* Botón principal cambia según estado y origen */}
+                  {p.origen === 'app_pickup' && p.estado === 'pendiente_entrega' ? (
+                    <button onClick={() => marcarListo(p)} disabled={marcandoListoId === p.id}
+                      className="py-4 bg-amber-500 text-white font-bold rounded-xl hover:bg-amber-600 text-base shadow disabled:opacity-50">
+                      {marcandoListoId === p.id ? 'Avisando...' : '🔔 Marcar listo (avisa al cliente)'}
+                    </button>
+                  ) : (
+                    <button onClick={() => onContinuar(p)}
+                      className="py-4 bg-emerald-600 text-white font-bold rounded-xl hover:bg-emerald-700 text-base shadow">
+                      📥 Cobrar / Facturar
+                    </button>
+                  )}
                   <div className="flex flex-col gap-1.5">
                     <input type="text" placeholder="Motivo cancelación..."
                       value={motivos[p.id] || ''}
@@ -382,6 +466,14 @@ function ModalBandejaPedidos({ pedidos, cargando, onClose, onContinuar, onCancel
                     </button>
                   </div>
                 </div>
+
+                {/* Si el pickup ya está marcado listo, mostrar también el botón de facturar */}
+                {p.origen === 'app_pickup' && p.estado === 'lista' && (
+                  <button onClick={() => onContinuar(p)}
+                    className="w-full mt-2 py-3 bg-emerald-600 text-white font-bold rounded-xl hover:bg-emerald-700 text-base shadow">
+                    📥 Cliente vino — Cobrar / Facturar
+                  </button>
+                )}
               </div>
             )
           })}
@@ -786,6 +878,19 @@ const METODOS_PAGO = [
   { id: 'otro',          label: 'Otro' },
 ]
 
+// Métodos exclusivos del POS modo kiosko (es_kiosko=true). El cliente
+// autoservicio del K2 solo ve estos dos botones — sin efectivo, sin tarjeta
+// física, sin transferencia manual.
+//   recurrente_qr   → modal QR en pantalla, cliente paga con su celular,
+//                     POS factura automático al confirmar.
+//   pagar_en_caja   → crea pedido_pendiente con código P-NNNN, cliente lleva
+//                     ticket/pantalla a la P3 Mix y el cajero ahí cobra y
+//                     emite la factura desde la bandeja.
+const METODOS_PAGO_KIOSKO = [
+  { id: 'recurrente_qr', label: '📱 Pagar con QR' },
+  { id: 'pagar_en_caja', label: '💵 Pagar en caja' },
+]
+
 // Extrae variants de loyverse_items + resuelve imagen con fallback a categoria.
 // categoriasInfo: { [loyverse_id]: { name, image_url } }
 function expandirVariantes(items, categoriasInfo) {
@@ -870,16 +975,120 @@ export default function POS({ session }) {
   const [pagosDivididos, setPagosDivididos] = useState(null)  // null | [{metodo, monto, ...}]
   const [mostrarDividirPago, setMostrarDividirPago] = useState(false)
 
-  async function recargarPedidos() {
-    setCargandoPedidos(true)
+  // Modales del POS kiosko: QR Recurrente y código "Pagar en caja"
+  //   modalQR     = { checkoutUrl, orderId, segsRestantes } | null
+  //   modalCaja   = { referencia, total, segsRestantes } | null
+  const [modalQR, setModalQR] = useState(null)
+  const [modalCaja, setModalCaja] = useState(null)
+
+  async function recargarPedidos({ silent = false } = {}) {
+    if (!silent) setCargandoPedidos(true)
     try {
-      const r = await apiFetch('/api/pos/pedidos?estado=pendiente_entrega&limit=50')
+      // Traer pedidos en preparación Y los marcados como 'lista' (esperando
+      // que el cliente venga a recoger) para que el cajero vea ambos.
+      const r = await apiFetch('/api/pos/pedidos?estado=activos&limit=50')
       const j = await r.json()
       if (j.ok) setPedidosPendientes(j.pedidos || [])
     } finally {
-      setCargandoPedidos(false)
+      if (!silent) setCargandoPedidos(false)
     }
   }
+
+  // Polling del modal QR Recurrente. Mientras está abierto, pega cada 3s al
+  // endpoint /api/pickup/pedido-status/[id] y avanza cuando estado pasa a
+  // pendiente_entrega (pago confirmado por webhook o por confirmar-sandbox).
+  useEffect(() => {
+    if (!modalQR || modalQR.estado !== 'esperando') return
+    let cancel = false
+    const poll = async () => {
+      try {
+        const r = await fetch(`/api/pickup/pedido-status/${modalQR.orderId}`, { cache: 'no-store' })
+        const j = await r.json()
+        if (cancel) return
+        if (j.ok && (j.estado === 'pendiente_entrega' || j.estado === 'lista')) {
+          setModalQR(m => m ? { ...m, estado: 'pagado' } : null)
+          // Pago confirmado → emitir factura del pedido
+          setTimeout(() => facturarPedidoKioskoTrasQR(modalQR.orderId).catch(() => {}), 800)
+        }
+      } catch (_) {}
+    }
+    const interval = setInterval(poll, 3000)
+    poll()
+    return () => { cancel = true; clearInterval(interval) }
+  }, [modalQR?.orderId, modalQR?.estado])
+
+  // Countdown timeout del modal QR — 10 mins. Si vence, cancelamos.
+  useEffect(() => {
+    if (!modalQR || modalQR.estado !== 'esperando') return
+    const t = setInterval(() => {
+      setModalQR(m => {
+        if (!m) return null
+        if (m.segsRestantes <= 1) {
+          clearInterval(t)
+          return { ...m, estado: 'timeout', segsRestantes: 0 }
+        }
+        return { ...m, segsRestantes: m.segsRestantes - 1 }
+      })
+    }, 1000)
+    return () => clearInterval(t)
+  }, [modalQR?.estado])
+
+  // Countdown del modal "Pagar en caja" — 30s y vuelve a inicio
+  useEffect(() => {
+    if (!modalCaja) return
+    const t = setInterval(() => {
+      setModalCaja(m => {
+        if (!m) return null
+        if (m.segsRestantes <= 1) {
+          clearInterval(t)
+          // reset al estado limpio del POS para próximo cliente
+          setCarrito([])
+          setReceptor({ nit: 'CF', nombre: 'CONSUMIDOR FINAL', email: '', modo: 'cf' })
+          return null
+        }
+        return { ...m, segsRestantes: m.segsRestantes - 1 }
+      })
+    }, 1000)
+    return () => clearInterval(t)
+  }, [!!modalCaja])
+
+  // Después del QR: cuando se confirma el pago, llamamos al endpoint que
+  // emite la factura del pedido pendiente. Reusa /api/pos/pedidos/[id]/facturar
+  // que ya marca el pedido como entregado_facturado + emite FEL + asiento.
+  async function facturarPedidoKioskoTrasQR(orderId) {
+    try {
+      const r = await apiFetch(`/api/pos/pedidos/${orderId}/facturar`, {
+        method: 'POST',
+        body: JSON.stringify({
+          metodo_pago: 'tarjeta',  // recurrente = tarjeta para QBO/contabilidad
+          receptor: { nit: 'CF', nombre: 'CONSUMIDOR FINAL' },
+        }),
+      })
+      const j = await r.json()
+      if (!r.ok || !j.ok) {
+        console.error('[kiosko-qr] facturar falló:', j.error)
+        flashToast('Pago OK pero la factura falló — avisá al cajero')
+      } else {
+        flashToast('✅ Pago confirmado y facturado')
+      }
+    } catch (e) {
+      console.error('[kiosko-qr] exc:', e)
+    } finally {
+      // Reset del POS pase lo que pase
+      setModalQR(null)
+      setCarrito([])
+      setReceptor({ nit: 'CF', nombre: 'CONSUMIDOR FINAL', email: '', modo: 'cf' })
+    }
+  }
+
+  // Auto-refresh: mientras la bandeja esté abierta, refrescamos cada 20s para
+  // que pedidos nuevos (pickup PWA, K2 armador) aparezcan sin que el cajero
+  // tenga que cerrar/abrir el modal. silent=true evita el skeleton flickering.
+  useEffect(() => {
+    if (!mostrarBandeja) return
+    const t = setInterval(() => { recargarPedidos({ silent: true }) }, 20000)
+    return () => clearInterval(t)
+  }, [mostrarBandeja])
 
   // Cargar perfil + catálogo + turno (si cajero)
   useEffect(() => {
@@ -945,19 +1154,17 @@ export default function POS({ session }) {
 
   const esAdmin = perfil?.rol === 'admin'
   const esCajero = perfil?.rol === 'cajero'
-  // Cajero "Kiosko" (K2 Mini autoservicio): oculta efectivo + bandeja Pedidos Ya
+  // Cajero "Kiosko" (K2 Mini autoservicio). En kiosko reemplazamos los métodos
+  // de pago por sólo 2: QR Recurrente (pago digital en el momento) y Pagar en
+  // caja (genera pedido pendiente, el cliente va a la P3 Mix a cobrar/facturar).
   const esKioskoCajero = !!perfil?.es_kiosko
-  // Métodos de pago visibles para el cajero actual. En kiosko sacamos efectivo
-  // y Pedidos Ya (no aplican: cliente paga solo con tarjeta o QR/transferencia).
-  const metodosPagoDisponibles = esKioskoCajero
-    ? METODOS_PAGO.filter(m => m.id !== 'efectivo' && m.id !== 'pedidos_ya')
-    : METODOS_PAGO
+  const metodosPagoDisponibles = esKioskoCajero ? METODOS_PAGO_KIOSKO : METODOS_PAGO
 
   // Si entra como kiosko y el método activo no es válido (default 'efectivo'),
-  // forzamos a tarjeta. Solo corre cuando cambia es_kiosko.
+  // forzamos al primer método del kiosko.
   useEffect(() => {
     if (esKioskoCajero && !metodosPagoDisponibles.some(m => m.id === metodoPago)) {
-      setMetodoPago('tarjeta')
+      setMetodoPago(METODOS_PAGO_KIOSKO[0].id)
     }
   }, [esKioskoCajero])
 
@@ -1108,10 +1315,135 @@ export default function POS({ session }) {
     }
   }
 
+  // ============================================================
+  // KIOSKO — Pagar en caja
+  //
+  // El cliente arma su carrito en el K2 pero NO paga ahí. POS crea un
+  // pedido_pendiente con origen='pos_kiosko', estado='pendiente_entrega'.
+  // En la P3 Mix del cajero aparece en la bandeja con prefijo P-NNNN. El
+  // cajero cobra (efectivo/tarjeta/lo que sea) y factura desde la bandeja
+  // como cualquier otro pedido pendiente.
+  // ============================================================
+  async function cobrarKioskoEnCaja() {
+    setEnviando(true)
+    try {
+      const body = {
+        origen: 'pos_kiosko',
+        items: carrito.map(l => ({
+          variant_id: l.variant_id,
+          descripcion: l.notas ? `${l.descripcion} · ${l.notas}` : l.descripcion,
+          cantidad: Number(l.cantidad),
+          precio_unitario: Number(l.precio_unitario),
+        })),
+        receptor: { nit: 'CF', nombre: 'CONSUMIDOR FINAL' },
+        pago: { metodo: 'cobrar_en_caja', simulado: true },
+      }
+      const r = await fetch('/api/pickup/orders', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      })
+      const j = await r.json()
+      if (!r.ok || !j.ok) {
+        setErr(j.error || 'No pudimos generar el pedido')
+        setEnviando(false)
+        return
+      }
+      setEnviando(false)
+      // Mostrar pantalla con código grande y countdown 30s
+      const total = (j.order?.total_estimado || 0)
+      setModalCaja({
+        referencia: j.order.referencia,
+        total: Number(total),
+        segsRestantes: 30,
+      })
+    } catch (e) {
+      setEnviando(false)
+      setErr('Error de red al crear el pedido')
+    }
+  }
+
+  // ============================================================
+  // KIOSKO — Pagar con QR Recurrente
+  //
+  // Crea pedido pendiente + checkout en Recurrente. Muestra QR. POS hace
+  // polling al estado del pedido cada 3s. Cuando se confirma el pago, el
+  // backend ya marcó el pedido como pendiente_entrega; el POS llama al
+  // endpoint /facturar para emitir el FEL y luego sigue el flujo normal
+  // (impresión de ticket + reset).
+  // ============================================================
+  async function cobrarKioskoQR() {
+    setEnviando(true)
+    try {
+      // 1) Crear pedido pendiente con origen pos_kiosko
+      const r1 = await fetch('/api/pickup/orders', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          origen: 'pos_kiosko',
+          items: carrito.map(l => ({
+            variant_id: l.variant_id,
+            descripcion: l.notas ? `${l.descripcion} · ${l.notas}` : l.descripcion,
+            cantidad: Number(l.cantidad),
+            precio_unitario: Number(l.precio_unitario),
+          })),
+          receptor: { nit: 'CF', nombre: 'CONSUMIDOR FINAL' },
+          pago: { metodo: 'recurrente', simulado: false },
+        }),
+      })
+      const j1 = await r1.json()
+      if (!r1.ok || !j1.ok) {
+        setErr(j1.error || 'No pudimos crear el pedido')
+        setEnviando(false)
+        return
+      }
+      const orderId = j1.order.id
+
+      // 2) Crear checkout en Recurrente
+      const r2 = await fetch('/api/pickup/recurrente-checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ order_id: orderId }),
+      })
+      const j2 = await r2.json()
+      if (!r2.ok || !j2.ok || !j2.checkout_url) {
+        setErr(j2.error || 'No pudimos iniciar el cobro QR')
+        setEnviando(false)
+        return
+      }
+
+      setEnviando(false)
+      // 3) Mostrar modal QR (polling lo maneja el useEffect de modalQR)
+      setModalQR({
+        checkoutUrl: j2.checkout_url,
+        orderId,
+        referencia: j1.order.referencia,
+        total: Number(j1.order.total_estimado || 0),
+        segsRestantes: 600,  // 10 min timeout
+        estado: 'esperando',
+      })
+    } catch (e) {
+      setEnviando(false)
+      setErr('Error de red al iniciar cobro QR')
+    }
+  }
+
   async function cobrar() {
     setErr(null)
     if (carrito.length === 0) { setErr('Carrito vacío'); return }
     if (receptor.nit !== 'CF' && !receptor.nombre.trim()) { setErr('Nombre del receptor requerido (o usá CF)'); return }
+
+    // ===== Flujos exclusivos del POS modo kiosko (K2 mini autoservicio) =====
+    // Estos métodos NO emiten factura en este paso — generan un pedido
+    // pendiente. recurrente_qr factura cuando el pago se confirma;
+    // pagar_en_caja factura cuando el cajero P3 Mix cobra desde su bandeja.
+    if (esKioskoCajero && metodoPago === 'recurrente_qr') {
+      return await cobrarKioskoQR()
+    }
+    if (esKioskoCajero && metodoPago === 'pagar_en_caja') {
+      return await cobrarKioskoEnCaja()
+    }
+
     setEnviando(true)
 
     // Si es tarjeta y tenemos integracion automatica habilitada, primero
@@ -1387,6 +1719,27 @@ export default function POS({ session }) {
     recargarPedidos()
   }
 
+  // Marca pedido pickup como 'lista' y dispara email al cliente.
+  // Solo aplica a origen=app_pickup en estado pendiente_entrega.
+  async function marcarPedidoListo(pedidoId) {
+    const r = await apiFetch(`/api/pos/pedidos/${pedidoId}/marcar-listo`, { method: 'POST' })
+    const j = await r.json()
+    if (!r.ok || !j.ok) {
+      flashToast(`Error: ${j.error || 'no se pudo marcar como listo'}`)
+      return
+    }
+    if (j.email?.ok) {
+      flashToast('✅ Marcado listo · email enviado al cliente')
+    } else if (j.email?.skipped) {
+      flashToast('✅ Marcado listo (email no configurado)')
+    } else if (j.email?.error) {
+      flashToast(`✅ Marcado listo · email falló: ${j.email.error}`)
+    } else {
+      flashToast('✅ Pedido marcado como listo')
+    }
+    recargarPedidos()
+  }
+
   // Cantidades por variant_id en el carrito — para mostrar badge en cards.
   // OJO: este hook DEBE estar antes de cualquier early return; si quedaba
   // despues, React tiraba "Rendered fewer hooks than expected" (error #300).
@@ -1467,6 +1820,7 @@ export default function POS({ session }) {
           onClose={() => setMostrarBandeja(false)}
           onContinuar={continuarPedido}
           onCancelar={cancelarPedido}
+          onMarcarListo={marcarPedidoListo}
           onRefresh={recargarPedidos}
         />
       )}
@@ -1482,6 +1836,105 @@ export default function POS({ session }) {
             setMostrarDividirPago(false)
           }}
         />
+      )}
+
+      {/* Modal QR Recurrente (kiosko) — pantalla completa para que el cliente
+          escanee con su celular. Polling automático al estado. */}
+      {modalQR && (
+        <div className="fixed inset-0 z-50 bg-white flex flex-col items-center justify-center p-6 text-center overflow-y-auto">
+          {modalQR.estado === 'esperando' && (
+            <>
+              <h2 className="text-4xl font-bold text-gray-900 mb-2">Escaneá con tu celular</h2>
+              <p className="text-lg text-gray-600 mb-6">
+                Abrí la cámara del teléfono y enfocá este código
+              </p>
+              <div className="bg-white border-4 border-julia-red rounded-3xl p-6 shadow-2xl mb-6">
+                <QRCodeSVG value={modalQR.checkoutUrl} size={320} level="M" marginSize={2} />
+              </div>
+              <div className="bg-gray-50 border border-gray-200 rounded-2xl px-8 py-4 mb-4">
+                <div className="text-xs uppercase tracking-wider text-gray-500 mb-1">Total a pagar</div>
+                <div className="text-5xl font-bold tabular-nums text-gray-900">
+                  Q{modalQR.total.toFixed(2)}
+                </div>
+                <div className="text-sm text-gray-500 mt-1">Pedido {modalQR.referencia}</div>
+              </div>
+              <div className="text-gray-500 text-base mb-6">
+                Tiempo restante:{' '}
+                <span className="tabular-nums font-bold text-gray-900">
+                  {String(Math.floor(modalQR.segsRestantes / 60)).padStart(2, '0')}
+                  :
+                  {String(modalQR.segsRestantes % 60).padStart(2, '0')}
+                </span>
+              </div>
+              <button
+                onClick={() => setModalQR(null)}
+                className="text-julia-red underline text-base"
+              >
+                Cancelar
+              </button>
+            </>
+          )}
+          {modalQR.estado === 'pagado' && (
+            <>
+              <div className="text-8xl mb-4">✅</div>
+              <h2 className="text-5xl font-bold text-green-600 mb-2">¡Pago recibido!</h2>
+              <p className="text-xl text-gray-600">Generando tu factura...</p>
+            </>
+          )}
+          {modalQR.estado === 'timeout' && (
+            <>
+              <div className="text-6xl mb-4">⏱️</div>
+              <h2 className="text-3xl font-bold text-gray-900 mb-2">Se acabó el tiempo</h2>
+              <p className="text-lg text-gray-600 mb-6">El QR expiró. Probá de nuevo.</p>
+              <button
+                onClick={() => setModalQR(null)}
+                className="bg-julia-red text-white text-lg font-semibold px-8 py-4 rounded-xl"
+              >
+                Volver al menú
+              </button>
+            </>
+          )}
+        </div>
+      )}
+
+      {/* Modal "Pagar en caja" (kiosko) — muestra código gigante para que el
+          cliente lo lleve a la P3 Mix donde el cajero cobra y factura. */}
+      {modalCaja && (
+        <div className="fixed inset-0 z-50 bg-white flex flex-col items-center justify-center p-6 text-center">
+          <div className="inline-block bg-amber-100 text-amber-900 px-6 py-2 rounded-full text-sm font-semibold uppercase tracking-wider mb-6">
+            💵 Pasá a la caja
+          </div>
+          <h2 className="text-3xl font-bold text-gray-900 mb-2">
+            Llevá este código al mostrador
+          </h2>
+          <p className="text-lg text-gray-600 mb-8">
+            El cajero te va a cobrar y entregar la factura.
+          </p>
+          <div className="font-bold text-julia-red mb-6 tabular-nums tracking-wider"
+            style={{ fontSize: '12rem', lineHeight: 1 }}>
+            {modalCaja.referencia}
+          </div>
+          <div className="bg-gray-50 border border-gray-200 rounded-2xl px-8 py-4 mb-8">
+            <div className="text-xs uppercase tracking-wider text-gray-500 mb-1">A pagar</div>
+            <div className="text-5xl font-bold tabular-nums text-gray-900">
+              Q{modalCaja.total.toFixed(2)}
+            </div>
+          </div>
+          <div className="text-gray-500 text-base mb-3">
+            Volvemos al menú en{' '}
+            <span className="tabular-nums font-bold">{modalCaja.segsRestantes}s</span>
+          </div>
+          <button
+            onClick={() => {
+              setModalCaja(null)
+              setCarrito([])
+              setReceptor({ nit: 'CF', nombre: 'CONSUMIDOR FINAL', email: '', modo: 'cf' })
+            }}
+            className="text-julia-red underline text-base"
+          >
+            Listo, volver ahora
+          </button>
+        </div>
       )}
 
       {/* Toast breve - confirma reimpresion / errores menores */}

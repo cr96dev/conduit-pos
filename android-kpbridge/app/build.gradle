@@ -1,0 +1,72 @@
+plugins {
+    id 'com.android.application'
+    id 'org.jetbrains.kotlin.android'
+}
+
+android {
+    namespace 'com.juliabakery.kpbridge'
+    compileSdk 34
+
+    defaultConfig {
+        applicationId "com.juliabakery.kpbridge"
+        // PAX A920 ship con Android 7.0+, asi que 24 es safe
+        minSdk 24
+        targetSdk 34
+        versionCode 1
+        versionName "0.1.0"
+
+        // El bridge solo escucha localmente, no hace certificados ni firmas.
+        // Para invocar SmartPOS usamos el package name documentado en el
+        // MainActivity.java de Kinpos.
+        buildConfigField "String", "MPOS_URL", "\"com.kinpos.BASEA920\""
+        // Puerto donde escucha el bridge. /pos webview hace fetch a este puerto.
+        buildConfigField "int", "BRIDGE_PORT", "8081"
+    }
+
+    buildTypes {
+        debug {
+            buildConfigField "boolean", "DEBUG_LOG", "true"
+        }
+        release {
+            minifyEnabled false  // por ahora dejar legible para debug en campo
+            buildConfigField "boolean", "DEBUG_LOG", "false"
+        }
+    }
+
+    buildFeatures {
+        buildConfig true
+        viewBinding true
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+    kotlinOptions {
+        jvmTarget = '17'
+    }
+
+    packaging {
+        resources {
+            excludes += ['META-INF/{AL2.0,LGPL2.1}']
+        }
+    }
+}
+
+dependencies {
+    implementation 'androidx.appcompat:appcompat:1.7.0'
+    implementation 'androidx.core:core-ktx:1.13.1'
+    implementation 'com.google.android.material:material:1.12.0'
+    implementation 'androidx.activity:activity-ktx:1.9.0'
+    implementation 'androidx.lifecycle:lifecycle-runtime-ktx:2.8.2'
+
+    // Mini HTTP server (lightweight, single jar). Lo usamos para exponer
+    // el bridge en el puerto 8081 con CORS abierto.
+    implementation 'org.nanohttpd:nanohttpd:2.3.1'
+
+    // Kinpos invocacion: AAR local — el usuario lo copia a app/libs/
+    // desde ~/Downloads/Integracion PAX A920/kpinvocacion-release 1225.aar
+    implementation files('libs/kpinvocacion.aar')
+
+    // JSON parsing (org.json viene built-in en Android, no necesitamos dep)
+}
