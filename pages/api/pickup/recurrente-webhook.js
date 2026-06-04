@@ -64,20 +64,34 @@ export default async function handler(req, res) {
       return res.status(200).json({ ok: true, message: 'No order to update' })
     }
 
-    // Lookup por order_id o por checkout_id guardado en pago_auth_code
-    let query = supabaseAdmin.from('pedidos_pendientes').update({
-      estado: 'pendiente_entrega',
-      pago_auth_code: checkoutId || undefined,
-    })
+    // Lookup por order_id o por checkout_id guardado en pago_auth_code.
+    // Filtramos por origen para evitar que un atacante (con un order_id
+    // robado o adivinado) marque pagado un pedido que NO viene de Recurrente.
+    let query = supabaseAdmin.from('pedidos_pendientes')
+      .update({
+        estado: 'pendiente_entrega',
+        pago_auth_code: checkoutId || undefined,
+      })
+      .in('origen', ['app_pickup', 'kiosko_k2', 'pos_kiosko'])
+      .eq('estado', 'pendiente_pago')  // guard: solo si todavía espera pago
 
     if (orderId) query = query.eq('id', orderId)
     else query = query.eq('pago_auth_code', checkoutId)
 
-    const { data: updated, error } = await query.select('id, referencia').single()
+    // .maybeSingle() — si el pedido ya fue confirmado por otro evento
+    // (idempotencia), devuelve null y no rompe. Recurrente reintenta los
+    // webhooks si nos demoramos.
+    const { data: updated, error } = await query.select('id, referencia').maybeSingle()
 
     if (error) {
       console.error('[recurrente-webhook] update error:', error.message)
       return res.status(500).json({ error: error.message })
+    }
+    if (!updated) {
+      // Ya estaba confirmado o no existe — devolvemos 200 para que Recurrente
+      // no nos siga mandando reintentos del mismo evento.
+      console.log('[recurrente-webhook] pedido ya confirmado o no encontrado — idempotente')
+      return res.status(200).json({ ok: true, already_processed: true })
     }
     console.log(`[recurrente-webhook] Pedido ${updated.referencia} confirmado como pagado`)
     return res.status(200).json({ ok: true, order_id: updated.id })
