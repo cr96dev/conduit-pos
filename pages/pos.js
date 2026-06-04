@@ -1055,7 +1055,11 @@ export default function POS({ session }) {
   // Después del QR: cuando se confirma el pago, llamamos al endpoint que
   // emite la factura del pedido pendiente. Reusa /api/pos/pedidos/[id]/facturar
   // que ya marca el pedido como entregado_facturado + emite FEL + asiento.
+  // Después de facturar, imprime el ticket en la térmica del K2 via el
+  // bridge nativo window.JuliaPOS.printTicket (mismo payload que el flujo
+  // normal de cobro del POS).
   async function facturarPedidoKioskoTrasQR(orderId) {
+    let facturaParaImprimir = null
     try {
       const r = await apiFetch(`/api/pos/pedidos/${orderId}/facturar`, {
         method: 'POST',
@@ -1069,16 +1073,62 @@ export default function POS({ session }) {
         console.error('[kiosko-qr] facturar falló:', j.error)
         flashToast('Pago OK pero la factura falló — avisá al cajero')
       } else {
+        facturaParaImprimir = j.factura
         flashToast('✅ Pago confirmado y facturado')
       }
     } catch (e) {
       console.error('[kiosko-qr] exc:', e)
-    } finally {
-      // Reset del POS pase lo que pase
-      setModalQR(null)
-      setCarrito([])
-      setReceptor({ nit: 'CF', nombre: 'CONSUMIDOR FINAL', email: '', modo: 'cf' })
     }
+
+    // Print del ticket en la térmica del Sunmi (best-effort, no rompe flow)
+    if (facturaParaImprimir && typeof window !== 'undefined' && window.JuliaPOS?.printTicket) {
+      try {
+        const f = facturaParaImprimir
+        const e = emisor || {}
+        const direccion = [
+          e.direccion,
+          [e.municipio, e.departamento].filter(Boolean).join(', '),
+        ].filter(Boolean).join(' ')
+        const payload = {
+          merchantName: e.nombre_comercial || 'Julia Bakery',
+          razonSocial: e.razon_social || null,
+          direccion: direccion || null,
+          nitEmisor: e.nit_emisor || null,
+          receptorNit: f.receptor_nit,
+          receptorNombre: f.receptor_nombre,
+          fecha: new Date(f.fecha_certificacion || Date.now()).toLocaleString('es-GT'),
+          cajeroNombre: 'K2 · QR Recurrente',
+          metodoPago: 'Tarjeta (QR Recurrente)',
+          items: carrito.map(l => ({
+            descripcion: l.notas ? `${l.descripcion} · ${l.notas}` : l.descripcion,
+            cantidad: String(l.cantidad),
+            precioUnitario: Number(l.precio_unitario),
+            subtotal: Math.round(Number(l.cantidad) * Number(l.precio_unitario) * 100) / 100,
+          })),
+          totalGravado: Math.round((Number(f.total) / 1.12) * 100) / 100,
+          iva: Number(f.iva),
+          total: Number(f.total),
+          uuidSat: f.uuid_sat,
+          serieSat: f.serie_sat,
+          numeroSat: f.numero_sat,
+          certificadorNombre: 'INFILE, S.A.',
+          certificadorNit: '12521329',
+          fechaCertificacion: f.fecha_certificacion
+            ? new Date(f.fecha_certificacion).toLocaleString('es-GT')
+            : null,
+          textoFooter: 'Sujeto a pago directo ISR (5111420251235387 - 01/04/2025)',
+        }
+        const pr = await window.JuliaPOS.printTicket(payload)
+        console.log('[kiosko-qr] printTicket result:', pr)
+      } catch (e) {
+        console.warn('[kiosko-qr] printTicket falló:', e?.message || e)
+      }
+    }
+
+    // Reset del POS pase lo que pase
+    setModalQR(null)
+    setCarrito([])
+    setReceptor({ nit: 'CF', nombre: 'CONSUMIDOR FINAL', email: '', modo: 'cf' })
   }
 
   // Auto-refresh: mientras la bandeja esté abierta, refrescamos cada 20s para
