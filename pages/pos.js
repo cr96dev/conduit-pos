@@ -1056,10 +1056,13 @@ export default function POS({ session }) {
   // emite la factura del pedido pendiente. Reusa /api/pos/pedidos/[id]/facturar
   // que ya marca el pedido como entregado_facturado + emite FEL + asiento.
   // Después de facturar, imprime el ticket en la térmica del K2 via el
-  // bridge nativo window.JuliaPOS.printTicket (mismo payload que el flujo
-  // normal de cobro del POS).
+  // bridge nativo window.JuliaPOS.printTicket.
+  //
+  // IMPORTANTE: los items para el ticket NO los tomamos del state `carrito`
+  // (que puede haber cambiado durante el polling de 3s+) sino del pedido
+  // devuelto por el endpoint — es la fuente de verdad.
   async function facturarPedidoKioskoTrasQR(orderId) {
-    let facturaParaImprimir = null
+    let datosImprimir = null
     try {
       const r = await apiFetch(`/api/pos/pedidos/${orderId}/facturar`, {
         method: 'POST',
@@ -1070,10 +1073,11 @@ export default function POS({ session }) {
       })
       const j = await r.json()
       if (!r.ok || !j.ok) {
-        console.error('[kiosko-qr] facturar falló:', j.error)
+        console.error('[kiosko-qr] facturar falló:', j.error || j)
         flashToast('Pago OK pero la factura falló — avisá al cajero')
       } else {
-        facturaParaImprimir = j.factura
+        datosImprimir = { factura: j.factura, pedido: j.pedido }
+        console.log('[kiosko-qr] facturado OK:', j.factura?.serie_sat, j.factura?.numero_sat)
         flashToast('✅ Pago confirmado y facturado')
       }
     } catch (e) {
@@ -1081,48 +1085,56 @@ export default function POS({ session }) {
     }
 
     // Print del ticket en la térmica del Sunmi (best-effort, no rompe flow)
-    if (facturaParaImprimir && typeof window !== 'undefined' && window.JuliaPOS?.printTicket) {
+    if (datosImprimir && typeof window !== 'undefined' && window.JuliaPOS?.printTicket) {
       try {
-        const f = facturaParaImprimir
-        const e = emisor || {}
-        const direccion = [
-          e.direccion,
-          [e.municipio, e.departamento].filter(Boolean).join(', '),
-        ].filter(Boolean).join(' ')
-        const payload = {
-          merchantName: e.nombre_comercial || 'Julia Bakery',
-          razonSocial: e.razon_social || null,
-          direccion: direccion || null,
-          nitEmisor: e.nit_emisor || null,
-          receptorNit: f.receptor_nit,
-          receptorNombre: f.receptor_nombre,
-          fecha: new Date(f.fecha_certificacion || Date.now()).toLocaleString('es-GT'),
-          cajeroNombre: 'K2 · QR Recurrente',
-          metodoPago: 'Tarjeta (QR Recurrente)',
-          items: carrito.map(l => ({
-            descripcion: l.notas ? `${l.descripcion} · ${l.notas}` : l.descripcion,
-            cantidad: String(l.cantidad),
-            precioUnitario: Number(l.precio_unitario),
-            subtotal: Math.round(Number(l.cantidad) * Number(l.precio_unitario) * 100) / 100,
-          })),
-          totalGravado: Math.round((Number(f.total) / 1.12) * 100) / 100,
-          iva: Number(f.iva),
-          total: Number(f.total),
-          uuidSat: f.uuid_sat,
-          serieSat: f.serie_sat,
-          numeroSat: f.numero_sat,
-          certificadorNombre: 'INFILE, S.A.',
-          certificadorNit: '12521329',
-          fechaCertificacion: f.fecha_certificacion
-            ? new Date(f.fecha_certificacion).toLocaleString('es-GT')
-            : null,
-          textoFooter: 'Sujeto a pago directo ISR (5111420251235387 - 01/04/2025)',
+        const f = datosImprimir.factura
+        const items = Array.isArray(datosImprimir.pedido?.items) ? datosImprimir.pedido.items : []
+        if (items.length === 0) {
+          console.warn('[kiosko-qr] pedido sin items — no imprimo ticket vacío')
+        } else {
+          const e = emisor || {}
+          const direccion = [
+            e.direccion,
+            [e.municipio, e.departamento].filter(Boolean).join(', '),
+          ].filter(Boolean).join(' ')
+          const payload = {
+            merchantName: e.nombre_comercial || 'Julia Bakery',
+            razonSocial: e.razon_social || 'Julia Bakery',
+            direccion: direccion || '2 Avenida 11-08, Zona 10',
+            nitEmisor: e.nit_emisor || '',
+            receptorNit: f.receptor_nit || 'CF',
+            receptorNombre: f.receptor_nombre || 'CONSUMIDOR FINAL',
+            fecha: new Date(f.fecha_certificacion || Date.now()).toLocaleString('es-GT'),
+            cajeroNombre: 'K2 · QR Recurrente',
+            metodoPago: 'Tarjeta (QR Recurrente)',
+            items: items.map(l => ({
+              descripcion: String(l.descripcion || ''),
+              cantidad: String(l.cantidad || 1),
+              precioUnitario: Number(l.precio_unitario || 0),
+              subtotal: Math.round(Number(l.cantidad || 0) * Number(l.precio_unitario || 0) * 100) / 100,
+            })),
+            totalGravado: Math.round((Number(f.total || 0) / 1.12) * 100) / 100,
+            iva: Number(f.iva || 0),
+            total: Number(f.total || 0),
+            uuidSat: f.uuid_sat || '',
+            serieSat: f.serie_sat || '',
+            numeroSat: String(f.numero_sat || ''),
+            certificadorNombre: 'INFILE, S.A.',
+            certificadorNit: '12521329',
+            fechaCertificacion: f.fecha_certificacion
+              ? new Date(f.fecha_certificacion).toLocaleString('es-GT')
+              : new Date().toLocaleString('es-GT'),
+            textoFooter: 'Sujeto a pago directo ISR (5111420251235387 - 01/04/2025)',
+          }
+          console.log('[kiosko-qr] payload print:', JSON.stringify(payload).slice(0, 400))
+          const pr = await window.JuliaPOS.printTicket(payload)
+          console.log('[kiosko-qr] printTicket result:', pr)
         }
-        const pr = await window.JuliaPOS.printTicket(payload)
-        console.log('[kiosko-qr] printTicket result:', pr)
       } catch (e) {
         console.warn('[kiosko-qr] printTicket falló:', e?.message || e)
       }
+    } else if (datosImprimir) {
+      console.warn('[kiosko-qr] sin bridge JuliaPOS.printTicket — no imprime')
     }
 
     // Reset del POS pase lo que pase
