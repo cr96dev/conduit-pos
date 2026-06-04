@@ -29,12 +29,13 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: 'order_id requerido' })
   }
 
-  // Cargar pedido
+  // Cargar pedido — aceptamos todos los orígenes que pasan por Recurrente:
+  // app_pickup (PWA), kiosko_k2 (armador K2), pos_kiosko (POS modo kiosko).
   const { data: pedido, error: errLoad } = await supabaseAdmin
     .from('pedidos_pendientes')
-    .select('id, referencia, estado, pago_simulado, pago_metodo, items, total_estimado, receptor_email, receptor_nombre, slot_label, day_label')
+    .select('id, referencia, estado, pago_simulado, pago_metodo, items, total_estimado, receptor_email, receptor_nombre, slot_label, day_label, origen')
     .eq('id', order_id)
-    .eq('origen', 'app_pickup')
+    .in('origen', ['app_pickup', 'kiosko_k2', 'pos_kiosko'])
     .single()
 
   if (errLoad || !pedido) return res.status(404).json({ error: 'Pedido no encontrado' })
@@ -58,8 +59,10 @@ export default async function handler(req, res) {
 
   if (errUpd) return res.status(500).json({ error: errUpd.message })
 
-  // Enviar email de confirmación (best-effort, no rompe el flujo si falla)
-  if (pedido.receptor_email) {
+  // Enviar email de confirmación (best-effort, no rompe el flujo si falla).
+  // Sólo si hay email — el origen pos_kiosko (autoservicio K2) no pide datos
+  // al cliente, así que no hay a dónde mandar.
+  if (pedido.receptor_email && pedido.origen !== 'pos_kiosko') {
     const proto = req.headers['x-forwarded-proto'] || 'https'
     const baseUrl = `${proto}://${req.headers.host}`
     enviarEmailConfirmacion({
