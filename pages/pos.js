@@ -22,28 +22,69 @@ function POSChrome({ perfil, kiosko, turno, onMostrarHistorial, onMostrarBandeja
   // queremos perder el sidebar.) Solo en kiosko o si rol=cajero mostramos
   // el chrome minimo con cajero/turno + Cerrar caja + Mis turnos.
   const esCajero = perfil?.rol === 'cajero'
+  const esKioskoCajero = !!perfil?.es_kiosko
   if (!kiosko && !esCajero) return <Layout perfil={perfil}>{children}</Layout>
+
+  // Modo K2 autoservicio: ocultamos todo lo administrativo (cerrar caja,
+  // historial, bandeja, salir, nombre cajero, estado turno). Triple tap en
+  // el logo abre "modo admin temporal" por 60s — suficiente para que el
+  // dueño/admin haga Cerrar Caja al final del día sin reiniciar la app.
+  const [adminOverride, setAdminOverride] = useState(false)
+  const tapsRef = useRef([])
+  function onTapLogo() {
+    if (!esKioskoCajero) return
+    const now = Date.now()
+    tapsRef.current = tapsRef.current.filter(t => now - t < 800)
+    tapsRef.current.push(now)
+    if (tapsRef.current.length >= 3) {
+      tapsRef.current = []
+      if (window.confirm('¿Activar modo admin temporal? (60s)')) {
+        setAdminOverride(true)
+        setTimeout(() => setAdminOverride(false), 60000)
+      }
+    }
+  }
+  const ocultarAdmin = esKioskoCajero && !adminOverride
 
   return (
     <div className="min-h-screen bg-surface-2 flex flex-col">
       <header className="bg-white border-b border-gray-100 px-4 py-2.5 flex items-center justify-between flex-shrink-0 gap-2 shadow-xs">
         <div className="flex items-center gap-3 min-w-0">
-          <img src="/logo.png" alt="" className="h-9 w-auto flex-shrink-0" />
+          <img
+            src="/logo.png"
+            alt=""
+            className="h-9 w-auto flex-shrink-0"
+            onClick={onTapLogo}
+            style={esKioskoCajero ? { cursor: 'pointer' } : undefined}
+          />
           <div className="min-w-0">
-            <div className="text-base font-bold text-gray-900 truncate leading-tight">
-              {perfil?.nombre_completo || 'Cajero'}
-            </div>
-            {turno && (
-              <button onClick={() => window.location.href = '/mis-turnos'}
-                className="text-2xs font-mono text-ink-subtle hover:text-julia-red transition-colors flex items-center gap-1 leading-tight mt-0.5">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block animate-pulse" />
-                Caja abierta · {new Date(turno.fecha_apertura).toLocaleTimeString('es-GT', { hour: '2-digit', minute: '2-digit' })}
-              </button>
+            {ocultarAdmin ? (
+              <div className="text-base font-bold text-gray-900 truncate leading-tight">
+                Julia Bakery
+              </div>
+            ) : (
+              <>
+                <div className="text-base font-bold text-gray-900 truncate leading-tight">
+                  {perfil?.nombre_completo || 'Cajero'}
+                  {adminOverride && (
+                    <span className="ml-2 text-2xs uppercase tracking-wider text-julia-red font-semibold">
+                      · modo admin
+                    </span>
+                  )}
+                </div>
+                {turno && (
+                  <button onClick={() => window.location.href = '/mis-turnos'}
+                    className="text-2xs font-mono text-ink-subtle hover:text-julia-red transition-colors flex items-center gap-1 leading-tight mt-0.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block animate-pulse" />
+                    Caja abierta · {new Date(turno.fecha_apertura).toLocaleTimeString('es-GT', { hour: '2-digit', minute: '2-digit' })}
+                  </button>
+                )}
+              </>
             )}
           </div>
         </div>
         <div className="flex items-center gap-1.5 flex-shrink-0">
-          {turno && onMostrarBandeja && (
+          {!ocultarAdmin && turno && onMostrarBandeja && (
             <button onClick={onMostrarBandeja}
               className={`text-sm px-3.5 py-2.5 rounded-lg font-bold flex items-center gap-2 transition-all ${
                 pedidosPendientesCount > 0
@@ -62,7 +103,7 @@ function POSChrome({ perfil, kiosko, turno, onMostrarHistorial, onMostrarBandeja
               )}
             </button>
           )}
-          {turno && onMostrarHistorial && (
+          {!ocultarAdmin && turno && onMostrarHistorial && (
             <button onClick={onMostrarHistorial}
               className="text-sm bg-blue-50 text-blue-700 hover:bg-blue-100 px-3.5 py-2.5 rounded-lg font-bold flex items-center gap-2">
               <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
@@ -71,7 +112,7 @@ function POSChrome({ perfil, kiosko, turno, onMostrarHistorial, onMostrarBandeja
               Historial
             </button>
           )}
-          {esCajero && (
+          {!ocultarAdmin && esCajero && (
             <>
               <button onClick={() => window.location.href = '/mis-turnos'}
                 className="text-sm text-ink-muted hover:text-julia-red hover:bg-gray-50 px-3 py-2.5 font-semibold rounded-lg transition-colors">
@@ -88,17 +129,19 @@ function POSChrome({ perfil, kiosko, turno, onMostrarHistorial, onMostrarBandeja
               )}
             </>
           )}
-          <button
-            onClick={async () => {
-              await supabase.auth.signOut()
-              window.location.href = esCajero ? '/cajero-login' : '/'
-            }}
-            className="text-sm text-ink-subtle hover:text-red-500 hover:bg-gray-50 px-3 py-2.5 font-semibold rounded-lg transition-colors flex items-center gap-1.5">
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-            </svg>
-            Salir
-          </button>
+          {!ocultarAdmin && (
+            <button
+              onClick={async () => {
+                await supabase.auth.signOut()
+                window.location.href = esCajero ? '/cajero-login' : '/'
+              }}
+              className="text-sm text-ink-subtle hover:text-red-500 hover:bg-gray-50 px-3 py-2.5 font-semibold rounded-lg transition-colors flex items-center gap-1.5">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+              </svg>
+              Salir
+            </button>
+          )}
         </div>
       </header>
       <main className="flex-1 min-h-0">{children}</main>
