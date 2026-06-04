@@ -46,12 +46,21 @@ export default async function handler(req, res) {
     return res.status(401).json({ error: 'Signature inválida' })
   }
 
-  console.log('[recurrente-webhook] event:', payload.event || payload.type, 'data keys:', Object.keys(payload.data || payload))
+  // Recurrente/Svix puede usar varios nombres para el campo del tipo de evento.
+  // Probamos en orden: event, type, event_type, kind, action, data.type.
+  // Si no encontramos en ninguno, loggemos el payload completo para diagnóstico.
+  const eventType = payload.event || payload.type || payload.event_type
+    || payload.kind || payload.action || payload.data?.type
+    || payload.data?.event || payload.data?.status || ''
 
-  // Manejar eventos de pago confirmado (nombre exacto a confirmar con Recurrente)
-  const eventType = payload.event || payload.type || ''
-  const isCompleted = /completed|succeeded|paid|confirmed/i.test(eventType)
-  const isFailed    = /failed|declined|rejected/i.test(eventType)
+  console.log('[recurrente-webhook] event:', eventType, 'top keys:', Object.keys(payload), 'data keys:', Object.keys(payload.data || {}))
+  // Log completo del payload truncado a 2KB para no llenar logs
+  console.log('[recurrente-webhook] payload preview:', JSON.stringify(payload).slice(0, 2000))
+
+  const isCompleted = /completed|succeeded|paid|confirmed|approved/i.test(eventType)
+                   || (typeof payload.status === 'string' && /paid|completed|succeeded/i.test(payload.status))
+                   || (typeof payload.data?.status === 'string' && /paid|completed|succeeded/i.test(payload.data.status))
+  const isFailed    = /failed|declined|rejected|cancelled|canceled/i.test(eventType)
 
   if (isCompleted) {
     // Identificar el pedido por metadata u order_id
