@@ -13,12 +13,12 @@
   <meta property="og:type" content="website">
   <meta property="og:locale" content="es_GT">
 
-  <!-- Fonts -->
+  <!-- Fonts: Cabinet Grotesk (display) + Switzer (body) + JetBrains Mono -->
+  <link rel="preconnect" href="https://api.fontshare.com" crossorigin>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT@9..144,400,30;9..144,500,30;9..144,600,30;9..144,700,30;9..144,800,30&display=swap" rel="stylesheet">
-  <link href="https://cdn.jsdelivr.net/npm/@fontsource-variable/geist@5.1.0/index.css" rel="stylesheet">
-  <link href="https://cdn.jsdelivr.net/npm/@fontsource-variable/geist-mono@5.1.0/index.css" rel="stylesheet">
+  <link href="https://api.fontshare.com/v2/css?f[]=cabinet-grotesk@400,500,600,700,800,900&f[]=switzer@300,400,500,600,700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 
   <style>
     /* ════════════════════════════════════════════════════════════
@@ -43,9 +43,9 @@
       --success: #38754D;
       --warning: #C8851B;
 
-      --font-display: 'Fraunces', Georgia, serif;
-      --font-body: 'Geist Variable', system-ui, sans-serif;
-      --font-mono: 'Geist Mono Variable', ui-monospace, Menlo, monospace;
+      --font-display: 'Cabinet Grotesk', 'Helvetica Neue', system-ui, sans-serif;
+      --font-body: 'Switzer', system-ui, -apple-system, sans-serif;
+      --font-mono: 'JetBrains Mono', ui-monospace, Menlo, monospace;
 
       --ease-quick: cubic-bezier(0.32, 0.72, 0, 1);
       --ease-smooth: cubic-bezier(0.65, 0, 0.35, 1);
@@ -57,13 +57,13 @@
     }
 
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    html { scroll-behavior: smooth; font-feature-settings: 'ss01', 'cv11'; }
+    html { scroll-behavior: smooth; }
     body {
       font-family: var(--font-body);
       background: var(--cream);
       color: var(--espresso);
       line-height: 1.5;
-      font-feature-settings: 'kern', 'ss01';
+      font-feature-settings: 'kern' 1, 'ss01' 1;
       -webkit-font-smoothing: antialiased;
       text-rendering: optimizeLegibility;
     }
@@ -179,13 +179,11 @@
       letter-spacing: -0.035em;
       color: var(--espresso);
       margin-bottom: 36px;
-      font-feature-settings: 'ss01', 'cv11';
     }
     .hero h1 em {
       font-style: italic;
       font-weight: 500;
       color: var(--primary);
-      font-feature-settings: 'ss01', 'ss06', 'cv11';
     }
     .hero h1 .quiet {
       color: var(--ink-soft);
@@ -1139,8 +1137,9 @@
         <div class="eyebrow">Lo que probablemente ya te pasó</div>
         <h2>El POS que tenés no fue hecho para acá.</h2>
         <p>
-          Loyverse no factura en Guatemala. Square no entiende FEL.
-          Y el cuadre de caja sigue siendo en Excel a las 11 de la noche.
+          Te lo vendieron afuera. No factura electrónica en Guatemala.
+          No entiende los métodos de pago que usás. Y el cuadre de caja sigue siendo en Excel
+          a las 11 de la noche.
         </p>
       </div>
       <div class="pain-stripes">
@@ -1166,9 +1165,9 @@
           <span class="num">03</span>
           <h3>Cambiaste de POS dos veces y ninguno te resolvió.</h3>
           <p>
-            Pasaste de Loyverse a Square, después a otro genérico. Cada migración fue un calvario —
-            <strong>200 productos cargados a mano, fotos perdidas, recetas reescritas</strong>. Y al
-            final, los problemas siguen.
+            Cada migración fue un calvario —
+            <strong>200 productos cargados a mano, fotos perdidas, recetas reescritas</strong>.
+            Y al final, los problemas que tenías al principio siguen ahí.
           </p>
         </div>
       </div>
@@ -1299,13 +1298,13 @@
             </svg>
           </div>
           <div>
-            <h3>Migramos tu catálogo de Loyverse en 1 hora.</h3>
+            <h3>Migramos tu catálogo en una tarde.</h3>
             <p>
               Te conectás, importás items, recibís el archivo limpio en 60 minutos.
-              Sin retipear 200 productos a mano. Sin perder fotos.
+              Sin retipear 200 productos a mano. Sin perder fotos. Sin perder recetas.
             </p>
           </div>
-          <div class="tile-detail">IMPORTADOR LOYVERSE · EXCEL · OAUTH</div>
+          <div class="tile-detail">IMPORT API · EXCEL · CSV</div>
         </div>
 
         <!-- Soporte -->
@@ -1345,8 +1344,8 @@
           <div class="eyebrow">Caso real · Julia Bakery</div>
           <h2>Tres turnos, cero diferencia, Q8,227 en un día.</h2>
           <p>
-            Julia Bakery abrió con Conduit hace 3 semanas. Migró 252 productos desde Loyverse en una
-            tarde. Hoy facturó 100 ventas FEL sin una sola intervención manual. El cuadre del turno
+            Julia Bakery abrió con Conduit hace 3 semanas. Migró 252 productos en una tarde.
+            Hoy facturó 100 ventas FEL sin una sola intervención manual. El cuadre del turno
             cerró en exacto.
           </p>
           <div class="story-stats">
@@ -1469,7 +1468,7 @@
           <li>PWA pickup whitelabel con tu marca</li>
           <li>Comandas iPad · inventario · recetas · cotizaciones</li>
           <li>Reportes + integración QuickBooks Online</li>
-          <li>Migración desde Loyverse incluida</li>
+          <li>Migración de tu catálogo actual incluida</li>
           <li>Soporte WhatsApp en GT · 7am–8pm</li>
         </ul>
         <a href="#cta" class="btn btn-primary">Empezar prueba de 14 días</a>
@@ -1505,15 +1504,15 @@
 
         <details class="faq-item">
           <summary>
-            <h3>¿Puedo migrar mi catálogo desde Loyverse?</h3>
+            <h3>¿Puedo migrar mi catálogo actual?</h3>
             <span class="toggle">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M12 5v14M5 12h14"/></svg>
             </span>
           </summary>
           <div class="answer">
-            Sí. Tenemos importador directo. Te conectás con tu cuenta Loyverse, traemos los items,
-            precios, categorías y fotos. Lo limpiamos y te lo entregamos cargado.
-            Tiempo típico: 1 hora para 200 productos, 3 horas para 500+.
+            Sí. Subís un Excel o CSV con tus items, precios, categorías y fotos. Nosotros lo
+            limpiamos y te lo entregamos cargado. Si tu sistema actual exporta por API, también
+            nos conectamos. Tiempo típico: 1 hora para 200 productos, 3 horas para 500+.
           </div>
         </details>
 
@@ -1617,7 +1616,7 @@
             <li><a href="#features">Funcionalidades</a></li>
             <li><a href="#pricing">Precio</a></li>
             <li><a href="#">Hardware compatible</a></li>
-            <li><a href="#">Migrar desde Loyverse</a></li>
+            <li><a href="#">Migrar tu catálogo</a></li>
           </ul>
         </div>
         <div class="footer-col">
