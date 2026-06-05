@@ -1,0 +1,1659 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#D7461C">
+  <title>Conduit POS — El POS para los que sí venden</title>
+  <meta name="description" content="Conduit corre tu caja, tu factura electrónica, tu inventario y tu pickup. Una sola plataforma. Hecha en Guatemala.">
+
+  <!-- Open Graph -->
+  <meta property="og:title" content="Conduit POS — El POS para los que sí venden">
+  <meta property="og:description" content="POS + FEL Guatemala + Recurrente QR + pickup PWA. Hecho aquí. Para los que están aquí.">
+  <meta property="og:type" content="website">
+  <meta property="og:locale" content="es_GT">
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT@9..144,400,30;9..144,500,30;9..144,600,30;9..144,700,30;9..144,800,30&display=swap" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/@fontsource-variable/geist@5.1.0/index.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/@fontsource-variable/geist-mono@5.1.0/index.css" rel="stylesheet">
+
+  <style>
+    /* ════════════════════════════════════════════════════════════
+       CONDUIT POS · LANDING · v0.1
+       Design tokens extraídos de brand/tokens.css
+       Aplicando: design-taste-frontend + high-end-visual-design
+       ════════════════════════════════════════════════════════════ */
+
+    :root {
+      --primary: #D7461C;
+      --primary-hover: #BB3815;
+      --primary-deep: #A3340F;
+      --primary-soft: #FCE4DB;
+      --cream: #FBF7F0;
+      --cream-deep: #F4EEE3;
+      --cream-darker: #E8E0D1;
+      --paper-line: #DDD3C1;
+      --espresso: #1F1411;
+      --ink: #3A2A22;
+      --ink-soft: #6E5C52;
+      --ink-mute: #9C8A7E;
+      --success: #38754D;
+      --warning: #C8851B;
+
+      --font-display: 'Fraunces', Georgia, serif;
+      --font-body: 'Geist Variable', system-ui, sans-serif;
+      --font-mono: 'Geist Mono Variable', ui-monospace, Menlo, monospace;
+
+      --ease-quick: cubic-bezier(0.32, 0.72, 0, 1);
+      --ease-smooth: cubic-bezier(0.65, 0, 0.35, 1);
+
+      --shadow-sm: 0 2px 8px rgba(31, 20, 17, 0.06);
+      --shadow-md: 0 8px 32px rgba(31, 20, 17, 0.08), 0 2px 6px rgba(31, 20, 17, 0.04);
+      --shadow-lg: 0 24px 64px rgba(31, 20, 17, 0.12), 0 6px 14px rgba(31, 20, 17, 0.06);
+      --shadow-brand: 0 12px 32px rgba(215, 70, 28, 0.22);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; font-feature-settings: 'ss01', 'cv11'; }
+    body {
+      font-family: var(--font-body);
+      background: var(--cream);
+      color: var(--espresso);
+      line-height: 1.5;
+      font-feature-settings: 'kern', 'ss01';
+      -webkit-font-smoothing: antialiased;
+      text-rendering: optimizeLegibility;
+    }
+    img { max-width: 100%; display: block; }
+    a { color: inherit; }
+    button { font-family: inherit; cursor: pointer; }
+
+    /* ─────────────────────────────────────────────────────────
+       LAYOUT PRIMITIVES
+       ───────────────────────────────────────────────────────── */
+    .container { max-width: 1280px; margin: 0 auto; padding: 0 32px; }
+    .container-narrow { max-width: 960px; margin: 0 auto; padding: 0 32px; }
+    .section { padding: 120px 0; }
+    .section-tight { padding: 80px 0; }
+
+    .eyebrow {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      font-weight: 500;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--primary);
+      margin-bottom: 20px;
+    }
+    .eyebrow::before {
+      content: ''; display: inline-block;
+      width: 24px; height: 1px; background: var(--primary);
+      vertical-align: middle; margin-right: 12px;
+    }
+
+    /* ════════════════════════════════════════════════════════════
+       FLOATING NAV — backdrop blur, scroll aware
+       ════════════════════════════════════════════════════════════ */
+    .nav {
+      position: fixed; top: 16px; left: 50%; transform: translateX(-50%);
+      z-index: 100; width: calc(100% - 32px); max-width: 1180px;
+      background: rgba(251, 247, 240, 0.78);
+      backdrop-filter: saturate(180%) blur(20px);
+      -webkit-backdrop-filter: saturate(180%) blur(20px);
+      border: 1px solid rgba(31, 20, 17, 0.06);
+      border-radius: 18px;
+      padding: 12px 20px 12px 24px;
+      display: flex; align-items: center; justify-content: space-between;
+      transition: box-shadow 0.3s var(--ease-quick),
+                  background 0.3s var(--ease-quick);
+    }
+    .nav.scrolled {
+      box-shadow: var(--shadow-md);
+      background: rgba(251, 247, 240, 0.92);
+    }
+    .nav-brand {
+      display: flex; align-items: center; gap: 10px;
+      font-family: var(--font-display); font-weight: 700; font-size: 19px;
+      color: var(--espresso); text-decoration: none;
+      letter-spacing: -0.01em;
+    }
+    .nav-brand svg { width: 24px; height: 24px; color: var(--primary); }
+    .nav-links {
+      display: flex; gap: 32px; align-items: center;
+    }
+    .nav-links a {
+      font-size: 14px; font-weight: 500; color: var(--ink);
+      text-decoration: none; transition: color 0.15s;
+    }
+    .nav-links a:hover { color: var(--espresso); }
+    .nav-cta {
+      background: var(--espresso); color: var(--cream) !important;
+      padding: 9px 18px; border-radius: 10px; font-weight: 600 !important;
+      transition: background 0.15s, transform 0.15s;
+    }
+    .nav-cta:hover { background: var(--ink); transform: translateY(-1px); }
+    .nav-hamburger { display: none; }
+
+    /* ════════════════════════════════════════════════════════════
+       HERO — asymmetric, massive display type
+       ════════════════════════════════════════════════════════════ */
+    .hero {
+      padding: 160px 0 100px;
+      background: var(--cream);
+      position: relative;
+      overflow: hidden;
+    }
+    .hero-grid {
+      display: grid;
+      grid-template-columns: 1.15fr 1fr;
+      gap: 64px;
+      align-items: center;
+    }
+    .hero-tag {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 6px 14px;
+      background: var(--primary-soft);
+      color: var(--primary-deep);
+      border-radius: 999px;
+      font-size: 12px; font-weight: 600;
+      margin-bottom: 32px;
+      font-family: var(--font-body);
+    }
+    .hero-tag .dot {
+      width: 6px; height: 6px; border-radius: 50%;
+      background: var(--primary);
+      animation: pulse 2s ease-in-out infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+    .hero h1 {
+      font-family: var(--font-display);
+      font-weight: 700;
+      font-size: clamp(56px, 8.5vw, 104px);
+      line-height: 0.92;
+      letter-spacing: -0.035em;
+      color: var(--espresso);
+      margin-bottom: 36px;
+      font-feature-settings: 'ss01', 'cv11';
+    }
+    .hero h1 em {
+      font-style: italic;
+      font-weight: 500;
+      color: var(--primary);
+      font-feature-settings: 'ss01', 'ss06', 'cv11';
+    }
+    .hero h1 .quiet {
+      color: var(--ink-soft);
+      font-weight: 400;
+      font-size: 0.45em;
+      letter-spacing: -0.015em;
+      display: block;
+      margin-bottom: 16px;
+      line-height: 1.2;
+    }
+    .hero p.lead {
+      font-size: 20px; line-height: 1.45;
+      color: var(--ink-soft);
+      max-width: 480px;
+      margin-bottom: 44px;
+    }
+    .hero-cta {
+      display: flex; gap: 20px; align-items: center;
+    }
+    .btn {
+      display: inline-flex; align-items: center; gap: 10px;
+      padding: 16px 28px; border-radius: 12px;
+      font-weight: 600; font-size: 15px;
+      text-decoration: none; border: none;
+      transition: all 0.2s var(--ease-quick);
+      font-family: var(--font-body);
+    }
+    .btn-primary {
+      background: var(--primary); color: var(--cream);
+      box-shadow: var(--shadow-brand);
+    }
+    .btn-primary:hover {
+      background: var(--primary-hover);
+      transform: translateY(-2px);
+      box-shadow: 0 18px 40px rgba(215, 70, 28, 0.32);
+    }
+    .btn-ghost {
+      color: var(--espresso);
+      border-bottom: 1.5px solid var(--paper-line);
+      padding: 4px 0 6px; border-radius: 0;
+    }
+    .btn-ghost:hover { border-color: var(--espresso); }
+    .btn-ghost::after { content: '→'; margin-left: 2px; transition: transform 0.2s; }
+    .btn-ghost:hover::after { transform: translateX(4px); }
+
+    /* HERO STAGE — POS device illustration */
+    .hero-stage {
+      position: relative;
+      aspect-ratio: 4/5;
+      max-height: 620px;
+    }
+    .hero-stage .surface {
+      position: absolute; inset: 0;
+      border-radius: 28px;
+      background:
+        radial-gradient(ellipse 80% 60% at 30% 25%, rgba(251, 247, 240, 0.18) 0%, transparent 60%),
+        linear-gradient(140deg, #D7461C 0%, #BB3815 50%, #6E2A0E 100%);
+      overflow: hidden;
+    }
+    .hero-stage .surface::after {
+      content: ''; position: absolute; inset: 0;
+      background-image:
+        radial-gradient(circle at 50% 50%, transparent 40%, rgba(31, 20, 17, 0.18) 100%);
+    }
+    /* Device frame */
+    .hero-stage .device {
+      position: absolute;
+      top: 50%; left: 50%;
+      transform: translate(-50%, -54%) rotate(-3deg);
+      width: 78%;
+      background: var(--espresso);
+      border-radius: 28px;
+      padding: 16px;
+      box-shadow:
+        0 40px 100px rgba(31, 0, 0, 0.45),
+        0 10px 24px rgba(31, 0, 0, 0.25),
+        inset 0 1px 0 rgba(255, 255, 255, 0.05);
+    }
+    .hero-stage .device-screen {
+      background: var(--cream);
+      border-radius: 14px;
+      aspect-ratio: 9/14;
+      padding: 24px 18px;
+      display: flex; flex-direction: column; gap: 14px;
+      overflow: hidden;
+    }
+    .hero-stage .device-screen .row1 {
+      display: flex; justify-content: space-between; align-items: center;
+      font-family: var(--font-mono); font-size: 9px;
+      color: var(--ink-mute);
+      letter-spacing: 0.08em;
+    }
+    .hero-stage .device-screen .row1 .chip {
+      padding: 3px 8px; background: var(--success); color: white;
+      border-radius: 999px; font-weight: 600; font-size: 8px;
+    }
+    .hero-stage .device-screen h4 {
+      font-family: var(--font-display); font-size: 18px;
+      color: var(--espresso); letter-spacing: -0.01em;
+    }
+    .hero-stage .device-screen .cart-line {
+      display: flex; justify-content: space-between;
+      padding: 8px 0;
+      border-bottom: 1px solid var(--cream-deep);
+      font-size: 11px;
+    }
+    .hero-stage .device-screen .cart-line strong { color: var(--espresso); }
+    .hero-stage .device-screen .cart-line span {
+      font-family: var(--font-mono); color: var(--ink-soft); font-size: 11px;
+    }
+    .hero-stage .device-screen .total {
+      margin-top: auto; padding-top: 12px;
+      border-top: 2px solid var(--espresso);
+      display: flex; justify-content: space-between; align-items: baseline;
+    }
+    .hero-stage .device-screen .total strong {
+      font-family: var(--font-display); font-size: 24px;
+      color: var(--espresso); font-weight: 700;
+    }
+    .hero-stage .device-screen .total span {
+      font-family: var(--font-mono); font-weight: 700; font-size: 22px;
+      color: var(--primary);
+    }
+    .hero-stage .device-screen .pay-btn {
+      background: var(--primary); color: var(--cream);
+      padding: 13px; border-radius: 10px;
+      font-weight: 700; text-align: center;
+      font-size: 13px; letter-spacing: 0.01em;
+      box-shadow: 0 4px 12px rgba(215, 70, 28, 0.4);
+    }
+    /* Floating receipt over device */
+    .hero-stage .receipt {
+      position: absolute; right: -32px; bottom: 16%;
+      width: 160px; padding: 16px 14px;
+      background: var(--cream);
+      transform: rotate(7deg);
+      box-shadow: 0 30px 60px rgba(31, 0, 0, 0.35);
+      font-family: var(--font-mono); font-size: 9px;
+      line-height: 1.5; color: var(--espresso);
+    }
+    .hero-stage .receipt .r-head {
+      text-align: center; padding-bottom: 8px;
+      border-bottom: 1px dashed var(--ink); margin-bottom: 8px;
+    }
+    .hero-stage .receipt .r-head svg {
+      width: 22px; height: 22px; color: var(--espresso); margin-bottom: 3px;
+    }
+    .hero-stage .receipt .r-head strong { font-size: 10px; }
+    .hero-stage .receipt .r-row {
+      display: flex; justify-content: space-between; padding: 1px 0;
+    }
+    .hero-stage .receipt .r-total {
+      display: flex; justify-content: space-between;
+      padding-top: 6px; margin-top: 4px;
+      border-top: 1px solid var(--espresso);
+      font-weight: 700; font-size: 10px;
+    }
+    .hero-stage .meta-label {
+      position: absolute; bottom: 24px; left: 24px;
+      color: rgba(251, 247, 240, 0.7);
+      font-family: var(--font-mono); font-size: 11px;
+      letter-spacing: 0.1em; z-index: 5;
+    }
+
+    /* Hero footer · live badge */
+    .hero-pulse {
+      margin-top: 64px;
+      display: flex; align-items: center; gap: 14px;
+      color: var(--ink-soft); font-size: 13px;
+    }
+    .hero-pulse strong { color: var(--espresso); font-weight: 600; }
+    .hero-pulse .live-dot {
+      display: inline-block; width: 8px; height: 8px; border-radius: 50%;
+      background: var(--success); margin-right: 8px;
+      box-shadow: 0 0 0 4px rgba(56, 117, 77, 0.18);
+    }
+
+    /* ════════════════════════════════════════════════════════════
+       CLIENT STRIP
+       ════════════════════════════════════════════════════════════ */
+    .clients {
+      padding: 56px 0 64px;
+      background: var(--cream);
+      border-top: 1px solid var(--paper-line);
+    }
+    .clients .container {
+      display: flex; flex-direction: column; align-items: center; gap: 32px;
+    }
+    .clients .label {
+      font-family: var(--font-mono); font-size: 11px;
+      letter-spacing: 0.18em; text-transform: uppercase;
+      color: var(--ink-mute);
+    }
+    .clients .names {
+      display: flex; gap: 64px; align-items: center; flex-wrap: wrap;
+      justify-content: center;
+      font-family: var(--font-display); font-style: italic; font-weight: 500;
+      font-size: 26px; color: var(--ink);
+      opacity: 0.75;
+    }
+    .clients .names span:last-child {
+      color: var(--primary); opacity: 1;
+      font-style: normal; font-weight: 600;
+      font-size: 18px; padding: 6px 14px;
+      border: 1.5px dashed var(--primary); border-radius: 999px;
+    }
+
+    /* ════════════════════════════════════════════════════════════
+       PAIN SECTION — alternating stripes
+       ════════════════════════════════════════════════════════════ */
+    .pain {
+      background: var(--cream-deep);
+      padding: 120px 0;
+    }
+    .pain-header {
+      max-width: 720px; margin-bottom: 88px;
+    }
+    .pain-header h2 {
+      font-family: var(--font-display);
+      font-size: clamp(36px, 5vw, 62px);
+      line-height: 1.02; letter-spacing: -0.025em;
+      color: var(--espresso); font-weight: 700;
+      margin-bottom: 20px;
+    }
+    .pain-header p {
+      font-size: 20px; line-height: 1.45; color: var(--ink-soft);
+      max-width: 580px;
+    }
+    .pain-stripes {
+      display: flex; flex-direction: column; gap: 64px;
+    }
+    .pain-stripe {
+      display: grid;
+      grid-template-columns: 80px 1fr 1.4fr;
+      gap: 40px;
+      align-items: start;
+      padding-bottom: 56px;
+      border-bottom: 1px solid var(--paper-line);
+    }
+    .pain-stripe:last-child { border-bottom: none; }
+    .pain-stripe .num {
+      font-family: var(--font-mono); font-size: 13px;
+      color: var(--ink-mute); letter-spacing: 0.1em;
+      padding-top: 8px;
+    }
+    .pain-stripe h3 {
+      font-family: var(--font-display); font-size: 32px;
+      line-height: 1.1; letter-spacing: -0.02em;
+      color: var(--espresso); font-weight: 600;
+    }
+    .pain-stripe p {
+      font-size: 17px; line-height: 1.55; color: var(--ink-soft);
+      max-width: 540px;
+    }
+    .pain-stripe p strong {
+      color: var(--espresso); font-weight: 600;
+      box-shadow: inset 0 -7px 0 rgba(215, 70, 28, 0.18);
+      padding: 0 2px;
+    }
+
+    /* ════════════════════════════════════════════════════════════
+       FEATURES BENTO — asymmetric grid
+       ════════════════════════════════════════════════════════════ */
+    .features {
+      padding: 120px 0;
+      background: var(--cream);
+    }
+    .features-header {
+      max-width: 760px; margin-bottom: 64px;
+    }
+    .features-header h2 {
+      font-family: var(--font-display); font-size: clamp(36px, 5vw, 62px);
+      line-height: 1.02; letter-spacing: -0.025em;
+      color: var(--espresso); font-weight: 700; margin-bottom: 20px;
+    }
+    .features-header p {
+      font-size: 19px; line-height: 1.45; color: var(--ink-soft);
+    }
+    .bento {
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      grid-auto-rows: minmax(200px, auto);
+      gap: 20px;
+    }
+    .bento-tile {
+      background: var(--cream-deep);
+      border-radius: 20px;
+      padding: 32px;
+      display: flex; flex-direction: column; justify-content: space-between;
+      gap: 24px;
+      border: 1px solid var(--cream-darker);
+      transition: transform 0.3s var(--ease-quick),
+                  box-shadow 0.3s var(--ease-quick);
+      overflow: hidden;
+      position: relative;
+    }
+    .bento-tile:hover {
+      transform: translateY(-4px);
+      box-shadow: var(--shadow-md);
+    }
+    .bento-tile.dark {
+      background: var(--espresso);
+      color: var(--cream);
+      border-color: var(--espresso);
+    }
+    .bento-tile.dark p { color: rgba(251, 247, 240, 0.7); }
+    .bento-tile.primary {
+      background: var(--primary);
+      color: var(--cream);
+      border-color: var(--primary);
+    }
+    .bento-tile.primary p { color: rgba(251, 247, 240, 0.85); }
+
+    .bento-tile .tile-icon {
+      width: 44px; height: 44px;
+      border-radius: 12px;
+      background: var(--cream);
+      display: flex; align-items: center; justify-content: center;
+      color: var(--primary);
+    }
+    .bento-tile.dark .tile-icon, .bento-tile.primary .tile-icon {
+      background: rgba(255,255,255,0.1); color: var(--cream);
+    }
+    .bento-tile .tile-icon svg {
+      width: 22px; height: 22px;
+      stroke-width: 1.5;
+      fill: none; stroke: currentColor;
+    }
+    .bento-tile h3 {
+      font-family: var(--font-display); font-size: 24px;
+      line-height: 1.1; letter-spacing: -0.015em; font-weight: 600;
+      margin-bottom: 8px;
+    }
+    .bento-tile p {
+      font-size: 14px; line-height: 1.55; color: var(--ink-soft);
+    }
+    .bento-tile .tile-detail {
+      font-family: var(--font-mono); font-size: 11px;
+      letter-spacing: 0.05em;
+      color: var(--ink-mute);
+      padding-top: 16px;
+      border-top: 1px solid var(--cream-darker);
+    }
+    .bento-tile.dark .tile-detail, .bento-tile.primary .tile-detail {
+      border-color: rgba(255,255,255,0.15);
+      color: rgba(251, 247, 240, 0.6);
+    }
+
+    /* Bento layout assignments */
+    .bento-tile.span-4 { grid-column: span 4; }
+    .bento-tile.span-3 { grid-column: span 3; }
+    .bento-tile.span-2 { grid-column: span 2; }
+    .bento-tile.tall  { grid-row: span 2; }
+
+    /* Featured tile — POS preview */
+    .bento-tile.pos-preview {
+      background: var(--espresso);
+      color: var(--cream);
+      padding: 32px 32px 0;
+      border-color: var(--espresso);
+      grid-column: span 4; grid-row: span 2;
+      gap: 24px;
+    }
+    .bento-tile.pos-preview .text { display: flex; flex-direction: column; gap: 16px; }
+    .bento-tile.pos-preview h3 {
+      font-size: 36px;
+      line-height: 1.05;
+    }
+    .bento-tile.pos-preview p { color: rgba(251, 247, 240, 0.75); font-size: 15px; }
+    .bento-tile.pos-preview .pos-mock {
+      flex: 1; margin: 0 -32px -1px;
+      border-radius: 0;
+      background: var(--cream);
+      padding: 16px;
+      display: grid; grid-template-columns: 1fr 1fr; gap: 12px;
+      color: var(--espresso);
+    }
+    .bento-tile.pos-preview .pos-mock .pos-card {
+      background: var(--cream-deep); border-radius: 10px;
+      padding: 10px 12px;
+      display: flex; flex-direction: column; gap: 6px;
+    }
+    .bento-tile.pos-preview .pos-mock .pos-card .ico {
+      font-size: 24px;
+    }
+    .bento-tile.pos-preview .pos-mock .pos-card .name {
+      font-size: 11px; font-weight: 600;
+    }
+    .bento-tile.pos-preview .pos-mock .pos-card .pp {
+      font-family: var(--font-mono); font-size: 12px; color: var(--primary); font-weight: 600;
+    }
+
+    /* ════════════════════════════════════════════════════════════
+       CUSTOMER STORY — Julia Bakery
+       ════════════════════════════════════════════════════════════ */
+    .story {
+      padding: 120px 0;
+      background: var(--espresso);
+      color: var(--cream);
+    }
+    .story-grid {
+      display: grid;
+      grid-template-columns: 1fr 1.2fr;
+      gap: 80px;
+      align-items: center;
+    }
+    .story-visual {
+      aspect-ratio: 4/5;
+      border-radius: 24px;
+      overflow: hidden;
+      position: relative;
+      background:
+        radial-gradient(ellipse 70% 60% at 60% 35%, rgba(215, 70, 28, 0.3) 0%, transparent 55%),
+        linear-gradient(140deg, #3A2A22 0%, #1F1411 50%, #0E0807 100%);
+    }
+    .story-visual::after {
+      content: ''; position: absolute; inset: 0;
+      background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='100' height='100'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='1.5' /></filter><rect width='100' height='100' filter='url(%23n)' opacity='0.08'/></svg>");
+      mix-blend-mode: overlay;
+    }
+    .story-visual .quote {
+      position: absolute; bottom: 32px; left: 32px; right: 32px;
+      font-family: var(--font-display);
+      font-size: 24px; line-height: 1.2;
+      color: var(--cream);
+      font-weight: 500;
+      font-style: italic;
+      letter-spacing: -0.01em;
+    }
+    .story-visual .quote .quoter {
+      display: block; margin-top: 16px;
+      font-family: var(--font-mono);
+      font-size: 11px; letter-spacing: 0.1em;
+      color: rgba(251, 247, 240, 0.5); font-style: normal;
+    }
+
+    .story-content .eyebrow { color: var(--primary); }
+    .story-content h2 {
+      font-family: var(--font-display); font-size: clamp(36px, 5vw, 58px);
+      line-height: 1.02; letter-spacing: -0.025em;
+      color: var(--cream); font-weight: 700;
+      margin-bottom: 24px;
+    }
+    .story-content > p {
+      font-size: 17px; line-height: 1.55;
+      color: rgba(251, 247, 240, 0.7);
+      margin-bottom: 40px;
+      max-width: 520px;
+    }
+    .story-stats {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 32px;
+      margin-bottom: 40px;
+    }
+    .story-stat {
+      padding-top: 24px;
+      border-top: 1px solid rgba(251, 247, 240, 0.15);
+    }
+    .story-stat .num {
+      font-family: var(--font-display);
+      font-size: 56px; font-weight: 700;
+      line-height: 1; letter-spacing: -0.03em;
+      color: var(--cream);
+      margin-bottom: 8px;
+      font-feature-settings: 'tnum', 'ss01';
+    }
+    .story-stat .num em {
+      color: var(--primary); font-style: normal;
+    }
+    .story-stat .label {
+      font-size: 13px; color: rgba(251, 247, 240, 0.55);
+      line-height: 1.4;
+    }
+    .story-content .read-more {
+      display: inline-flex; align-items: center; gap: 8px;
+      color: var(--primary); text-decoration: none;
+      font-weight: 600; font-size: 14px;
+      padding-bottom: 4px;
+      border-bottom: 1.5px solid var(--primary);
+      transition: gap 0.2s;
+    }
+    .story-content .read-more:hover { gap: 14px; }
+
+    /* ════════════════════════════════════════════════════════════
+       HARDWARE
+       ════════════════════════════════════════════════════════════ */
+    .hardware {
+      padding: 120px 0;
+      background: var(--cream);
+    }
+    .hardware-grid {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 80px;
+      align-items: center;
+    }
+    .hardware-content h2 {
+      font-family: var(--font-display); font-size: clamp(36px, 5vw, 58px);
+      line-height: 1.02; letter-spacing: -0.025em;
+      color: var(--espresso); font-weight: 700;
+      margin-bottom: 24px;
+    }
+    .hardware-content > p {
+      font-size: 18px; line-height: 1.5; color: var(--ink-soft);
+      margin-bottom: 40px;
+    }
+    .hardware-list { display: flex; flex-direction: column; gap: 16px; }
+    .hardware-item {
+      display: flex; align-items: center; gap: 16px;
+      padding: 16px 20px;
+      background: var(--cream-deep);
+      border-radius: 14px;
+      border: 1px solid var(--cream-darker);
+    }
+    .hardware-item .ico {
+      width: 40px; height: 40px; border-radius: 10px;
+      background: var(--primary-soft);
+      display: flex; align-items: center; justify-content: center;
+      color: var(--primary); font-family: var(--font-display);
+      font-weight: 700; font-size: 13px;
+      flex-shrink: 0;
+    }
+    .hardware-item .info { flex: 1; }
+    .hardware-item .info .name {
+      font-weight: 600; color: var(--espresso); font-size: 15px;
+      margin-bottom: 2px;
+    }
+    .hardware-item .info .desc {
+      font-size: 13px; color: var(--ink-soft);
+    }
+    .hardware-item .badge {
+      font-family: var(--font-mono); font-size: 10px;
+      padding: 4px 10px; border-radius: 999px;
+      background: var(--success); color: var(--cream);
+      font-weight: 600; letter-spacing: 0.05em;
+    }
+    .hardware-visual {
+      aspect-ratio: 4/5;
+      border-radius: 24px;
+      background:
+        linear-gradient(150deg, var(--cream-deep) 0%, var(--cream-darker) 100%);
+      position: relative; overflow: hidden;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .hardware-visual::before {
+      content: ''; position: absolute; inset: 0;
+      background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='40' height='40'><circle cx='1' cy='1' r='1' fill='%23DDD3C1'/></svg>");
+      background-size: 32px 32px;
+    }
+    .hw-stack {
+      position: relative; width: 60%; aspect-ratio: 3/4;
+    }
+    .hw-device {
+      position: absolute;
+      background: var(--espresso);
+      border-radius: 18px; padding: 8px;
+      box-shadow: 0 20px 40px rgba(31, 0, 0, 0.25);
+    }
+    .hw-device .screen {
+      background: var(--cream);
+      border-radius: 8px; aspect-ratio: 9/14;
+      padding: 12px 8px;
+      font-family: var(--font-display); font-weight: 700; font-size: 9px;
+      color: var(--espresso);
+      display: flex; flex-direction: column; gap: 4px;
+    }
+    .hw-device .screen .pill {
+      background: var(--primary); color: var(--cream);
+      padding: 6px; border-radius: 6px; text-align: center;
+      margin-top: auto;
+      font-family: var(--font-body); font-size: 9px;
+    }
+    .hw-device.k2 { top: 0; right: 0; width: 60%; transform: rotate(6deg); z-index: 2; }
+    .hw-device.ipad {
+      bottom: 0; left: 0; width: 75%;
+      transform: rotate(-4deg);
+      padding: 12px;
+    }
+    .hw-device.ipad .screen { aspect-ratio: 4/3; }
+
+    /* ════════════════════════════════════════════════════════════
+       PRICING
+       ════════════════════════════════════════════════════════════ */
+    .pricing {
+      padding: 120px 0 100px;
+      background: var(--cream-deep);
+    }
+    .pricing-head {
+      text-align: center; max-width: 640px; margin: 0 auto 64px;
+    }
+    .pricing-head h2 {
+      font-family: var(--font-display); font-size: clamp(36px, 5vw, 62px);
+      line-height: 1.02; letter-spacing: -0.025em;
+      color: var(--espresso); font-weight: 700; margin-bottom: 16px;
+    }
+    .pricing-head p {
+      font-size: 18px; color: var(--ink-soft);
+    }
+    .pricing-card {
+      max-width: 520px; margin: 0 auto;
+      background: var(--cream);
+      border-radius: 28px;
+      padding: 48px 48px 40px;
+      box-shadow: var(--shadow-md);
+      position: relative;
+      border: 1px solid var(--paper-line);
+    }
+    .pricing-card .plan-label {
+      font-family: var(--font-mono); font-size: 11px;
+      letter-spacing: 0.18em; text-transform: uppercase;
+      color: var(--primary); margin-bottom: 16px;
+    }
+    .pricing-card .price {
+      display: flex; align-items: baseline; gap: 6px;
+      margin-bottom: 8px;
+    }
+    .pricing-card .price .amount {
+      font-family: var(--font-display); font-size: 84px;
+      font-weight: 700; line-height: 1;
+      letter-spacing: -0.04em;
+      color: var(--espresso);
+      font-feature-settings: 'tnum';
+    }
+    .pricing-card .price .currency {
+      font-family: var(--font-mono); font-size: 24px;
+      color: var(--ink-soft); font-weight: 500;
+    }
+    .pricing-card .period { color: var(--ink-soft); font-size: 15px; margin-bottom: 32px; }
+    .pricing-card .features-list {
+      display: flex; flex-direction: column; gap: 14px;
+      margin-bottom: 36px;
+      list-style: none;
+    }
+    .pricing-card .features-list li {
+      display: flex; align-items: start; gap: 12px;
+      font-size: 15px; color: var(--ink);
+      line-height: 1.45;
+    }
+    .pricing-card .features-list li::before {
+      content: ''; width: 18px; height: 18px;
+      border-radius: 50%; flex-shrink: 0; margin-top: 2px;
+      background: var(--primary-soft);
+      background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='%23A3340F'><path d='M16.704 5.296a1 1 0 010 1.408l-7 7a1 1 0 01-1.408 0l-3-3a1 1 0 011.408-1.408L9 11.59l6.296-6.294a1 1 0 011.408 0z'/></svg>");
+      background-position: center; background-size: 14px; background-repeat: no-repeat;
+    }
+    .pricing-card .btn { width: 100%; justify-content: center; padding: 18px; font-size: 16px; }
+    .pricing-card .small {
+      text-align: center; margin-top: 16px;
+      font-size: 13px; color: var(--ink-mute);
+    }
+
+    /* ════════════════════════════════════════════════════════════
+       FAQ
+       ════════════════════════════════════════════════════════════ */
+    .faq {
+      padding: 120px 0;
+      background: var(--cream);
+    }
+    .faq-head {
+      max-width: 720px; margin-bottom: 56px;
+    }
+    .faq-head h2 {
+      font-family: var(--font-display); font-size: clamp(36px, 5vw, 58px);
+      line-height: 1.02; letter-spacing: -0.025em;
+      color: var(--espresso); font-weight: 700; margin-bottom: 16px;
+    }
+    .faq-head p {
+      font-size: 18px; color: var(--ink-soft);
+    }
+    .faq-list {
+      max-width: 800px;
+      border-top: 1px solid var(--paper-line);
+    }
+    .faq-item {
+      border-bottom: 1px solid var(--paper-line);
+    }
+    .faq-item summary {
+      list-style: none;
+      cursor: pointer;
+      padding: 32px 0;
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 32px;
+      transition: color 0.15s;
+    }
+    .faq-item summary::-webkit-details-marker { display: none; }
+    .faq-item summary h3 {
+      font-family: var(--font-display); font-size: 22px;
+      color: var(--espresso); font-weight: 600;
+      letter-spacing: -0.015em;
+      line-height: 1.25;
+    }
+    .faq-item summary .toggle {
+      flex-shrink: 0;
+      width: 32px; height: 32px;
+      border-radius: 50%;
+      background: var(--cream-deep);
+      display: flex; align-items: center; justify-content: center;
+      color: var(--espresso);
+      transition: transform 0.25s var(--ease-quick), background 0.15s;
+    }
+    .faq-item[open] summary .toggle {
+      transform: rotate(45deg);
+      background: var(--primary); color: var(--cream);
+    }
+    .faq-item .answer {
+      padding: 0 32px 32px 0;
+      color: var(--ink-soft);
+      font-size: 16px; line-height: 1.55;
+      max-width: 680px;
+    }
+
+    /* ════════════════════════════════════════════════════════════
+       FINAL CTA
+       ════════════════════════════════════════════════════════════ */
+    .cta-final {
+      padding: 96px 32px;
+      margin: 0 32px;
+      background: var(--primary);
+      border-radius: 32px;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+    .cta-final::before {
+      content: ''; position: absolute; inset: 0;
+      background:
+        radial-gradient(ellipse 60% 50% at 20% 30%, rgba(251, 247, 240, 0.18) 0%, transparent 60%),
+        radial-gradient(ellipse 50% 40% at 80% 70%, rgba(31, 0, 0, 0.2) 0%, transparent 60%);
+    }
+    .cta-final::after {
+      content: ''; position: absolute; inset: 0;
+      background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='100' height='100'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='2' /></filter><rect width='100' height='100' filter='url(%23n)' opacity='0.06'/></svg>");
+    }
+    .cta-final-inner { position: relative; z-index: 1; }
+    .cta-final h2 {
+      font-family: var(--font-display);
+      font-size: clamp(40px, 6vw, 76px);
+      line-height: 0.98; letter-spacing: -0.035em;
+      color: var(--cream); font-weight: 700;
+      max-width: 760px; margin: 0 auto 32px;
+    }
+    .cta-final h2 em { font-style: italic; font-weight: 500; }
+    .cta-final p {
+      font-size: 19px; color: rgba(251, 247, 240, 0.85);
+      max-width: 540px; margin: 0 auto 40px;
+    }
+    .cta-final .cta-row {
+      display: flex; gap: 20px; justify-content: center; align-items: center;
+      flex-wrap: wrap;
+    }
+    .cta-final .btn-primary {
+      background: var(--cream); color: var(--primary-deep);
+      box-shadow: 0 10px 30px rgba(31, 0, 0, 0.25);
+    }
+    .cta-final .btn-primary:hover {
+      background: white;
+      transform: translateY(-2px);
+    }
+    .cta-final .btn-ghost {
+      color: var(--cream);
+      border-color: rgba(251, 247, 240, 0.3);
+    }
+    .cta-final .btn-ghost:hover { border-color: var(--cream); }
+
+    /* ════════════════════════════════════════════════════════════
+       FOOTER
+       ════════════════════════════════════════════════════════════ */
+    footer {
+      padding: 80px 0 40px;
+      background: var(--cream);
+      color: var(--ink-soft);
+      font-size: 14px;
+    }
+    .footer-grid {
+      display: grid;
+      grid-template-columns: 2fr 1fr 1fr 1fr;
+      gap: 64px;
+      padding-bottom: 64px;
+      border-bottom: 1px solid var(--paper-line);
+      margin-bottom: 32px;
+    }
+    .footer-brand .nav-brand {
+      font-size: 24px; margin-bottom: 20px; display: inline-flex;
+    }
+    .footer-brand .nav-brand svg { width: 28px; height: 28px; }
+    .footer-brand p {
+      max-width: 320px; font-size: 14px; line-height: 1.5;
+      color: var(--ink-soft);
+    }
+    .footer-col h4 {
+      font-family: var(--font-mono); font-size: 11px;
+      letter-spacing: 0.18em; text-transform: uppercase;
+      color: var(--espresso); margin-bottom: 20px;
+    }
+    .footer-col ul { list-style: none; display: flex; flex-direction: column; gap: 12px; }
+    .footer-col a {
+      color: var(--ink-soft); text-decoration: none;
+      transition: color 0.15s;
+    }
+    .footer-col a:hover { color: var(--espresso); }
+    .footer-base {
+      display: flex; justify-content: space-between; align-items: center;
+      font-size: 12px; color: var(--ink-mute);
+    }
+    .footer-base .badge {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 4px 10px; border-radius: 999px;
+      background: var(--cream-deep); border: 1px solid var(--paper-line);
+      font-family: var(--font-mono);
+    }
+    .footer-base .badge .dot {
+      width: 6px; height: 6px; border-radius: 50%;
+      background: var(--success);
+    }
+
+    /* ════════════════════════════════════════════════════════════
+       RESPONSIVE
+       ════════════════════════════════════════════════════════════ */
+    @media (max-width: 980px) {
+      .container, .container-narrow { padding: 0 20px; }
+      .section { padding: 80px 0; }
+      .nav-links { display: none; }
+      .nav-hamburger { display: flex; }
+      .hero { padding: 120px 0 80px; }
+      .hero-grid { grid-template-columns: 1fr; gap: 48px; }
+      .hero-stage { max-height: 500px; }
+      .hero p.lead { font-size: 18px; }
+      .clients .names { gap: 24px; font-size: 18px; }
+      .pain-stripe { grid-template-columns: 1fr; gap: 16px; }
+      .pain-stripe .num { padding-top: 0; }
+      .bento { grid-template-columns: repeat(2, 1fr); }
+      .bento-tile.span-4, .bento-tile.span-3, .bento-tile.span-2,
+      .bento-tile.pos-preview { grid-column: span 2; }
+      .bento-tile.tall { grid-row: span 1; }
+      .story-grid, .hardware-grid { grid-template-columns: 1fr; gap: 48px; }
+      .story-stats .story-stat .num { font-size: 44px; }
+      .pricing-card { padding: 36px 28px; }
+      .pricing-card .price .amount { font-size: 64px; }
+      .footer-grid { grid-template-columns: 1fr 1fr; gap: 40px; }
+      .footer-brand { grid-column: span 2; }
+      .cta-final { margin: 0 16px; padding: 72px 24px; border-radius: 24px; }
+    }
+
+  </style>
+</head>
+<body>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       FLOATING NAV
+       ═══════════════════════════════════════════════════════════ -->
+  <header class="nav" id="nav">
+    <a href="#" class="nav-brand">
+      <svg viewBox="0 0 120 120" fill="currentColor" aria-hidden="true">
+        <path d="M 95.355 25.355 A 50 50 0 1 0 95.355 94.645 L 84.041 83.331 A 34 34 0 1 1 84.041 36.669 Z"/>
+        <rect x="40" y="52" width="80" height="16" rx="2"/>
+      </svg>
+      Conduit
+    </a>
+    <nav class="nav-links">
+      <a href="#features">Producto</a>
+      <a href="#story">Clientes</a>
+      <a href="#pricing">Precio</a>
+      <a href="#faq">Preguntas</a>
+      <a href="#cta" class="nav-cta">Ver demo</a>
+    </nav>
+  </header>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       HERO
+       ═══════════════════════════════════════════════════════════ -->
+  <section class="hero">
+    <div class="container">
+      <div class="hero-grid">
+        <div>
+          <div class="hero-tag">
+            <span class="dot"></span>
+            <span>Operando con Julia Bakery · 100 facturas FEL hoy</span>
+          </div>
+          <h1>
+            <span class="quiet">El POS</span>
+            para los que<br/>
+            <em>sí venden.</em>
+          </h1>
+          <p class="lead">
+            Conduit corre tu caja, tu factura electrónica, tu inventario y tu pickup.
+            Una sola plataforma. Hecha en Guatemala.
+          </p>
+          <div class="hero-cta">
+            <a href="#cta" class="btn btn-primary">Ver demo en vivo</a>
+            <a href="#story" class="btn btn-ghost">Cómo lo usa Julia Bakery</a>
+          </div>
+          <div class="hero-pulse">
+            <span class="live-dot"></span>
+            <span><strong>Q8,227</strong> facturados hoy en clientes activos · sin caídas en 21 días</span>
+          </div>
+        </div>
+
+        <!-- POS device illustration -->
+        <div class="hero-stage">
+          <div class="surface">
+            <div class="device">
+              <div class="device-screen">
+                <div class="row1">
+                  <span>POS · Caja 1</span>
+                  <span class="chip">EN TURNO</span>
+                </div>
+                <h4>Venta actual</h4>
+                <div class="cart-line"><strong>Cinnamon roll</strong><span>Q 47.00</span></div>
+                <div class="cart-line"><strong>Cappuccino</strong><span>Q 22.00</span></div>
+                <div class="cart-line"><strong>Croissant ×2</strong><span>Q 36.00</span></div>
+                <div class="total"><strong>Total</strong><span>Q 105.00</span></div>
+                <div class="pay-btn">Cobrar Q 105.00</div>
+              </div>
+            </div>
+            <div class="receipt">
+              <div class="r-head">
+                <svg viewBox="0 0 120 120" fill="currentColor" aria-hidden="true">
+                  <path d="M 95.355 25.355 A 50 50 0 1 0 95.355 94.645 L 84.041 83.331 A 34 34 0 1 1 84.041 36.669 Z"/>
+                  <rect x="40" y="52" width="80" height="16" rx="2"/>
+                </svg>
+                <strong>JULIA BAKERY</strong>
+              </div>
+              <div class="r-row"><span>Cinnamon roll</span><span>Q47</span></div>
+              <div class="r-row"><span>Cappuccino</span><span>Q22</span></div>
+              <div class="r-row"><span>Croissant ×2</span><span>Q36</span></div>
+              <div class="r-total"><span>TOTAL</span><span>Q105</span></div>
+            </div>
+            <div class="meta-label">CAJERO · DALIA · 18:31 · QR APROBADO</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       CLIENTS
+       ═══════════════════════════════════════════════════════════ -->
+  <section class="clients">
+    <div class="container">
+      <span class="label">Negocios que ya operan con Conduit</span>
+      <div class="names">
+        <span>Julia Bakery</span>
+        <span>+ tu negocio</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       PAIN
+       ═══════════════════════════════════════════════════════════ -->
+  <section class="pain">
+    <div class="container">
+      <div class="pain-header">
+        <div class="eyebrow">Lo que probablemente ya te pasó</div>
+        <h2>El POS que tenés no fue hecho para acá.</h2>
+        <p>
+          Loyverse no factura en Guatemala. Square no entiende FEL.
+          Y el cuadre de caja sigue siendo en Excel a las 11 de la noche.
+        </p>
+      </div>
+      <div class="pain-stripes">
+        <div class="pain-stripe">
+          <span class="num">01</span>
+          <h3>Pagás Q900 al mes por un plugin que apenas factura.</h3>
+          <p>
+            Tu POS no emite FEL. Le pagás <strong>a un tercero por la integración con Infile</strong>.
+            Cuando algo falla, el cajero te llama a vos. Y vos no podés hacer nada porque el plugin
+            no es tuyo.
+          </p>
+        </div>
+        <div class="pain-stripe">
+          <span class="num">02</span>
+          <h3>El cuadre de caja sigue siendo en Excel a las 11pm.</h3>
+          <p>
+            Sumás efectivo, restás tarjeta, comparás con el reporte del POS, encontrás Q47 de diferencia
+            y <strong>nadie sabe en cuál venta se fueron</strong>. Repetís el cuadre tres veces. Te
+            acostás cansado, no convencido.
+          </p>
+        </div>
+        <div class="pain-stripe">
+          <span class="num">03</span>
+          <h3>Cambiaste de POS dos veces y ninguno te resolvió.</h3>
+          <p>
+            Pasaste de Loyverse a Square, después a otro genérico. Cada migración fue un calvario —
+            <strong>200 productos cargados a mano, fotos perdidas, recetas reescritas</strong>. Y al
+            final, los problemas siguen.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       FEATURES BENTO
+       ═══════════════════════════════════════════════════════════ -->
+  <section class="features" id="features">
+    <div class="container">
+      <div class="features-header">
+        <div class="eyebrow">Lo que hace Conduit</div>
+        <h2>Una plataforma. Todo el negocio.</h2>
+        <p>
+          POS, FEL Infile, cobro QR, comandas, inventario, pickup, reportes, contabilidad.
+          Vienen incluidos. No son módulos extra.
+        </p>
+      </div>
+
+      <div class="bento">
+        <!-- FEL Infile -->
+        <div class="bento-tile span-3">
+          <div class="tile-icon">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M9 12h6m-6 4h6M7 21V5a2 2 0 0 1 2-2h8.5l3.5 3.5V21a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2z"/>
+            </svg>
+          </div>
+          <div>
+            <h3>FEL Infile nativa.<br/>No es plugin.</h3>
+            <p>
+              Emite, certifica y guarda tu factura electrónica. Si la SAT te audita, está todo.
+              Si la SAT cambia algo, lo actualizamos nosotros.
+            </p>
+          </div>
+          <div class="tile-detail">CERT. INFILE · UUID SAT · QR público</div>
+        </div>
+
+        <!-- Recurrente QR -->
+        <div class="bento-tile span-3 dark">
+          <div class="tile-icon">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <rect x="3" y="3" width="7" height="7" rx="1"/>
+              <rect x="14" y="3" width="7" height="7" rx="1"/>
+              <rect x="3" y="14" width="7" height="7" rx="1"/>
+              <path d="M14 14h3M20 14v3M14 17v4M17 20h4"/>
+            </svg>
+          </div>
+          <div>
+            <h3>Cobrá con QR Recurrente en 8 segundos.</h3>
+            <p>
+              Cliente escanea, paga, listo. La factura se imprime sola.
+              Sin lector externo. Sin esperas. Compatible con todos los bancos GT.
+            </p>
+          </div>
+          <div class="tile-detail">RECURRENTE LIVE · WEBHOOK SVIX · 99.7% UPTIME</div>
+        </div>
+
+        <!-- POS preview -->
+        <div class="bento-tile pos-preview">
+          <div class="text">
+            <div class="tile-icon">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <rect x="3" y="4" width="18" height="14" rx="2"/>
+                <path d="M3 10h18M8 21h8"/>
+              </svg>
+            </div>
+            <h3>POS pensado para cajeros, no para diseñadores.</h3>
+            <p>
+              Botones grandes. Cero pasos extras. Funciona en Sunmi K2, iPad o computadora normal.
+              Hit-target garantizado a dedo grande.
+            </p>
+          </div>
+          <div class="pos-mock">
+            <div class="pos-card"><span class="ico">☕</span><span class="name">Cappuccino</span><span class="pp">Q 22</span></div>
+            <div class="pos-card"><span class="ico">🥐</span><span class="name">Croissant</span><span class="pp">Q 18</span></div>
+            <div class="pos-card"><span class="ico">🍰</span><span class="name">Cheesecake</span><span class="pp">Q 55</span></div>
+            <div class="pos-card"><span class="ico">🥯</span><span class="name">Brioche</span><span class="pp">Q 25</span></div>
+          </div>
+        </div>
+
+        <!-- Cierre de turno -->
+        <div class="bento-tile span-2">
+          <div class="tile-icon">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <circle cx="12" cy="12" r="9"/>
+              <path d="M12 7v5l3 3"/>
+            </svg>
+          </div>
+          <div>
+            <h3>Cuadre que cuadra.</h3>
+            <p>El cajero cierra. Conduit calcula efectivo esperado, te muestra la diferencia exacta.</p>
+          </div>
+        </div>
+
+        <!-- Inventario -->
+        <div class="bento-tile span-2">
+          <div class="tile-icon">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M21 8v13H3V8M1 3h22v5H1zM10 12h4"/>
+            </svg>
+          </div>
+          <div>
+            <h3>Inventario que se descuenta solo.</h3>
+            <p>Cada venta resta del stock. Avisos cuando algo baja del mínimo.</p>
+          </div>
+        </div>
+
+        <!-- PWA Pickup -->
+        <div class="bento-tile span-2 primary">
+          <div class="tile-icon">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <rect x="5" y="2" width="14" height="20" rx="3"/>
+              <path d="M11 18h2"/>
+            </svg>
+          </div>
+          <div>
+            <h3>App de pickup con tu marca.</h3>
+            <p>El cliente pide desde el celular. Pagás QR. Pasás a recoger. Sin apps de terceros.</p>
+          </div>
+        </div>
+
+        <!-- Migración -->
+        <div class="bento-tile span-3">
+          <div class="tile-icon">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M16 3h5v5M4 20l16-16M21 16v5h-5M4 4l16 16"/>
+            </svg>
+          </div>
+          <div>
+            <h3>Migramos tu catálogo de Loyverse en 1 hora.</h3>
+            <p>
+              Te conectás, importás items, recibís el archivo limpio en 60 minutos.
+              Sin retipear 200 productos a mano. Sin perder fotos.
+            </p>
+          </div>
+          <div class="tile-detail">IMPORTADOR LOYVERSE · EXCEL · OAUTH</div>
+        </div>
+
+        <!-- Soporte -->
+        <div class="bento-tile span-3">
+          <div class="tile-icon">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/>
+            </svg>
+          </div>
+          <div>
+            <h3>Soporte humano. En Guatemala.</h3>
+            <p>
+              Cuando algo falla, contestamos por WhatsApp. No tickets en inglés que tardan tres días.
+              El que te atiende también opera una panadería.
+            </p>
+          </div>
+          <div class="tile-detail">WHATSAPP · 7AM–8PM GT · RESPUESTA &lt; 15 MIN</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       CUSTOMER STORY · Julia Bakery
+       ═══════════════════════════════════════════════════════════ -->
+  <section class="story" id="story">
+    <div class="container">
+      <div class="story-grid">
+        <div class="story-visual">
+          <div class="quote">
+            "Antes hacía el cuadre tres veces y nunca cuadraba.
+            Con Conduit lo cierro en dos minutos. Y duermo."
+            <span class="quoter">Dalia Mishel · Cajera · Julia Bakery</span>
+          </div>
+        </div>
+        <div class="story-content">
+          <div class="eyebrow">Caso real · Julia Bakery</div>
+          <h2>Tres turnos, cero diferencia, Q8,227 en un día.</h2>
+          <p>
+            Julia Bakery abrió con Conduit hace 3 semanas. Migró 252 productos desde Loyverse en una
+            tarde. Hoy facturó 100 ventas FEL sin una sola intervención manual. El cuadre del turno
+            cerró en exacto.
+          </p>
+          <div class="story-stats">
+            <div class="story-stat">
+              <div class="num"><em>Q</em>8,227</div>
+              <div class="label">facturado en un día normal · jueves 4 de junio</div>
+            </div>
+            <div class="story-stat">
+              <div class="num">100</div>
+              <div class="label">facturas FEL certificadas · 0 fallas</div>
+            </div>
+            <div class="story-stat">
+              <div class="num">3 / 3</div>
+              <div class="label">turnos cerrados con Q0 de diferencia</div>
+            </div>
+            <div class="story-stat">
+              <div class="num">15<em>s</em></div>
+              <div class="label">por venta promedio · de cobro a ticket</div>
+            </div>
+          </div>
+          <a href="#" class="read-more">Leé el caso completo</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       HARDWARE
+       ═══════════════════════════════════════════════════════════ -->
+  <section class="hardware">
+    <div class="container">
+      <div class="hardware-grid">
+        <div class="hardware-content">
+          <div class="eyebrow">Hardware</div>
+          <h2>Tu fierro actual funciona.</h2>
+          <p>
+            No te vendemos hardware caro. Si ya tenés Sunmi K2, iPad, o cualquier
+            computadora moderna, Conduit corre. Sin contratos atados.
+          </p>
+          <div class="hardware-list">
+            <div class="hardware-item">
+              <div class="ico">K2</div>
+              <div class="info">
+                <div class="name">Sunmi K2 mini / K2 (recomendado)</div>
+                <div class="desc">POS + impresora térmica + lector de QR integrado</div>
+              </div>
+              <span class="badge">RECOMENDADO</span>
+            </div>
+            <div class="hardware-item">
+              <div class="ico">📱</div>
+              <div class="info">
+                <div class="name">iPad / tablet Android</div>
+                <div class="desc">Ideal para comandas en cocina o caja móvil</div>
+              </div>
+              <span class="badge" style="background:var(--ink-soft)">COMPATIBLE</span>
+            </div>
+            <div class="hardware-item">
+              <div class="ico">💻</div>
+              <div class="info">
+                <div class="name">Computadora normal</div>
+                <div class="desc">Cualquier laptop o desktop con navegador Chrome moderno</div>
+              </div>
+              <span class="badge" style="background:var(--ink-soft)">COMPATIBLE</span>
+            </div>
+            <div class="hardware-item">
+              <div class="ico">🖨</div>
+              <div class="info">
+                <div class="name">Impresora térmica genérica</div>
+                <div class="desc">58mm o 80mm. Bluetooth o USB. Sin marca atada.</div>
+              </div>
+              <span class="badge" style="background:var(--ink-soft)">COMPATIBLE</span>
+            </div>
+          </div>
+        </div>
+        <div class="hardware-visual">
+          <div class="hw-stack">
+            <div class="hw-device k2">
+              <div class="screen">
+                <span>POS</span>
+                <span>Q 105</span>
+                <div class="pill">Cobrar</div>
+              </div>
+            </div>
+            <div class="hw-device ipad">
+              <div class="screen">
+                <span>COMANDAS</span>
+                <span>#0042</span>
+                <span>Cappuccino</span>
+                <span>Cinnamon roll</span>
+                <div class="pill" style="background:var(--success)">Listo</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       PRICING
+       ═══════════════════════════════════════════════════════════ -->
+  <section class="pricing" id="pricing">
+    <div class="container">
+      <div class="pricing-head">
+        <div class="eyebrow">Precio</div>
+        <h2>Un plan. Sin sorpresas.</h2>
+        <p>Sin setup. Sin contrato anual. Cancelás cuando querés.</p>
+      </div>
+      <div class="pricing-card">
+        <div class="plan-label">Plan único</div>
+        <div class="price">
+          <span class="amount">1,500</span>
+          <span class="currency">Q / mes</span>
+        </div>
+        <p class="period">+ IVA · facturado mensual · sin permanencia</p>
+        <ul class="features-list">
+          <li>POS multi-cajero · turnos · split payments</li>
+          <li>FEL Infile certificación ilimitada · sin costo por factura</li>
+          <li>Cobro QR Recurrente (comisión Recurrente aparte)</li>
+          <li>PWA pickup whitelabel con tu marca</li>
+          <li>Comandas iPad · inventario · recetas · cotizaciones</li>
+          <li>Reportes + integración QuickBooks Online</li>
+          <li>Migración desde Loyverse incluida</li>
+          <li>Soporte WhatsApp en GT · 7am–8pm</li>
+        </ul>
+        <a href="#cta" class="btn btn-primary">Empezar prueba de 14 días</a>
+        <p class="small">Sin tarjeta. Te llamamos al WhatsApp para configurar.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       FAQ
+       ═══════════════════════════════════════════════════════════ -->
+  <section class="faq" id="faq">
+    <div class="container">
+      <div class="faq-head">
+        <div class="eyebrow">Preguntas reales</div>
+        <h2>Lo que ya nos preguntaron.</h2>
+      </div>
+      <div class="faq-list">
+
+        <details class="faq-item">
+          <summary>
+            <h3>¿Funciona con mi impresora térmica actual?</h3>
+            <span class="toggle">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M12 5v14M5 12h14"/></svg>
+            </span>
+          </summary>
+          <div class="answer">
+            Sí. Conduit imprime en cualquier impresora térmica de 58mm o 80mm,
+            conectada por Bluetooth o USB. Si tenés una Sunmi K2 ya integra todo en un solo equipo.
+            Si tenés impresora suelta (Star, Epson, genérica), también funciona.
+          </div>
+        </details>
+
+        <details class="faq-item">
+          <summary>
+            <h3>¿Puedo migrar mi catálogo desde Loyverse?</h3>
+            <span class="toggle">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M12 5v14M5 12h14"/></svg>
+            </span>
+          </summary>
+          <div class="answer">
+            Sí. Tenemos importador directo. Te conectás con tu cuenta Loyverse, traemos los items,
+            precios, categorías y fotos. Lo limpiamos y te lo entregamos cargado.
+            Tiempo típico: 1 hora para 200 productos, 3 horas para 500+.
+          </div>
+        </details>
+
+        <details class="faq-item">
+          <summary>
+            <h3>¿Y si la SAT me cambia los requisitos de FEL?</h3>
+            <span class="toggle">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M12 5v14M5 12h14"/></svg>
+            </span>
+          </summary>
+          <div class="answer">
+            Nosotros lo actualizamos sin que tengas que hacer nada. La conexión con Infile la
+            mantenemos del lado nuestro. Si la SAT publica nuevos requerimientos, los implementamos
+            antes de la fecha de corte. Vos seguís vendiendo.
+          </div>
+        </details>
+
+        <details class="faq-item">
+          <summary>
+            <h3>¿Qué pasa si se cae el internet?</h3>
+            <span class="toggle">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M12 5v14M5 12h14"/></svg>
+            </span>
+          </summary>
+          <div class="answer">
+            Conduit guarda la venta local y la sincroniza cuando vuelve el internet. La factura FEL
+            no se puede emitir sin conexión a Infile (eso es regla de la SAT, no nuestra), pero el
+            cobro queda registrado y certificamos automáticamente cuando vuelve la línea.
+          </div>
+        </details>
+
+        <details class="faq-item">
+          <summary>
+            <h3>¿Puedo cancelar cuando quiera?</h3>
+            <span class="toggle">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M12 5v14M5 12h14"/></svg>
+            </span>
+          </summary>
+          <div class="answer">
+            Sí. No hay contrato de permanencia. Cancelás por WhatsApp, te exportamos toda tu data
+            (facturas, productos, ventas, clientes) en CSV o Excel, y listo. Sin lock-in.
+          </div>
+        </details>
+
+        <details class="faq-item">
+          <summary>
+            <h3>¿Quién atiende el soporte?</h3>
+            <span class="toggle">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M12 5v14M5 12h14"/></svg>
+            </span>
+          </summary>
+          <div class="answer">
+            Atendemos directamente, no un call center tercerizado. El equipo opera Julia Bakery
+            como cliente piloto — sabemos exactamente lo que es estar a las 11pm intentando cerrar
+            el día. WhatsApp directo, 7am a 8pm, días laborales.
+          </div>
+        </details>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       FINAL CTA
+       ═══════════════════════════════════════════════════════════ -->
+  <section style="padding: 96px 0; background: var(--cream);" id="cta">
+    <div class="cta-final">
+      <div class="cta-final-inner">
+        <h2>Empezá a vender mejor<br/>la <em>semana que viene</em>.</h2>
+        <p>Te llamamos por WhatsApp. Migramos tu catálogo. Configuramos FEL. Vendés con Conduit el viernes.</p>
+        <div class="cta-row">
+          <a href="#" class="btn btn-primary">Quiero la demo</a>
+          <a href="https://wa.me/50200000000" class="btn btn-ghost">Hablar por WhatsApp</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       FOOTER
+       ═══════════════════════════════════════════════════════════ -->
+  <footer>
+    <div class="container">
+      <div class="footer-grid">
+        <div class="footer-brand">
+          <a href="#" class="nav-brand">
+            <svg viewBox="0 0 120 120" fill="currentColor" aria-hidden="true">
+              <path d="M 95.355 25.355 A 50 50 0 1 0 95.355 94.645 L 84.041 83.331 A 34 34 0 1 1 84.041 36.669 Z"/>
+              <rect x="40" y="52" width="80" height="16" rx="2"/>
+            </svg>
+            Conduit
+          </a>
+          <p>
+            POS + FEL + pickup + inventario + comandas para panaderías, cafés y restaurantes en GT.
+            Hecho aquí. Para los que están aquí.
+          </p>
+        </div>
+        <div class="footer-col">
+          <h4>Producto</h4>
+          <ul>
+            <li><a href="#features">Funcionalidades</a></li>
+            <li><a href="#pricing">Precio</a></li>
+            <li><a href="#">Hardware compatible</a></li>
+            <li><a href="#">Migrar desde Loyverse</a></li>
+          </ul>
+        </div>
+        <div class="footer-col">
+          <h4>Empresa</h4>
+          <ul>
+            <li><a href="#story">Caso Julia Bakery</a></li>
+            <li><a href="#">Blog del operador</a></li>
+            <li><a href="#">Quiénes somos</a></li>
+            <li><a href="#">Contacto</a></li>
+          </ul>
+        </div>
+        <div class="footer-col">
+          <h4>Soporte</h4>
+          <ul>
+            <li><a href="https://wa.me/50200000000">WhatsApp</a></li>
+            <li><a href="#faq">Preguntas</a></li>
+            <li><a href="#">Estado del sistema</a></li>
+            <li><a href="#">Documentación</a></li>
+          </ul>
+        </div>
+      </div>
+      <div class="footer-base">
+        <span>© 2026 Conduit POS · Guatemala City</span>
+        <span class="badge"><span class="dot"></span> Todos los sistemas operando</span>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Scroll-aware nav -->
+  <script>
+    const nav = document.getElementById('nav');
+    window.addEventListener('scroll', () => {
+      if (window.scrollY > 24) nav.classList.add('scrolled');
+      else nav.classList.remove('scrolled');
+    }, { passive: true });
+  </script>
+
+</body>
+</html>
