@@ -145,7 +145,7 @@ export default function Comandas({ session }) {
       .then(({ data }) => {
         const p = data || {}
         if (!['admin', 'cajero', 'barista'].includes(p.rol)) {
-          router.push('/')
+          router.push('/login')
           return
         }
         setPerfil(p)
@@ -264,7 +264,7 @@ export default function Comandas({ session }) {
               Listas: {listas.length}
             </span>
             <button
-              onClick={async () => { await supabase.auth.signOut(); router.push('/') }}
+              onClick={async () => { await supabase.auth.signOut(); router.push('/login') }}
               className="text-gray-400 hover:text-red-600 ml-2">
               Salir
             </button>

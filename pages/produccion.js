@@ -68,7 +68,7 @@ export default function Produccion({ session }) {
   const [aviso, setAviso] = useState(null)
 
   useEffect(() => {
-    if (!session) { router.push('/'); return }
+    if (!session) { router.push('/login'); return }
     cargarPerfil()
     cargarRecetas()
   }, [session])

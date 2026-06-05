@@ -23,7 +23,7 @@ export default function Productos({ session }) {
   const [productoEditando, setProductoEditando] = useState(null)  // { nuevo: true } | producto a editar
 
   useEffect(() => {
-    if (!session) { router.push('/'); return }
+    if (!session) { router.push('/login'); return }
     supabase.from('perfiles').select('id, nombre_completo, rol').eq('id', session.user.id).single()
       .then(({ data }) => setPerfil(data || {}))
     cargar()

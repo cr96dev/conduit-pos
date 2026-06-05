@@ -48,7 +48,7 @@ export default function Compras({ session }) {
   const [tab, setTab] = useState('compras')
 
   useEffect(() => {
-    if (!session) { router.push('/'); return }
+    if (!session) { router.push('/login'); return }
     (async () => {
       const { data } = await supabase.from('perfiles')
         .select('id, email, nombre_completo, rol, activo')

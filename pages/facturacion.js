@@ -61,7 +61,7 @@ export default function Facturacion({ session }) {
   const [tab, setTab] = useState('facturas')
 
   useEffect(() => {
-    if (!session) { router.push('/'); return }
+    if (!session) { router.push('/login'); return }
     (async () => {
       const { data } = await supabase.from('perfiles')
         .select('id, email, nombre_completo, rol, activo')

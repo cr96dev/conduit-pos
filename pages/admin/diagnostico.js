@@ -21,7 +21,7 @@ export default function Diagnostico({ session }) {
   const [resultados, setResultados] = useState([])
 
   useEffect(() => {
-    if (!session) { router.push('/'); return }
+    if (!session) { router.push('/login'); return }
     supabase.from('perfiles').select('id, nombre_completo, rol').eq('id', session.user.id).single()
       .then(({ data }) => {
         if (data?.rol !== 'admin') { router.push('/dashboard'); return }

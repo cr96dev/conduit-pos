@@ -62,7 +62,7 @@ export default function Reportes({ session }) {
   const onDrillCuenta = (c) => setDrillCuenta(c)
 
   useEffect(() => {
-    if (!session) { router.push('/'); return }
+    if (!session) { router.push('/login'); return }
     supabase.from('perfiles').select('id, email, nombre_completo, rol, activo').eq('id', session.user.id).single()
       .then(({ data }) => setPerfil(data || { id: session.user.id, email: session.user.email, rol: 'empleado' }))
   }, [session])

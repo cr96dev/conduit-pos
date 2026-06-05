@@ -50,10 +50,10 @@ export default function AdminTurnos({ session }) {
   const [filtroFecha, setFiltroFecha] = useState('') // YYYY-MM-DD
 
   useEffect(() => {
-    if (!session) { router.push('/'); return }
+    if (!session) { router.push('/login'); return }
     supabase.from('perfiles').select('id, nombre_completo, rol').eq('id', session.user.id).single()
       .then(({ data }) => {
-        if (!data || data.rol !== 'admin') { router.push('/'); return }
+        if (!data || data.rol !== 'admin') { router.push('/login'); return }
         setPerfil(data)
       })
     cargar()

@@ -22,7 +22,7 @@ export default function Ventas({ session }) {
   const [filtro, setFiltro] = useState('hoy') // hoy | semana | mes
 
   useEffect(() => {
-    if (!session) { router.push('/'); return }
+    if (!session) { router.push('/login'); return }
     cargar()
   }, [session, filtro])
 

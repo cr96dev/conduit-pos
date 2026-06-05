@@ -161,7 +161,7 @@ export default function Layout({ children, perfil }) {
 
   async function logout() {
     await supabase.auth.signOut()
-    router.push('/')
+    router.push('/login')
   }
 
   return (

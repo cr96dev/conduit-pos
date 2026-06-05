@@ -39,7 +39,7 @@ export default function Cotizaciones({ session }) {
   const [q, setQ] = useState('')
 
   useEffect(() => {
-    if (!session) { router.push('/'); return }
+    if (!session) { router.push('/login'); return }
     supabase.from('perfiles').select('*').eq('id', session.user.id).single()
       .then(({ data }) => setPerfil(data))
     cargar()

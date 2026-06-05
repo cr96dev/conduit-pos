@@ -40,7 +40,7 @@ export default function Caja({ session }) {
   const [modal, setModal] = useState(null) // {tipo: 'crear'|'detalle', cierreId?}
 
   useEffect(() => {
-    if (!session) { router.push('/'); return }
+    if (!session) { router.push('/login'); return }
     (async () => {
       const { data } = await supabase.from('perfiles')
         .select('id, email, nombre_completo, rol, activo')

@@ -68,7 +68,7 @@ export default function Dashboard({ session }) {
   const [syncState, setSyncState] = useState(null)
 
   useEffect(() => {
-    if (!session) { router.push('/'); return }
+    if (!session) { router.push('/login'); return }
     loadData()
   }, [session])
 

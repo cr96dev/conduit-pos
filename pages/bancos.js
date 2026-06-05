@@ -34,7 +34,7 @@ export default function Bancos({ session }) {
   const [cuentaSel, setCuentaSel] = useState(null)
 
   useEffect(() => {
-    if (!session) { router.push('/'); return }
+    if (!session) { router.push('/login'); return }
     (async () => {
       const { data } = await supabase.from('perfiles')
         .select('id, email, nombre_completo, rol, activo')

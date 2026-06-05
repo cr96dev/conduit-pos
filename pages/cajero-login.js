@@ -163,7 +163,7 @@ export default function CajeroLogin({ session }) {
         </div>
 
         <button
-          onClick={() => router.push('/')}
+          onClick={() => router.push('/login')}
           className="mt-8 text-2xs text-ink-subtle hover:text-julia-red font-medium uppercase tracking-wider transition-colors">
           Ingresar como administrador
         </button>

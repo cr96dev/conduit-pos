@@ -60,7 +60,7 @@ export default function Inventario({ session }) {
   const [tab, setTab] = useState('terminados') // 'terminados' | 'insumos'
 
   useEffect(() => {
-    if (!session) { router.push('/'); return }
+    if (!session) { router.push('/login'); return }
     cargarPerfil()
   }, [session])
 
