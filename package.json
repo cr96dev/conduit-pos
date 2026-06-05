@@ -1,7 +1,8 @@
 {
-  "name": "julia-bakery",
-  "version": "1.0.0",
+  "name": "conduit-pos",
+  "version": "0.1.0",
   "private": true,
+  "description": "Conduit POS — whitelabel B2B SaaS POS platform for restaurants, cafés, and bakeries in LATAM. FEL Guatemala native + Recurrente QR + pickup PWA + Loyverse migration.",
   "scripts": {
     "dev": "npm run build:pickup-css && next dev",
     "build:pickup-css": "npx tailwindcss -c tailwind.pickup.config.js -i styles/pickup-source.css -o public/pickup/styles.css --minify",

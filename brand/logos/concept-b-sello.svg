@@ -1,0 +1,18 @@
+<!--
+  Conduit POS — Concept B · "El Sello"
+  C envolvente, casi cerrada como sello/moneda.
+  Metáfora: marca registrada del operador, café/panadería boutique.
+
+  Geometría:
+  - Anillo circular cerrado al 95%, grosor 14
+  - Pequeño gap en posición SE (~330°)
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" fill="currentColor">
+  <path d="
+    M 80 13.397
+    A 50 50 0 1 1 60 10
+    L 60 26
+    A 34 34 0 1 0 73.6 28.713
+    Z
+  "/>
+</svg>

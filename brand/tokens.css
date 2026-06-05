@@ -1,0 +1,175 @@
+/*
+ * Conduit POS — Design Tokens
+ *
+ * Drop-in CSS variables para el theme base whitelabel.
+ * Cada tenant puede sobrescribir --brand-primary, --brand-primary-deep
+ * y --brand-cream para customizar sin tocar código.
+ *
+ * Importación esperada:
+ *   @import './brand/tokens.css';
+ *
+ * Y luego mapear a Tailwind config (ver tailwind.config.js).
+ */
+
+:root {
+  /* ─────────────────────────────────────────────────────────────
+     COLOR PRIMARIO — vibe Toast/Square warm
+     ─────────────────────────────────────────────────────────────
+     Tomato premium. Warm pero no infantil. Imprime bien en B/N.
+     Sustituible por tenant en runtime via env var en _app.js.
+  */
+  --brand-primary:       #D7461C;  /* Default Conduit · Tomato premium */
+  --brand-primary-hover: #BB3815;  /* hover/focus */
+  --brand-primary-deep:  #A3340F;  /* presionado, alto contraste sobre cream */
+  --brand-primary-soft:  #FCE4DB;  /* tint para badges, hovers suaves, bg de éxito */
+
+  /* ─────────────────────────────────────────────────────────────
+     SURFACES — papel cálido, no blanco frío
+     ─────────────────────────────────────────────────────────────
+  */
+  --brand-cream:         #FBF7F0;  /* superficie principal — papel */
+  --brand-cream-deep:    #F4EEE3;  /* cards elevadas, separadores */
+  --brand-cream-darker:  #E8E0D1;  /* bordes sutiles */
+  --brand-paper-line:    #DDD3C1;  /* underline, hr */
+
+  /* ─────────────────────────────────────────────────────────────
+     INK — texto y elementos negros
+     ─────────────────────────────────────────────────────────────
+     No usamos #000 puro. Espresso warm para que combine con cream.
+  */
+  --brand-espresso:      #1F1411;  /* texto principal */
+  --brand-ink:           #3A2A22;  /* texto secundario, labels */
+  --brand-ink-soft:      #6E5C52;  /* meta info, captions */
+  --brand-ink-mute:      #9C8A7E;  /* placeholders, disabled */
+
+  /* ─────────────────────────────────────────────────────────────
+     ESTADOS — semántica de feedback
+     ─────────────────────────────────────────────────────────────
+  */
+  --brand-success:       #38754D;  /* sage oscuro, no Material green chillón */
+  --brand-success-soft:  #DCE9DE;
+  --brand-warning:       #C8851B;  /* ámbar warm, no naranja */
+  --brand-warning-soft:  #F5E8CB;
+  --brand-error:         #B4321A;  /* rojo más oscuro que el primario para diferenciar error vs branding */
+  --brand-error-soft:    #F4D5CC;
+  --brand-info:          #2D5B7A;  /* azul slate apagado */
+  --brand-info-soft:     #D6E1EA;
+
+  /* ─────────────────────────────────────────────────────────────
+     TIPOGRAFÍA
+     ─────────────────────────────────────────────────────────────
+     Display: Fraunces — warm geometric serif con personalidad.
+     Body:    Geist    — neutral grotesk premium, no Inter.
+     Mono:    Geist Mono — para números, IDs, código.
+
+     Cargar en _document.js via Google Fonts (Fraunces) y self-host (Geist).
+  */
+  --font-display: 'Fraunces', Georgia, 'Times New Roman', serif;
+  --font-body:    'Geist', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-mono:    'Geist Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+  --font-numeric: 'Geist Mono', ui-monospace, Menlo, monospace;  /* para Q amounts */
+
+  /* Escala tipográfica — modular scale 1.25 */
+  --text-xs:    0.75rem;   /* 12px — meta, captions */
+  --text-sm:    0.875rem;  /* 14px — body small, table cells */
+  --text-base:  1rem;      /* 16px — body */
+  --text-lg:    1.125rem;  /* 18px — body large */
+  --text-xl:    1.375rem;  /* 22px — section heading sm */
+  --text-2xl:   1.75rem;   /* 28px — section heading */
+  --text-3xl:   2.25rem;   /* 36px — page heading */
+  --text-4xl:   3rem;      /* 48px — hero medium */
+  --text-5xl:   4rem;      /* 64px — hero large (display Fraunces) */
+  --text-6xl:   5.5rem;    /* 88px — landing hero (display Fraunces) */
+
+  /* Weights — usamos solo 4 pesos para mantener disciplina */
+  --weight-regular:  400;
+  --weight-medium:   500;
+  --weight-semibold: 600;
+  --weight-bold:     700;
+
+  /* Line heights */
+  --leading-tight:   1.1;   /* display headings */
+  --leading-snug:    1.25;  /* subheadings */
+  --leading-normal:  1.5;   /* body */
+  --leading-relaxed: 1.7;   /* long-form */
+
+  /* Letter spacing */
+  --tracking-tight:  -0.025em;  /* display headings */
+  --tracking-normal: 0;
+  --tracking-wide:   0.05em;    /* small caps, labels */
+
+  /* ─────────────────────────────────────────────────────────────
+     ESPACIADO — escala consistente
+     ─────────────────────────────────────────────────────────────
+  */
+  --space-1:  0.25rem;   /* 4px */
+  --space-2:  0.5rem;    /* 8px */
+  --space-3:  0.75rem;   /* 12px */
+  --space-4:  1rem;      /* 16px */
+  --space-5:  1.25rem;   /* 20px */
+  --space-6:  1.5rem;    /* 24px */
+  --space-8:  2rem;      /* 32px */
+  --space-10: 2.5rem;    /* 40px */
+  --space-12: 3rem;      /* 48px */
+  --space-16: 4rem;      /* 64px */
+  --space-20: 5rem;      /* 80px */
+  --space-24: 6rem;      /* 96px */
+  --space-32: 8rem;      /* 128px */
+
+  /* ─────────────────────────────────────────────────────────────
+     RADIOS — coherencia de bordes
+     ─────────────────────────────────────────────────────────────
+     Conduit usa radios medios. NO ultra-rounded (infantil),
+     NO sharp-square (frío). Espacio premium intermedio.
+  */
+  --radius-xs:  0.25rem;  /* 4px — chips, badges */
+  --radius-sm:  0.5rem;   /* 8px — buttons, inputs */
+  --radius-md:  0.75rem;  /* 12px — cards */
+  --radius-lg:  1rem;     /* 16px — modales, paneles */
+  --radius-xl:  1.5rem;   /* 24px — hero cards */
+  --radius-full: 9999px;  /* pills */
+
+  /* ─────────────────────────────────────────────────────────────
+     SOMBRAS — tinted con el cream/espresso, no negro puro
+     ─────────────────────────────────────────────────────────────
+     Las sombras siempre tienen tinte. Cero shadow-md genérico.
+  */
+  --shadow-xs:  0 1px 2px rgba(31, 20, 17, 0.06);
+  --shadow-sm:  0 2px 8px rgba(31, 20, 17, 0.08);
+  --shadow-md:  0 8px 24px rgba(31, 20, 17, 0.10), 0 2px 4px rgba(31, 20, 17, 0.06);
+  --shadow-lg:  0 16px 48px rgba(31, 20, 17, 0.14), 0 4px 8px rgba(31, 20, 17, 0.06);
+  --shadow-xl:  0 24px 64px rgba(31, 20, 17, 0.18), 0 8px 16px rgba(31, 20, 17, 0.08);
+
+  /* Sombra con tinte del primary, para hover de elementos de marca */
+  --shadow-brand: 0 8px 24px rgba(215, 70, 28, 0.20);
+
+  /* ─────────────────────────────────────────────────────────────
+     MOTION — restraint total
+     ─────────────────────────────────────────────────────────────
+     Curvas: usamos easing curtos y precisos. NO ease-in-out lazy.
+  */
+  --ease-quick:  cubic-bezier(0.32, 0.72, 0, 1);     /* hovers, micro-interactions */
+  --ease-smooth: cubic-bezier(0.65, 0, 0.35, 1);     /* modales, transiciones */
+  --ease-spring: cubic-bezier(0.43, 1.5, 0.65, 1);   /* feedback positivo */
+
+  --duration-fast:    120ms;  /* hover, focus */
+  --duration-base:    200ms;  /* button press, chip toggle */
+  --duration-slow:    320ms;  /* modal open, page transition */
+  --duration-slower:  480ms;  /* hero reveal */
+}
+
+/*
+ * Dark mode — opcional, off por defecto.
+ * Conduit es un POS que opera de día, dark mode NO es prioridad.
+ * Si se activa, las superficies invierten pero el primario mantiene warmth.
+ */
+:root.dark {
+  --brand-cream:        #1F1411;
+  --brand-cream-deep:   #2A1B16;
+  --brand-cream-darker: #3A2A22;
+  --brand-paper-line:   #4A372E;
+  --brand-espresso:     #FBF7F0;
+  --brand-ink:          #E8E0D1;
+  --brand-ink-soft:     #B8A89C;
+  --brand-ink-mute:     #88766C;
+}

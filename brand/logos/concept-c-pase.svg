@@ -1,0 +1,17 @@
+<!--
+  Conduit POS — Concept C · "El Pase" (wordmark puro)
+  Wordmark 'conduit' con ligadura: la barra de la 'd' extiende hacia atrás
+  cruzando por encima de 'n' y 'u' como un canal físico.
+
+  Esta es una aproximación SVG hand-drawn — el wordmark final requiere
+  trabajo en Glyphs / FontLab con tipografía custom. Acá queda el concept
+  para review.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 120" fill="currentColor">
+  <!-- Letras simuladas con paths (esto sería una fuente custom en producción) -->
+  <text x="0" y="90" font-family="Fraunces, Georgia, serif" font-weight="700" font-size="100" letter-spacing="-3">
+    conduit
+  </text>
+  <!-- Ligadura: barra horizontal cruzando desde la 'd' hacia atrás -->
+  <rect x="40" y="35" width="180" height="10" fill="currentColor"/>
+</svg>
