@@ -1,0 +1,1105 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Conduit POS — Mockup de Plataforma</title>
+
+  <!-- Fonts: Fraunces (display) + Geist (body) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700;9..144,800&display=swap" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/@fontsource-variable/geist@5.1.0/index.css" rel="stylesheet">
+
+  <style>
+    /* ─────────────────────────────────────────────────────────
+       Conduit Design Tokens (extraídos de brand/tokens.css)
+       ───────────────────────────────────────────────────────── */
+    :root {
+      --brand-primary: #D7461C;
+      --brand-primary-hover: #BB3815;
+      --brand-primary-deep: #A3340F;
+      --brand-primary-soft: #FCE4DB;
+      --brand-cream: #FBF7F0;
+      --brand-cream-deep: #F4EEE3;
+      --brand-cream-darker: #E8E0D1;
+      --brand-paper-line: #DDD3C1;
+      --brand-espresso: #1F1411;
+      --brand-ink: #3A2A22;
+      --brand-ink-soft: #6E5C52;
+      --brand-ink-mute: #9C8A7E;
+      --brand-success: #38754D;
+      --brand-warning: #C8851B;
+      --brand-error: #B4321A;
+      --font-display: 'Fraunces', Georgia, serif;
+      --font-body: 'Geist Variable', system-ui, sans-serif;
+      --font-mono: ui-monospace, 'SF Mono', Menlo, monospace;
+      --shadow-sm: 0 2px 8px rgba(31, 20, 17, 0.08);
+      --shadow-md: 0 8px 24px rgba(31, 20, 17, 0.10), 0 2px 4px rgba(31, 20, 17, 0.06);
+      --shadow-lg: 0 16px 48px rgba(31, 20, 17, 0.14), 0 4px 8px rgba(31, 20, 17, 0.06);
+      --shadow-brand: 0 8px 24px rgba(215, 70, 28, 0.20);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: var(--font-body);
+      background: #ECE6D8;
+      color: var(--brand-espresso);
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ─────────────────────────────────────────────────────────
+       Showcase chrome (la página que muestra los mockups)
+       ───────────────────────────────────────────────────────── */
+    .showcase-nav {
+      position: sticky; top: 0; z-index: 100;
+      background: var(--brand-espresso);
+      color: var(--brand-cream);
+      padding: 14px 32px;
+      display: flex; align-items: center; justify-content: space-between;
+      font-size: 13px;
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+    }
+    .showcase-nav .brand-mark {
+      display: flex; align-items: center; gap: 10px;
+      font-family: var(--font-display); font-weight: 700; font-size: 18px;
+    }
+    .showcase-nav .brand-mark svg { width: 24px; height: 24px; }
+    .showcase-nav nav { display: flex; gap: 24px; }
+    .showcase-nav nav a {
+      color: var(--brand-cream); text-decoration: none; opacity: 0.7;
+      font-size: 12px; letter-spacing: 0.04em; text-transform: uppercase;
+      transition: opacity 0.2s;
+    }
+    .showcase-nav nav a:hover { opacity: 1; }
+
+    .showcase-section { padding: 48px 32px; }
+    .showcase-label {
+      max-width: 1400px; margin: 0 auto 24px;
+      display: flex; align-items: baseline; gap: 16px;
+      padding-left: 12px; border-left: 3px solid var(--brand-primary);
+    }
+    .showcase-label .num {
+      font-family: var(--font-mono); font-size: 12px;
+      color: var(--brand-ink-mute); letter-spacing: 0.1em;
+    }
+    .showcase-label h2 {
+      font-family: var(--font-display); font-weight: 600; font-size: 22px;
+      color: var(--brand-espresso);
+    }
+    .showcase-label .desc {
+      font-size: 13px; color: var(--brand-ink-soft); margin-left: auto;
+    }
+    .frame {
+      max-width: 1400px; margin: 0 auto;
+      background: white; border-radius: 16px;
+      box-shadow: var(--shadow-lg); overflow: hidden;
+    }
+
+    /* ═════════════════════════════════════════════════════════
+       SECCIÓN 1 · LANDING PÚBLICA (conduit-pos.com)
+       ═════════════════════════════════════════════════════════ */
+    .landing { background: var(--brand-cream); }
+    .landing .nav {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 24px 64px; border-bottom: 1px solid var(--brand-paper-line);
+    }
+    .landing .nav .brand {
+      display: flex; align-items: center; gap: 12px;
+      font-family: var(--font-display); font-weight: 700; font-size: 22px;
+      color: var(--brand-espresso);
+    }
+    .landing .nav .brand svg { width: 30px; height: 30px; color: var(--brand-primary); }
+    .landing .nav .links { display: flex; gap: 32px; align-items: center; }
+    .landing .nav .links a {
+      color: var(--brand-ink); text-decoration: none; font-size: 14px; font-weight: 500;
+    }
+    .landing .nav .links .cta {
+      background: var(--brand-espresso); color: var(--brand-cream);
+      padding: 10px 20px; border-radius: 8px;
+    }
+    .landing .hero {
+      display: grid; grid-template-columns: 1.1fr 1fr;
+      gap: 48px; padding: 96px 64px 64px;
+      align-items: center;
+    }
+    .landing .hero h1 {
+      font-family: var(--font-display); font-weight: 700; font-size: 88px;
+      line-height: 0.96; letter-spacing: -0.03em;
+      color: var(--brand-espresso); margin-bottom: 32px;
+    }
+    .landing .hero h1 em {
+      font-style: italic; color: var(--brand-primary); font-weight: 500;
+    }
+    .landing .hero p {
+      font-size: 19px; line-height: 1.5; color: var(--brand-ink-soft);
+      max-width: 480px; margin-bottom: 40px;
+    }
+    .landing .hero .cta-row { display: flex; gap: 16px; align-items: center; }
+    .landing .hero .btn-primary {
+      background: var(--brand-primary); color: var(--brand-cream);
+      padding: 16px 32px; border-radius: 10px; text-decoration: none;
+      font-weight: 600; font-size: 15px;
+      box-shadow: var(--shadow-brand);
+      transition: transform 0.15s;
+    }
+    .landing .hero .btn-primary:hover { transform: translateY(-1px); }
+    .landing .hero .btn-ghost {
+      color: var(--brand-espresso); text-decoration: none; font-weight: 500;
+      font-size: 15px; border-bottom: 1px solid var(--brand-paper-line); padding-bottom: 4px;
+    }
+    .landing .hero-photo {
+      aspect-ratio: 5/6; border-radius: 16px; overflow: hidden;
+      box-shadow: var(--shadow-lg); position: relative;
+      background: linear-gradient(135deg, #D7461C 0%, #BB3815 50%, #6E2A0E 100%);
+    }
+    .landing .hero-photo::after {
+      content: ''; position: absolute; inset: 0;
+      background: radial-gradient(circle at 30% 30%, rgba(251, 247, 240, 0.15), transparent 60%);
+    }
+    .landing .hero-photo .photo-label {
+      position: absolute; bottom: 24px; left: 24px; right: 24px;
+      color: rgba(251, 247, 240, 0.6);
+      font-family: var(--font-mono); font-size: 11px;
+      letter-spacing: 0.1em;
+    }
+    .landing .social-strip {
+      padding: 48px 64px; border-top: 1px solid var(--brand-paper-line);
+      display: flex; gap: 64px; align-items: center; justify-content: space-between;
+    }
+    .landing .social-strip .label {
+      font-size: 12px; color: var(--brand-ink-mute);
+      letter-spacing: 0.1em; text-transform: uppercase;
+    }
+    .landing .social-strip .clients {
+      display: flex; gap: 56px; opacity: 0.6;
+      font-family: var(--font-display); font-style: italic; font-size: 22px;
+      color: var(--brand-espresso);
+    }
+
+    /* ═════════════════════════════════════════════════════════
+       SECCIÓN 2 · LOGIN POS (cajeros)
+       ═════════════════════════════════════════════════════════ */
+    .login-pos {
+      background: var(--brand-cream);
+      padding: 80px 0;
+      min-height: 700px;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .login-pos .card {
+      width: 440px; padding: 48px 40px;
+      background: white; border-radius: 24px;
+      box-shadow: var(--shadow-md);
+      text-align: center;
+    }
+    .login-pos .logo-lockup {
+      display: flex; align-items: center; justify-content: center;
+      gap: 12px; margin-bottom: 40px;
+    }
+    .login-pos .logo-lockup svg { width: 48px; height: 48px; color: var(--brand-primary); }
+    .login-pos .logo-lockup span {
+      font-family: var(--font-display); font-weight: 700; font-size: 34px;
+      color: var(--brand-espresso);
+    }
+    .login-pos h1 {
+      font-family: var(--font-display); font-weight: 600; font-size: 28px;
+      color: var(--brand-espresso); margin-bottom: 8px;
+    }
+    .login-pos p.subtitle {
+      font-size: 14px; color: var(--brand-ink-soft); margin-bottom: 32px;
+    }
+    .login-pos .pin-display {
+      display: flex; justify-content: center; gap: 12px; margin-bottom: 32px;
+    }
+    .login-pos .pin-display .dot {
+      width: 16px; height: 16px; border-radius: 50%;
+      background: var(--brand-cream-darker);
+    }
+    .login-pos .pin-display .dot.filled { background: var(--brand-primary); }
+    .login-pos .keypad {
+      display: grid; grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+    }
+    .login-pos .keypad button {
+      aspect-ratio: 1.4/1; border: none;
+      background: var(--brand-cream-deep);
+      color: var(--brand-espresso);
+      font-family: var(--font-display); font-weight: 500; font-size: 28px;
+      border-radius: 14px; cursor: pointer;
+      transition: background 0.15s;
+    }
+    .login-pos .keypad button:hover { background: var(--brand-cream-darker); }
+    .login-pos .keypad button.delete {
+      background: transparent; color: var(--brand-ink-soft); font-size: 18px;
+    }
+
+    /* ═════════════════════════════════════════════════════════
+       SECCIÓN 3 · POS CASHIER (durante venta)
+       ═════════════════════════════════════════════════════════ */
+    .pos { display: grid; grid-template-columns: 280px 1fr 380px; min-height: 640px; }
+    .pos .sidebar {
+      background: var(--brand-espresso); color: var(--brand-cream); padding: 24px 0;
+    }
+    .pos .sidebar .brand {
+      padding: 0 20px 28px; border-bottom: 1px solid rgba(255,255,255,0.08);
+      margin-bottom: 16px; display: flex; align-items: center; gap: 10px;
+      font-family: var(--font-display); font-weight: 700; font-size: 22px;
+    }
+    .pos .sidebar .brand svg { width: 26px; height: 26px; color: var(--brand-primary); }
+    .pos .sidebar .section-title {
+      padding: 16px 20px 8px; font-size: 11px; letter-spacing: 0.1em;
+      text-transform: uppercase; color: var(--brand-ink-mute);
+    }
+    .pos .sidebar a {
+      display: flex; align-items: center; gap: 12px;
+      padding: 12px 20px; color: var(--brand-cream);
+      text-decoration: none; font-size: 14px; font-weight: 500;
+      opacity: 0.7; transition: all 0.15s;
+    }
+    .pos .sidebar a:hover { opacity: 1; }
+    .pos .sidebar a.active {
+      opacity: 1; background: rgba(215, 70, 28, 0.12);
+      border-left: 3px solid var(--brand-primary); padding-left: 17px;
+    }
+    .pos .sidebar a .ico {
+      width: 18px; height: 18px; border-radius: 4px; background: rgba(255,255,255,0.1);
+    }
+
+    .pos .main { background: var(--brand-cream); padding: 24px 32px; overflow-y: auto; }
+    .pos .topbar {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-bottom: 24px;
+    }
+    .pos .topbar .greeting {
+      font-family: var(--font-display); font-size: 22px;
+      color: var(--brand-espresso); font-weight: 600;
+    }
+    .pos .topbar .greeting span { color: var(--brand-ink-soft); font-weight: 400; }
+    .pos .topbar .turno-info {
+      display: flex; gap: 16px; align-items: center; font-size: 13px;
+    }
+    .pos .topbar .turno-info .chip {
+      padding: 6px 12px; background: var(--brand-success); color: white;
+      border-radius: 999px; font-size: 12px; font-weight: 600;
+    }
+    .pos .topbar .turno-info .name { color: var(--brand-ink-soft); }
+
+    .pos .cat-tabs { display: flex; gap: 12px; margin-bottom: 20px; overflow-x: auto; }
+    .pos .cat-tabs .tab {
+      padding: 10px 18px; border-radius: 10px;
+      background: white; border: 1px solid var(--brand-paper-line);
+      font-size: 13px; font-weight: 500; color: var(--brand-ink);
+      cursor: pointer; white-space: nowrap;
+    }
+    .pos .cat-tabs .tab.active {
+      background: var(--brand-espresso); color: var(--brand-cream); border-color: var(--brand-espresso);
+    }
+    .pos .grid {
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+      gap: 14px;
+    }
+    .pos .card {
+      background: white; border-radius: 14px; padding: 12px;
+      cursor: pointer; transition: transform 0.15s, box-shadow 0.15s;
+      border: 1px solid transparent;
+    }
+    .pos .card:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-sm);
+      border-color: var(--brand-paper-line);
+    }
+    .pos .card .img {
+      aspect-ratio: 1/1; border-radius: 10px;
+      background: linear-gradient(135deg, #F4EEE3 0%, #E8E0D1 100%);
+      margin-bottom: 10px;
+      display: flex; align-items: center; justify-content: center;
+      font-family: var(--font-display); color: var(--brand-ink-mute); font-size: 32px;
+    }
+    .pos .card .name {
+      font-size: 13px; font-weight: 600; color: var(--brand-espresso);
+      margin-bottom: 4px; line-height: 1.25;
+    }
+    .pos .card .price {
+      font-family: var(--font-mono); font-size: 14px; font-weight: 600;
+      color: var(--brand-primary);
+    }
+
+    .pos .cart {
+      background: white; padding: 24px 24px 20px;
+      display: flex; flex-direction: column;
+      border-left: 1px solid var(--brand-paper-line);
+    }
+    .pos .cart h3 {
+      font-family: var(--font-display); font-size: 18px; font-weight: 600;
+      margin-bottom: 16px; color: var(--brand-espresso);
+    }
+    .pos .cart .items { flex: 1; }
+    .pos .cart .item {
+      display: flex; justify-content: space-between; align-items: start;
+      padding: 12px 0; border-bottom: 1px solid var(--brand-cream-deep);
+    }
+    .pos .cart .item .name {
+      font-size: 14px; font-weight: 500; color: var(--brand-espresso);
+    }
+    .pos .cart .item .qty {
+      font-size: 12px; color: var(--brand-ink-soft); margin-top: 2px;
+    }
+    .pos .cart .item .price {
+      font-family: var(--font-mono); font-weight: 600; color: var(--brand-espresso);
+    }
+    .pos .cart .totals {
+      padding: 16px 0; border-top: 2px solid var(--brand-espresso);
+      margin-top: 12px;
+    }
+    .pos .cart .totals .row {
+      display: flex; justify-content: space-between; padding: 4px 0;
+      font-size: 14px; color: var(--brand-ink-soft);
+    }
+    .pos .cart .totals .row.grand {
+      font-family: var(--font-display); font-size: 26px; font-weight: 700;
+      color: var(--brand-espresso); padding-top: 12px;
+    }
+    .pos .cart .totals .row.grand span:last-child {
+      font-family: var(--font-mono); color: var(--brand-primary);
+    }
+    .pos .cart .pay-btn {
+      width: 100%; margin-top: 16px;
+      padding: 20px; border: none;
+      background: var(--brand-primary); color: var(--brand-cream);
+      font-size: 17px; font-weight: 700;
+      border-radius: 12px; cursor: pointer;
+      box-shadow: var(--shadow-brand);
+      font-family: var(--font-body);
+      transition: background 0.15s;
+    }
+    .pos .cart .pay-btn:hover { background: var(--brand-primary-hover); }
+
+    /* ═════════════════════════════════════════════════════════
+       SECCIÓN 4 · PWA PICKUP (cliente en celular)
+       ═════════════════════════════════════════════════════════ */
+    .pwa-stage {
+      background: linear-gradient(135deg, var(--brand-cream-deep) 0%, var(--brand-cream-darker) 100%);
+      padding: 64px; display: flex; justify-content: center;
+      gap: 64px; align-items: center;
+    }
+    .iphone-frame {
+      width: 360px; aspect-ratio: 9/19.5;
+      border-radius: 48px; padding: 12px;
+      background: var(--brand-espresso);
+      box-shadow: var(--shadow-lg);
+      flex-shrink: 0;
+    }
+    .iphone-screen {
+      background: var(--brand-cream); border-radius: 36px; height: 100%;
+      overflow: hidden; position: relative;
+      display: flex; flex-direction: column;
+    }
+    .iphone-screen .notch {
+      position: absolute; top: 12px; left: 50%; transform: translateX(-50%);
+      width: 100px; height: 28px; background: var(--brand-espresso);
+      border-radius: 18px; z-index: 10;
+    }
+    .pwa-header {
+      padding: 36px 20px 16px; display: flex;
+      justify-content: space-between; align-items: center;
+    }
+    .pwa-header .tenant-brand {
+      font-family: var(--font-display); font-size: 18px; font-weight: 700;
+      color: var(--brand-espresso);
+    }
+    .pwa-header .perfil-icon {
+      width: 32px; height: 32px; border-radius: 50%;
+      background: var(--brand-cream-darker);
+    }
+    .pwa-hero {
+      padding: 12px 20px 24px;
+    }
+    .pwa-hero h2 {
+      font-family: var(--font-display); font-size: 32px; line-height: 1.05;
+      color: var(--brand-espresso); font-weight: 700;
+      letter-spacing: -0.02em; margin-bottom: 6px;
+    }
+    .pwa-hero p { font-size: 13px; color: var(--brand-ink-soft); }
+    .pwa-search {
+      margin: 0 20px 20px; padding: 12px 14px;
+      background: var(--brand-cream-deep); border-radius: 12px;
+      font-size: 14px; color: var(--brand-ink-mute);
+    }
+    .pwa-category-row {
+      display: flex; gap: 8px; padding: 0 20px 16px; overflow-x: auto;
+    }
+    .pwa-category-row .chip {
+      padding: 8px 14px; border-radius: 999px;
+      background: var(--brand-cream-deep); font-size: 12px; font-weight: 600;
+      color: var(--brand-ink); white-space: nowrap;
+    }
+    .pwa-category-row .chip.active { background: var(--brand-espresso); color: white; }
+    .pwa-products {
+      padding: 0 20px 16px; display: grid;
+      grid-template-columns: 1fr 1fr; gap: 12px;
+    }
+    .pwa-products .item {
+      background: white; border-radius: 14px; overflow: hidden;
+      box-shadow: var(--shadow-sm);
+    }
+    .pwa-products .item .img {
+      aspect-ratio: 1.2/1;
+      background: linear-gradient(135deg, var(--brand-cream-darker), #d4c2b0);
+      display: flex; align-items: center; justify-content: center;
+      font-family: var(--font-display); font-size: 28px;
+      color: var(--brand-ink-mute);
+    }
+    .pwa-products .item .info { padding: 10px 12px; }
+    .pwa-products .item .name {
+      font-size: 12px; font-weight: 600; color: var(--brand-espresso);
+      line-height: 1.2; margin-bottom: 4px;
+    }
+    .pwa-products .item .price {
+      font-family: var(--font-mono); font-size: 13px; font-weight: 600;
+      color: var(--brand-primary);
+    }
+    .pwa-bottom-nav {
+      margin-top: auto;
+      display: flex; justify-content: space-around;
+      padding: 12px 0 24px; background: white;
+      border-top: 1px solid var(--brand-cream-deep);
+    }
+    .pwa-bottom-nav .nav-item {
+      display: flex; flex-direction: column; align-items: center; gap: 4px;
+      font-size: 10px; color: var(--brand-ink-mute);
+    }
+    .pwa-bottom-nav .nav-item.active { color: var(--brand-primary); font-weight: 600; }
+    .pwa-bottom-nav .nav-item .dot { width: 18px; height: 18px; border-radius: 4px; background: currentColor; opacity: 0.8; }
+
+    .pwa-notes {
+      max-width: 320px; color: var(--brand-ink-soft); font-size: 14px;
+    }
+    .pwa-notes h3 {
+      font-family: var(--font-display); font-size: 22px;
+      color: var(--brand-espresso); margin-bottom: 12px;
+    }
+    .pwa-notes ul { list-style: none; padding: 0; }
+    .pwa-notes ul li {
+      padding: 8px 0; border-bottom: 1px solid var(--brand-paper-line);
+      padding-left: 20px; position: relative;
+    }
+    .pwa-notes ul li::before {
+      content: '◖'; position: absolute; left: 0; top: 8px;
+      color: var(--brand-primary);
+    }
+
+    /* ═════════════════════════════════════════════════════════
+       SECCIÓN 5 · ADMIN DASHBOARD
+       ═════════════════════════════════════════════════════════ */
+    .admin { display: grid; grid-template-columns: 240px 1fr; min-height: 600px; background: var(--brand-cream); }
+    .admin .sidebar {
+      background: white; padding: 24px 0;
+      border-right: 1px solid var(--brand-paper-line);
+    }
+    .admin .sidebar .brand {
+      padding: 0 24px 24px; display: flex; align-items: center; gap: 10px;
+      font-family: var(--font-display); font-weight: 700; font-size: 20px;
+      color: var(--brand-espresso); border-bottom: 1px solid var(--brand-paper-line);
+      margin-bottom: 16px;
+    }
+    .admin .sidebar .brand svg { width: 24px; height: 24px; color: var(--brand-primary); }
+    .admin .sidebar .menu a {
+      display: flex; align-items: center; gap: 10px;
+      padding: 11px 24px; color: var(--brand-ink-soft);
+      text-decoration: none; font-size: 14px; font-weight: 500;
+      transition: all 0.15s;
+    }
+    .admin .sidebar .menu a:hover { background: var(--brand-cream); color: var(--brand-espresso); }
+    .admin .sidebar .menu a.active {
+      background: var(--brand-primary-soft); color: var(--brand-primary-deep);
+      border-right: 3px solid var(--brand-primary);
+    }
+    .admin .sidebar .menu a .ico {
+      width: 16px; height: 16px; border-radius: 4px; background: currentColor; opacity: 0.7;
+    }
+    .admin .main { padding: 32px 40px; }
+    .admin .page-head {
+      display: flex; justify-content: space-between; align-items: baseline;
+      margin-bottom: 32px;
+    }
+    .admin .page-head h1 {
+      font-family: var(--font-display); font-size: 36px; font-weight: 700;
+      color: var(--brand-espresso); letter-spacing: -0.02em;
+    }
+    .admin .page-head .date {
+      font-size: 13px; color: var(--brand-ink-soft);
+      padding: 8px 14px; background: white; border-radius: 8px;
+      border: 1px solid var(--brand-paper-line);
+    }
+    .admin .kpis {
+      display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px;
+      margin-bottom: 32px;
+    }
+    .admin .kpi {
+      background: white; padding: 20px 24px; border-radius: 14px;
+      border: 1px solid var(--brand-paper-line);
+    }
+    .admin .kpi .label {
+      font-size: 12px; color: var(--brand-ink-soft); text-transform: uppercase;
+      letter-spacing: 0.05em; margin-bottom: 8px;
+    }
+    .admin .kpi .value {
+      font-family: var(--font-display); font-size: 32px; font-weight: 700;
+      color: var(--brand-espresso); letter-spacing: -0.02em; line-height: 1;
+    }
+    .admin .kpi .delta {
+      margin-top: 8px; font-family: var(--font-mono); font-size: 12px;
+      color: var(--brand-success); font-weight: 600;
+    }
+    .admin .kpi .delta.negative { color: var(--brand-error); }
+    .admin .chart {
+      background: white; padding: 24px; border-radius: 14px;
+      border: 1px solid var(--brand-paper-line);
+      margin-bottom: 24px;
+    }
+    .admin .chart h3 {
+      font-family: var(--font-display); font-size: 16px; font-weight: 600;
+      color: var(--brand-espresso); margin-bottom: 24px;
+    }
+    .admin .chart .bars {
+      display: flex; align-items: flex-end; gap: 4px; height: 180px;
+    }
+    .admin .chart .bars .bar {
+      flex: 1; background: var(--brand-primary-soft); border-radius: 4px 4px 0 0;
+      position: relative;
+    }
+    .admin .chart .bars .bar.tall { background: var(--brand-primary); }
+    .admin .chart .x-axis {
+      display: flex; gap: 4px; padding-top: 8px;
+      font-family: var(--font-mono); font-size: 10px; color: var(--brand-ink-mute);
+    }
+    .admin .chart .x-axis span { flex: 1; text-align: center; }
+    .admin .recent {
+      background: white; padding: 24px; border-radius: 14px;
+      border: 1px solid var(--brand-paper-line);
+    }
+    .admin .recent h3 {
+      font-family: var(--font-display); font-size: 16px; font-weight: 600;
+      color: var(--brand-espresso); margin-bottom: 16px;
+    }
+    .admin .recent table { width: 100%; font-size: 13px; }
+    .admin .recent th {
+      text-align: left; padding: 8px 0; color: var(--brand-ink-mute);
+      font-weight: 500; font-size: 11px; text-transform: uppercase;
+      letter-spacing: 0.05em; border-bottom: 1px solid var(--brand-paper-line);
+    }
+    .admin .recent td {
+      padding: 12px 0; border-bottom: 1px solid var(--brand-cream-deep);
+    }
+    .admin .recent td.amount {
+      font-family: var(--font-mono); font-weight: 600; color: var(--brand-espresso);
+    }
+    .admin .recent .badge {
+      display: inline-block; padding: 3px 10px; border-radius: 999px;
+      font-size: 11px; font-weight: 600;
+    }
+    .admin .recent .badge.tarjeta { background: #DEE9F0; color: #2D5B7A; }
+    .admin .recent .badge.efectivo { background: #DCE9DE; color: var(--brand-success); }
+    .admin .recent .badge.qr { background: var(--brand-primary-soft); color: var(--brand-primary-deep); }
+
+    /* ═════════════════════════════════════════════════════════
+       SECCIÓN 6 · TICKET TÉRMICO
+       ═════════════════════════════════════════════════════════ */
+    .ticket-stage {
+      background: var(--brand-espresso); padding: 64px;
+      display: flex; gap: 48px; justify-content: center; align-items: center;
+    }
+    .ticket {
+      width: 280px; padding: 24px 20px;
+      background: var(--brand-cream); color: var(--brand-espresso);
+      font-family: var(--font-mono); font-size: 11px; line-height: 1.5;
+      box-shadow: 0 30px 80px rgba(0,0,0,0.4);
+      position: relative;
+    }
+    .ticket::before {
+      content: ''; position: absolute; bottom: -8px; left: 0; right: 0;
+      height: 16px; background: var(--brand-cream);
+      clip-path: polygon(
+        0 0, 5% 100%, 10% 0, 15% 100%, 20% 0, 25% 100%, 30% 0, 35% 100%,
+        40% 0, 45% 100%, 50% 0, 55% 100%, 60% 0, 65% 100%, 70% 0, 75% 100%,
+        80% 0, 85% 100%, 90% 0, 95% 100%, 100% 0
+      );
+    }
+    .ticket .head { text-align: center; padding-bottom: 12px; border-bottom: 1px dashed var(--brand-ink); margin-bottom: 12px; }
+    .ticket .head svg { width: 40px; height: 40px; color: var(--brand-espresso); margin-bottom: 6px; }
+    .ticket .head .name { font-weight: 700; font-size: 13px; }
+    .ticket .head .nit { font-size: 10px; color: var(--brand-ink-soft); margin-top: 2px; }
+    .ticket .meta { font-size: 10px; margin-bottom: 10px; }
+    .ticket .meta div { display: flex; justify-content: space-between; }
+    .ticket .items { padding: 8px 0; border-top: 1px dashed var(--brand-ink); border-bottom: 1px dashed var(--brand-ink); }
+    .ticket .items .row {
+      display: flex; justify-content: space-between; padding: 3px 0;
+    }
+    .ticket .items .row .item { flex: 1; }
+    .ticket .total {
+      display: flex; justify-content: space-between; padding: 10px 0;
+      border-bottom: 2px solid var(--brand-espresso);
+      font-weight: 700; font-size: 14px;
+    }
+    .ticket .pay-method {
+      text-align: center; padding: 10px 0; font-size: 10px;
+    }
+    .ticket .pay-method .approved { color: var(--brand-success); font-weight: 700; }
+    .ticket .qr-area {
+      display: flex; justify-content: center; padding: 10px 0;
+    }
+    .ticket .qr-area .qr-placeholder {
+      width: 90px; height: 90px;
+      background: repeating-conic-gradient(var(--brand-espresso) 0% 25%, transparent 0% 50%) 50% / 8px 8px;
+      border: 1px solid var(--brand-espresso);
+    }
+    .ticket .footer {
+      text-align: center; font-size: 9px; color: var(--brand-ink-soft);
+      padding-top: 10px;
+    }
+    .ticket .footer strong { color: var(--brand-primary); font-weight: 700; }
+
+    .ticket-notes {
+      max-width: 320px; color: var(--brand-cream); font-size: 14px;
+      line-height: 1.6;
+    }
+    .ticket-notes h3 {
+      font-family: var(--font-display); font-size: 24px;
+      color: var(--brand-cream); margin-bottom: 16px;
+    }
+    .ticket-notes p { color: rgba(251, 247, 240, 0.65); }
+
+    /* ─── Footer chrome ─── */
+    .showcase-footer {
+      background: var(--brand-espresso); color: var(--brand-cream);
+      padding: 48px 32px; text-align: center; font-size: 13px;
+    }
+    .showcase-footer p { opacity: 0.6; }
+    .showcase-footer strong { color: var(--brand-primary); }
+
+    @media (max-width: 980px) {
+      .landing .hero { grid-template-columns: 1fr; padding: 48px 32px; }
+      .landing .hero h1 { font-size: 56px; }
+      .pos { grid-template-columns: 1fr; }
+      .pos .sidebar, .pos .cart { display: none; }
+      .admin { grid-template-columns: 1fr; }
+      .admin .sidebar { display: none; }
+      .pwa-stage { flex-direction: column; }
+      .ticket-stage { flex-direction: column; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ═══ Showcase top nav ═══ -->
+  <header class="showcase-nav">
+    <div class="brand-mark">
+      <svg viewBox="0 0 120 120" fill="currentColor">
+        <path d="M 95.355 25.355 A 50 50 0 1 0 95.355 94.645 L 84.041 83.331 A 34 34 0 1 1 84.041 36.669 Z"/>
+        <rect x="40" y="52" width="80" height="16" rx="2"/>
+      </svg>
+      Conduit POS · Platform Preview
+    </div>
+    <nav>
+      <a href="#landing">Landing</a>
+      <a href="#login">Login</a>
+      <a href="#pos">POS</a>
+      <a href="#pwa">PWA Pickup</a>
+      <a href="#admin">Admin</a>
+      <a href="#ticket">Ticket</a>
+    </nav>
+  </header>
+
+  <!-- ═══ 1. Landing pública ═══ -->
+  <section class="showcase-section" id="landing">
+    <div class="showcase-label">
+      <span class="num">01 ── LANDING PÚBLICA</span>
+      <h2>conduit-pos.com</h2>
+      <span class="desc">Hero de la marketing site — convierte prospectos</span>
+    </div>
+    <div class="frame">
+      <div class="landing">
+        <div class="nav">
+          <div class="brand">
+            <svg viewBox="0 0 120 120" fill="currentColor">
+              <path d="M 95.355 25.355 A 50 50 0 1 0 95.355 94.645 L 84.041 83.331 A 34 34 0 1 1 84.041 36.669 Z"/>
+              <rect x="40" y="52" width="80" height="16" rx="2"/>
+            </svg>
+            Conduit
+          </div>
+          <div class="links">
+            <a href="#">Producto</a>
+            <a href="#">Precios</a>
+            <a href="#">Clientes</a>
+            <a href="#">Iniciar sesión</a>
+            <a href="#" class="cta">Ver demo</a>
+          </div>
+        </div>
+        <div class="hero">
+          <div>
+            <h1>El POS<br/>para los que<br/><em>sí venden.</em></h1>
+            <p>Conduit corre tu caja, tu factura electrónica, tu inventario, tu delivery y tu pickup. Una sola plataforma. Hecha en Guatemala.</p>
+            <div class="cta-row">
+              <a href="#" class="btn-primary">Ver demo en vivo</a>
+              <a href="#" class="btn-ghost">Cómo lo usa Julia Bakery →</a>
+            </div>
+          </div>
+          <div class="hero-photo">
+            <div class="photo-label">Cajera Dalia · Julia Bakery · 6:31 AM</div>
+          </div>
+        </div>
+        <div class="social-strip">
+          <span class="label">Negocios que ya operan con Conduit</span>
+          <div class="clients">
+            <span>Julia Bakery</span>
+            <span>Café Solo</span>
+            <span>La Panera</span>
+            <span>+ tu negocio</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ 2. Login POS ═══ -->
+  <section class="showcase-section" id="login">
+    <div class="showcase-label">
+      <span class="num">02 ── LOGIN POS</span>
+      <h2>Cajero ingresando turno</h2>
+      <span class="desc">Calmo, sin fricción, hit-target preservado</span>
+    </div>
+    <div class="frame">
+      <div class="login-pos">
+        <div class="card">
+          <div class="logo-lockup">
+            <svg viewBox="0 0 120 120" fill="currentColor">
+              <path d="M 95.355 25.355 A 50 50 0 1 0 95.355 94.645 L 84.041 83.331 A 34 34 0 1 1 84.041 36.669 Z"/>
+              <rect x="40" y="52" width="80" height="16" rx="2"/>
+            </svg>
+            <span>Conduit</span>
+          </div>
+          <h1>¿Cuál es tu PIN?</h1>
+          <p class="subtitle">Tu turno empieza cuando lo ingresás.</p>
+          <div class="pin-display">
+            <div class="dot filled"></div>
+            <div class="dot filled"></div>
+            <div class="dot filled"></div>
+            <div class="dot"></div>
+          </div>
+          <div class="keypad">
+            <button>1</button><button>2</button><button>3</button>
+            <button>4</button><button>5</button><button>6</button>
+            <button>7</button><button>8</button><button>9</button>
+            <button class="delete">←</button><button>0</button><button class="delete">OK</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ 3. POS en venta ═══ -->
+  <section class="showcase-section" id="pos">
+    <div class="showcase-label">
+      <span class="num">03 ── POS CAJERO</span>
+      <h2>Pantalla de venta</h2>
+      <span class="desc">El operativo del día a día — botones grandes, totales claros</span>
+    </div>
+    <div class="frame">
+      <div class="pos">
+        <aside class="sidebar">
+          <div class="brand">
+            <svg viewBox="0 0 120 120" fill="currentColor">
+              <path d="M 95.355 25.355 A 50 50 0 1 0 95.355 94.645 L 84.041 83.331 A 34 34 0 1 1 84.041 36.669 Z"/>
+              <rect x="40" y="52" width="80" height="16" rx="2"/>
+            </svg>
+            Conduit
+          </div>
+          <div class="section-title">Operación</div>
+          <a class="active"><span class="ico"></span> Vender</a>
+          <a><span class="ico"></span> Bandeja pedidos <span style="margin-left:auto;font-family:var(--font-mono);background:var(--brand-primary);color:white;padding:2px 8px;border-radius:999px;font-size:11px">3</span></a>
+          <a><span class="ico"></span> Comandas</a>
+          <a><span class="ico"></span> Historial</a>
+          <div class="section-title">Cierre</div>
+          <a><span class="ico"></span> Mi turno</a>
+          <a><span class="ico"></span> Salir</a>
+        </aside>
+        <main class="main">
+          <div class="topbar">
+            <div class="greeting">
+              ¡Buen día Dalia! <span>· Turno abierto desde 06:42</span>
+            </div>
+            <div class="turno-info">
+              <span class="chip">EN TURNO</span>
+              <span class="name">Julia Bakery · Caja 1</span>
+            </div>
+          </div>
+          <div class="cat-tabs">
+            <button class="tab active">Todo</button>
+            <button class="tab">Café</button>
+            <button class="tab">Té & Matcha</button>
+            <button class="tab">Panadería</button>
+            <button class="tab">Repostería</button>
+            <button class="tab">Bebidas</button>
+            <button class="tab">Postres</button>
+          </div>
+          <div class="grid">
+            <div class="card"><div class="img">☕</div><div class="name">Cappuccino</div><div class="price">Q 22.00</div></div>
+            <div class="card"><div class="img">☕</div><div class="name">Americano</div><div class="price">Q 18.00</div></div>
+            <div class="card"><div class="img">🥐</div><div class="name">Croissant plain</div><div class="price">Q 18.00</div></div>
+            <div class="card"><div class="img">🍩</div><div class="name">Cinnamon roll</div><div class="price">Q 47.00</div></div>
+            <div class="card"><div class="img">🥯</div><div class="name">Brioche dulce</div><div class="price">Q 25.00</div></div>
+            <div class="card"><div class="img">🍰</div><div class="name">Cheesecake nutella</div><div class="price">Q 55.00</div></div>
+            <div class="card"><div class="img">🥐</div><div class="name">Pain au chocolat</div><div class="price">Q 22.00</div></div>
+            <div class="card"><div class="img">🍵</div><div class="name">Latte matcha</div><div class="price">Q 28.00</div></div>
+            <div class="card"><div class="img">🧁</div><div class="name">Scone berries</div><div class="price">Q 22.00</div></div>
+            <div class="card"><div class="img">🍩</div><div class="name">Pavlova pistacho</div><div class="price">Q 48.00</div></div>
+          </div>
+        </main>
+        <aside class="cart">
+          <h3>Venta actual</h3>
+          <div class="items">
+            <div class="item">
+              <div><div class="name">Cinnamon roll</div><div class="qty">×1</div></div>
+              <div class="price">Q 47.00</div>
+            </div>
+            <div class="item">
+              <div><div class="name">Cappuccino</div><div class="qty">×1 · sin azúcar</div></div>
+              <div class="price">Q 22.00</div>
+            </div>
+            <div class="item">
+              <div><div class="name">Croissant plain</div><div class="qty">×2</div></div>
+              <div class="price">Q 36.00</div>
+            </div>
+          </div>
+          <div class="totals">
+            <div class="row"><span>Subtotal</span><span>Q 105.00</span></div>
+            <div class="row"><span>IVA incluido</span><span>Q 12.50</span></div>
+            <div class="row grand"><span>Total</span><span>Q 105.00</span></div>
+          </div>
+          <button class="pay-btn">Cobrar Q 105.00</button>
+        </aside>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ 4. PWA Pickup ═══ -->
+  <section class="showcase-section" id="pwa">
+    <div class="showcase-label">
+      <span class="num">04 ── PWA PICKUP</span>
+      <h2>Cliente pidiendo desde su celular</h2>
+      <span class="desc">Whitelabel: la marca de Julia adelante, Conduit en footer</span>
+    </div>
+    <div class="frame">
+      <div class="pwa-stage">
+        <div class="iphone-frame">
+          <div class="iphone-screen">
+            <div class="notch"></div>
+            <div class="pwa-header">
+              <div class="tenant-brand">Julia Bakery</div>
+              <div class="perfil-icon"></div>
+            </div>
+            <div class="pwa-hero">
+              <h2>Buenos días.<br/>Pedí ya.</h2>
+              <p>Hoy abrimos 7am–7pm · entrega rápida</p>
+            </div>
+            <div class="pwa-search">🔍 Buscar pan, café, repostería…</div>
+            <div class="pwa-category-row">
+              <span class="chip active">Recomendado</span>
+              <span class="chip">Café</span>
+              <span class="chip">Panadería</span>
+              <span class="chip">Postres</span>
+            </div>
+            <div class="pwa-products">
+              <div class="item">
+                <div class="img">🥐</div>
+                <div class="info"><div class="name">Cinnamon roll</div><div class="price">Q 47</div></div>
+              </div>
+              <div class="item">
+                <div class="img">☕</div>
+                <div class="info"><div class="name">Cappuccino</div><div class="price">Q 22</div></div>
+              </div>
+              <div class="item">
+                <div class="img">🥯</div>
+                <div class="info"><div class="name">Brioche dulce</div><div class="price">Q 25</div></div>
+              </div>
+              <div class="item">
+                <div class="img">🍰</div>
+                <div class="info"><div class="name">Cheesecake nutella</div><div class="price">Q 55</div></div>
+              </div>
+            </div>
+            <div class="pwa-bottom-nav">
+              <div class="nav-item active"><div class="dot"></div>Inicio</div>
+              <div class="nav-item"><div class="dot"></div>Carrito</div>
+              <div class="nav-item"><div class="dot"></div>Pedidos</div>
+              <div class="nav-item"><div class="dot"></div>Perfil</div>
+            </div>
+          </div>
+        </div>
+        <div class="pwa-notes">
+          <h3>Lo que ve el cliente final</h3>
+          <ul>
+            <li><strong>Marca del tenant</strong> arriba (Julia, Café Solo, etc.). Cada cliente personaliza color + logo.</li>
+            <li><strong>Foto de producto real</strong> (acá placeholders) — no íconos genéricos.</li>
+            <li><strong>Bottom nav</strong> con 4 acciones. Cero distracción.</li>
+            <li><strong>Powered by Conduit</strong> en footer, pequeño, sin gritar.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ 5. Admin dashboard ═══ -->
+  <section class="showcase-section" id="admin">
+    <div class="showcase-label">
+      <span class="num">05 ── ADMIN DASHBOARD</span>
+      <h2>El owner viendo cómo va el día</h2>
+      <span class="desc">11pm desde la cama: cuánto vendió, qué método, todo cuadrado</span>
+    </div>
+    <div class="frame">
+      <div class="admin">
+        <aside class="sidebar">
+          <div class="brand">
+            <svg viewBox="0 0 120 120" fill="currentColor">
+              <path d="M 95.355 25.355 A 50 50 0 1 0 95.355 94.645 L 84.041 83.331 A 34 34 0 1 1 84.041 36.669 Z"/>
+              <rect x="40" y="52" width="80" height="16" rx="2"/>
+            </svg>
+            Conduit
+          </div>
+          <div class="menu">
+            <a class="active"><span class="ico"></span> Dashboard</a>
+            <a><span class="ico"></span> Ventas</a>
+            <a><span class="ico"></span> Facturas FEL</a>
+            <a><span class="ico"></span> Turnos</a>
+            <a><span class="ico"></span> Productos</a>
+            <a><span class="ico"></span> Inventario</a>
+            <a><span class="ico"></span> Recetas</a>
+            <a><span class="ico"></span> Cotizaciones</a>
+            <a><span class="ico"></span> Cajeros</a>
+            <a><span class="ico"></span> Reportes</a>
+            <a><span class="ico"></span> Configuración</a>
+          </div>
+        </aside>
+        <main class="main">
+          <div class="page-head">
+            <h1>Hoy en Julia Bakery</h1>
+            <div class="date">📅 Jueves 4 de junio · 18:39</div>
+          </div>
+          <div class="kpis">
+            <div class="kpi">
+              <div class="label">Ventas hoy</div>
+              <div class="value">Q 8,227</div>
+              <div class="delta">+18% vs. ayer</div>
+            </div>
+            <div class="kpi">
+              <div class="label">Facturas FEL</div>
+              <div class="value">100</div>
+              <div class="delta">2 anuladas</div>
+            </div>
+            <div class="kpi">
+              <div class="label">Ticket promedio</div>
+              <div class="value">Q 82</div>
+              <div class="delta">+Q 4 vs. ayer</div>
+            </div>
+            <div class="kpi">
+              <div class="label">Cajeros activos</div>
+              <div class="value">3</div>
+              <div class="delta" style="color: var(--brand-ink-soft);">Alex · Dalia · Kiosko</div>
+            </div>
+          </div>
+          <div class="chart">
+            <h3>Ventas por hora</h3>
+            <div class="bars">
+              <div class="bar" style="height: 20%"></div>
+              <div class="bar" style="height: 35%"></div>
+              <div class="bar tall" style="height: 78%"></div>
+              <div class="bar tall" style="height: 92%"></div>
+              <div class="bar tall" style="height: 88%"></div>
+              <div class="bar" style="height: 55%"></div>
+              <div class="bar" style="height: 42%"></div>
+              <div class="bar" style="height: 48%"></div>
+              <div class="bar tall" style="height: 72%"></div>
+              <div class="bar tall" style="height: 85%"></div>
+              <div class="bar" style="height: 60%"></div>
+              <div class="bar" style="height: 38%"></div>
+            </div>
+            <div class="x-axis">
+              <span>7am</span><span>8am</span><span>9am</span><span>10am</span><span>11am</span>
+              <span>12pm</span><span>1pm</span><span>2pm</span><span>3pm</span><span>4pm</span><span>5pm</span><span>6pm</span>
+            </div>
+          </div>
+          <div class="recent">
+            <h3>Últimas facturas</h3>
+            <table>
+              <thead><tr><th>Hora</th><th>#</th><th>Cliente</th><th>Cajero</th><th>Método</th><th style="text-align:right">Total</th></tr></thead>
+              <tbody>
+                <tr><td>18:31</td><td>A-0098</td><td>CF</td><td>Dalia</td><td><span class="badge qr">QR Recurrente</span></td><td class="amount" style="text-align:right">Q 47.00</td></tr>
+                <tr><td>18:22</td><td>A-0097</td><td>Corp. Batgo S.A.</td><td>Alexander</td><td><span class="badge tarjeta">Tarjeta</span></td><td class="amount" style="text-align:right">Q 380.00</td></tr>
+                <tr><td>18:14</td><td>A-0096</td><td>CF</td><td>Dalia</td><td><span class="badge efectivo">Efectivo</span></td><td class="amount" style="text-align:right">Q 105.00</td></tr>
+                <tr><td>17:58</td><td>A-0095</td><td>CF</td><td>Alexander</td><td><span class="badge tarjeta">Tarjeta</span></td><td class="amount" style="text-align:right">Q 67.00</td></tr>
+                <tr><td>17:42</td><td>A-0094</td><td>CF</td><td>Dalia</td><td><span class="badge efectivo">Efectivo</span></td><td class="amount" style="text-align:right">Q 25.00</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </main>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ 6. Ticket térmico ═══ -->
+  <section class="showcase-section" id="ticket">
+    <div class="showcase-label">
+      <span class="num">06 ── TICKET TÉRMICO</span>
+      <h2>Lo que se imprime</h2>
+      <span class="desc">Logo Conduit en B/N + datos del comercio FEL + QR SAT</span>
+    </div>
+    <div class="frame">
+      <div class="ticket-stage">
+        <div class="ticket">
+          <div class="head">
+            <svg viewBox="0 0 120 120" fill="currentColor">
+              <path d="M 95.355 25.355 A 50 50 0 1 0 95.355 94.645 L 84.041 83.331 A 34 34 0 1 1 84.041 36.669 Z"/>
+              <rect x="40" y="52" width="80" height="16" rx="2"/>
+            </svg>
+            <div class="name">JULIA BAKERY</div>
+            <div class="nit">NIT 120302411<br/>Av. Las Américas 14-50</div>
+          </div>
+          <div class="meta">
+            <div><span>Factura</span><span>A-0098</span></div>
+            <div><span>Fecha</span><span>04/06/2026 18:31</span></div>
+            <div><span>Cliente</span><span>CF</span></div>
+            <div><span>Cajero</span><span>Dalia M.</span></div>
+          </div>
+          <div class="items">
+            <div class="row"><span class="item">1× Cinnamon roll</span><span>Q 47.00</span></div>
+            <div class="row"><span class="item">1× Cappuccino</span><span>Q 22.00</span></div>
+            <div class="row"><span class="item">2× Croissant plain</span><span>Q 36.00</span></div>
+          </div>
+          <div class="total"><span>TOTAL</span><span>Q 105.00</span></div>
+          <div class="pay-method">QR Recurrente · <span class="approved">APROBADO</span></div>
+          <div class="qr-area"><div class="qr-placeholder"></div></div>
+          <div class="footer">
+            UUID 80E386C3-A4B0-4ABF-ACBF-9A5C2456<br/>
+            Verificá esta factura en gob.gt<br/><br/>
+            ¡Gracias por venir!<br/>
+            <strong>Conduit POS</strong> · conduit-pos.com
+          </div>
+        </div>
+        <div class="ticket-notes">
+          <h3>El ticket es el momento de marca</h3>
+          <p>Es el único objeto físico que el cliente se lleva. Lleva la C de Conduit en negro sólido (papel térmico = 1 bit), pero la marca dominante es el comercio (Julia). Conduit aparece chico en el footer, sin competir.</p>
+          <p style="margin-top:16px;">El QR SAT verifica la factura ante la DGI. Es obligatorio.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer chrome -->
+  <footer class="showcase-footer">
+    <p>Mockup preview · <strong>Conduit POS v0.1</strong> · brand kit en <code>brand/</code></p>
+    <p style="margin-top:8px;">Decisiones pendientes: logo direction · color exacto · tagline · dominio · ¿avanzamos a Fase 2?</p>
+  </footer>
+
+</body>
+</html>
