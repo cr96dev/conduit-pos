@@ -1,0 +1,25 @@
+<!--
+  Conduit POS — Concept A · "El Canal"
+  C-mark con corte horizontal que la atraviesa.
+  Metáfora: el canal por el que pasa la transacción.
+
+  Geometría:
+  - Anillo de radio externo 50, grosor 16
+  - Apertura de 90° hacia la derecha (de -45° a +45°)
+  - Línea horizontal grosor 16 que cruza el centro
+
+  Color: usa currentColor para que respete el theme (brand-primary, espresso, cream).
+  Versión final cromática se aplica en CSS, no aquí.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" fill="currentColor">
+  <!-- Anillo C (de 45° hasta 315° en sentido antihorario) -->
+  <path d="
+    M 95.355 25.355
+    A 50 50 0 1 0 95.355 94.645
+    L 84.041 83.331
+    A 34 34 0 1 1 84.041 36.669
+    Z
+  "/>
+  <!-- Corte horizontal — el 'paso' de la transacción -->
+  <rect x="40" y="52" width="80" height="16" rx="2"/>
+</svg>

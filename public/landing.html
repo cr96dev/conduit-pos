@@ -5,6 +5,17 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="theme-color" content="#D7461C">
   <link rel="canonical" href="https://conduitgt.net/">
+
+  <!-- Favicons (Concept A — El Canal) -->
+  <link rel="icon" type="image/svg+xml" href="/favicon-tomato.svg">
+  <link rel="icon" type="image/svg+xml" sizes="any" href="/favicon.svg">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.svg">
+  <link rel="mask-icon" href="/favicon.svg" color="#D7461C">
+
+  <!-- hreflang -->
+  <link rel="alternate" hreflang="es-GT" href="https://conduitgt.net/">
+  <link rel="alternate" hreflang="en" href="https://conduitgt.net/en/">
+  <link rel="alternate" hreflang="x-default" href="https://conduitgt.net/">
   <title>Conduit POS — El POS para los que sí venden</title>
   <meta name="description" content="Conduit administra su caja, su facturación electrónica, su inventario y su pickup. Una sola plataforma. Hecha en Guatemala.">
 
@@ -1645,26 +1656,273 @@
           <ul>
             <li><a href="https://wa.me/50200000000">WhatsApp</a></li>
             <li><a href="#faq">Preguntas</a></li>
-            <li><a href="#">Estado del sistema</a></li>
-            <li><a href="#">Documentación</a></li>
+            <li><a href="#" data-open-form>Solicitar demo</a></li>
+            <li><a href="https://github.com/cr96dev/conduit-pos">Cambios recientes</a></li>
           </ul>
         </div>
       </div>
       <div class="footer-base">
-        <span>© 2026 Conduit POS · Guatemala City</span>
+        <div style="display:flex;gap:24px;align-items:center;flex-wrap:wrap;">
+          <span>© 2026 Conduit POS · Guatemala City</span>
+          <a href="/privacy" style="color:var(--ink-mute);text-decoration:none;">Privacidad</a>
+          <a href="/terms" style="color:var(--ink-mute);text-decoration:none;">Términos</a>
+        </div>
         <span class="badge"><span class="dot"></span> Todos los sistemas operando</span>
       </div>
     </div>
   </footer>
 
-  <!-- Scroll-aware nav -->
+  <!-- ═══════════════════════════════════════════════════════════
+       MODAL · Solicitar demostración
+       ═══════════════════════════════════════════════════════════ -->
+  <div class="modal-backdrop" id="modalContacto" aria-hidden="true">
+    <div class="modal" role="dialog" aria-labelledby="modalTitle">
+      <button class="modal-close" aria-label="Cerrar" data-close-form>×</button>
+
+      <div class="modal-body">
+        <div class="eyebrow">Conversemos</div>
+        <h3 id="modalTitle">Solicitar demostración</h3>
+        <p class="modal-sub">Le contactamos por WhatsApp en menos de 24 horas hábiles. Sin compromiso.</p>
+
+        <form id="formContacto" novalidate>
+          <!-- Honeypot anti-bot (invisible para humanos) -->
+          <input type="text" name="campo_secreto" class="hp" autocomplete="off" tabindex="-1" aria-hidden="true">
+
+          <div class="form-grid">
+            <label class="form-field">
+              <span>Nombre completo</span>
+              <input type="text" name="nombre" required maxlength="100" placeholder="Carlos Rodríguez">
+            </label>
+            <label class="form-field">
+              <span>Nombre del negocio</span>
+              <input type="text" name="negocio" required maxlength="100" placeholder="Panadería La Aurora">
+            </label>
+            <label class="form-field">
+              <span>Email</span>
+              <input type="email" name="email" required maxlength="200" placeholder="carlos@panaderiaaurora.gt">
+            </label>
+            <label class="form-field">
+              <span>WhatsApp</span>
+              <input type="tel" name="telefono" maxlength="30" placeholder="+502 5555-5555">
+            </label>
+          </div>
+
+          <label class="form-field full">
+            <span>¿Qué le interesa de Conduit? (opcional)</span>
+            <textarea name="mensaje" maxlength="2000" rows="3" placeholder="Migrar mi POS actual · Empezar a facturar FEL · Habilitar pickup..."></textarea>
+          </label>
+
+          <div class="form-actions">
+            <button type="submit" class="btn btn-primary" id="formSubmit">
+              <span class="label">Enviar</span>
+              <span class="spinner" hidden>···</span>
+            </button>
+            <p class="form-legal">
+              Al enviar acepta nuestra <a href="/privacy" target="_blank">Política de Privacidad</a>.
+              No compartimos sus datos con nadie.
+            </p>
+          </div>
+
+          <div class="form-status" hidden></div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <style>
+    .modal-backdrop {
+      position: fixed; inset: 0; z-index: 200;
+      background: rgba(31, 20, 17, 0.6);
+      backdrop-filter: blur(8px);
+      display: none;
+      align-items: center; justify-content: center;
+      padding: 24px;
+    }
+    .modal-backdrop.open { display: flex; animation: fadeIn 0.2s ease; }
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    .modal {
+      background: var(--cream);
+      border-radius: 24px;
+      max-width: 560px; width: 100%;
+      max-height: 90vh; overflow-y: auto;
+      box-shadow: var(--shadow-lg);
+      position: relative;
+      animation: slideUp 0.25s cubic-bezier(0.32, 0.72, 0, 1);
+    }
+    @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+    .modal-close {
+      position: absolute; top: 16px; right: 16px;
+      width: 36px; height: 36px;
+      border: none; background: var(--cream-deep);
+      border-radius: 50%; cursor: pointer;
+      font-size: 22px; font-weight: 500;
+      color: var(--ink); line-height: 1;
+      display: flex; align-items: center; justify-content: center;
+      transition: background 0.15s;
+    }
+    .modal-close:hover { background: var(--cream-darker); }
+    .modal-body { padding: 40px 36px 36px; }
+    .modal-body h3 {
+      font-family: var(--font-display); font-size: 32px;
+      letter-spacing: -0.02em; color: var(--espresso);
+      margin-bottom: 8px; line-height: 1.1;
+    }
+    .modal-sub { color: var(--ink-soft); font-size: 15px; margin-bottom: 28px; }
+
+    .hp { position: absolute; left: -9999px; opacity: 0; pointer-events: none; }
+
+    .form-grid {
+      display: grid; grid-template-columns: 1fr 1fr;
+      gap: 16px; margin-bottom: 16px;
+    }
+    .form-field { display: flex; flex-direction: column; gap: 6px; }
+    .form-field.full { grid-column: span 2; margin-bottom: 20px; }
+    .form-field span {
+      font-size: 12px; font-weight: 600; color: var(--ink);
+      letter-spacing: 0.02em;
+    }
+    .form-field input, .form-field textarea {
+      padding: 12px 14px; border-radius: 10px;
+      border: 1.5px solid var(--paper-line);
+      background: white; font-size: 14px;
+      font-family: var(--font-body); color: var(--espresso);
+      transition: border-color 0.15s;
+    }
+    .form-field input:focus, .form-field textarea:focus {
+      outline: none; border-color: var(--primary);
+    }
+    .form-field textarea { resize: vertical; min-height: 70px; }
+
+    .form-actions {
+      display: flex; flex-direction: column; gap: 12px;
+      margin-top: 8px;
+    }
+    .form-actions .btn-primary {
+      width: 100%; justify-content: center;
+      padding: 16px; font-size: 15px;
+    }
+    .form-actions .btn-primary[disabled] { opacity: 0.6; cursor: wait; }
+    .form-legal {
+      font-size: 12px; color: var(--ink-mute);
+      text-align: center;
+    }
+    .form-legal a { color: var(--ink-soft); }
+    .form-status {
+      margin-top: 16px; padding: 14px 18px;
+      border-radius: 10px; font-size: 14px; font-weight: 500;
+    }
+    .form-status.ok { background: #DCE9DE; color: #1F5A3A; }
+    .form-status.err { background: #F4D5CC; color: #8A2515; }
+
+    @media (max-width: 600px) {
+      .modal-body { padding: 32px 24px 24px; }
+      .modal-body h3 { font-size: 26px; }
+      .form-grid { grid-template-columns: 1fr; }
+      .form-field.full { grid-column: span 1; }
+    }
+  </style>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       SCRIPTS
+       ═══════════════════════════════════════════════════════════ -->
   <script>
+    // Nav scroll-aware
     const nav = document.getElementById('nav');
     window.addEventListener('scroll', () => {
       if (window.scrollY > 24) nav.classList.add('scrolled');
       else nav.classList.remove('scrolled');
     }, { passive: true });
+
+    // Modal contacto: abrir/cerrar
+    const modal = document.getElementById('modalContacto');
+    const form = document.getElementById('formContacto');
+    const status = form.querySelector('.form-status');
+    const submitBtn = document.getElementById('formSubmit');
+
+    function abrirModal() {
+      modal.classList.add('open');
+      modal.setAttribute('aria-hidden', 'false');
+      document.body.style.overflow = 'hidden';
+      setTimeout(() => form.querySelector('[name=nombre]')?.focus(), 100);
+    }
+    function cerrarModal() {
+      modal.classList.remove('open');
+      modal.setAttribute('aria-hidden', 'true');
+      document.body.style.overflow = '';
+    }
+
+    // Triggers: cualquier link con href="#cta" o data-open-form abre el modal
+    document.addEventListener('click', (e) => {
+      const trigger = e.target.closest('[href="#cta"], [href="#"][data-open-form], [data-open-form]');
+      if (trigger) {
+        e.preventDefault();
+        abrirModal();
+        return;
+      }
+      const closer = e.target.closest('[data-close-form]');
+      if (closer || e.target === modal) {
+        cerrarModal();
+      }
+    });
+
+    // Wire up botón "Solicitar demostración" (hero + nav + cta-final)
+    document.querySelectorAll('a').forEach(a => {
+      const txt = (a.textContent || '').trim();
+      if (txt === 'Solicitar demostración' || txt === 'Solicitar demo' || txt === 'Quiero la demo') {
+        a.setAttribute('data-open-form', '');
+      }
+    });
+
+    // ESC cierra
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && modal.classList.contains('open')) cerrarModal();
+    });
+
+    // Submit
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const fd = new FormData(form);
+      const data = Object.fromEntries(fd.entries());
+      data.fuente = 'landing-conduitgt.net';
+
+      submitBtn.disabled = true;
+      submitBtn.querySelector('.label').hidden = true;
+      submitBtn.querySelector('.spinner').hidden = false;
+      status.hidden = true;
+
+      try {
+        const r = await fetch('/api/contacto', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data),
+        });
+        const j = await r.json();
+        if (r.ok && j.ok) {
+          status.className = 'form-status ok';
+          status.textContent = '✓ Recibido. Le contactamos en menos de 24 horas hábiles.';
+          status.hidden = false;
+          form.reset();
+          setTimeout(cerrarModal, 3500);
+        } else {
+          status.className = 'form-status err';
+          status.textContent = j.error || 'Hubo un problema. Intente de nuevo o escríbanos por WhatsApp.';
+          status.hidden = false;
+        }
+      } catch (err) {
+        status.className = 'form-status err';
+        status.textContent = 'No pudimos enviar. Verifique su conexión o escríbanos por WhatsApp.';
+        status.hidden = false;
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.querySelector('.label').hidden = false;
+        submitBtn.querySelector('.spinner').hidden = true;
+      }
+    });
   </script>
+
+  <!-- Vercel Web Analytics (anónimo, sin cookies) -->
+  <script defer src="/_vercel/insights/script.js"></script>
+  <script defer src="/_vercel/speed-insights/script.js"></script>
 
 </body>
 </html>
