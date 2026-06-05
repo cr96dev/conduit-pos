@@ -46,7 +46,7 @@ export default function Terms() {
         <li>Gestión de inventario, recetas y comandas.</li>
         <li>Aplicación web progresiva (PWA) para órdenes de pickup desde el celular del cliente final.</li>
         <li>Reportes operativos, cuadre de turnos y cierre de caja.</li>
-        <li>Integraciones con QuickBooks Online y otros sistemas autorizados.</li>
+        <li>Exportación de información operativa (CSV, Excel) y, cuando aplique, integraciones con sistemas autorizados por el Cliente.</li>
       </ul>
 
       <h2 style={h2}>3. Suscripción y precio</h2>
@@ -99,7 +99,7 @@ export default function Terms() {
       <ul style={ul}>
         <li>Conduit no responde por daños indirectos, lucro cesante o pérdida de oportunidad comercial del Cliente.</li>
         <li>La responsabilidad total de Conduit ante cualquier reclamo está limitada al equivalente de tres (3) meses de la cuota mensual pagada por el Cliente.</li>
-        <li>Conduit no responde por errores de los servicios de terceros integrados (Infile, Recurrente, QuickBooks, bancos), aunque hará el mejor esfuerzo para resolver incidencias relacionadas.</li>
+        <li>Conduit no responde por errores de los servicios de terceros integrados (Infile, Recurrente, bancos, u otros sistemas autorizados por el Cliente), aunque hará el mejor esfuerzo para resolver incidencias relacionadas.</li>
       </ul>
 
       <h2 style={h2}>10. Cancelación</h2>

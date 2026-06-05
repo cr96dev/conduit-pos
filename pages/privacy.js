@@ -81,7 +81,7 @@ export default function Privacy() {
         <li>Para operar la plataforma (procesar ventas, emitir facturas, registrar inventario).</li>
         <li>Para emitir documentos fiscales válidos ante la SAT a través de Infile.</li>
         <li>Para procesar pagos (vía Recurrente u otros procesadores autorizados por el Cliente).</li>
-        <li>Para sincronizar información contable con QuickBooks Online u otros sistemas integrados por el Cliente.</li>
+        <li>Para sincronizar información operativa con otros sistemas autorizados por el Cliente (cuando aplique).</li>
         <li>Para notificar al Cliente sobre actualizaciones, fallas de servicio y temas operativos.</li>
         <li>Para enviar a los Consumidores Finales notificaciones de pickup (confirmación, estado, recogida lista) cuando proporcionan correo o teléfono.</li>
       </ul>
@@ -95,7 +95,6 @@ export default function Privacy() {
       <ul style={ul}>
         <li><strong>Infile</strong> (certificación FEL) — datos necesarios para emitir el documento ante la SAT.</li>
         <li><strong>Recurrente</strong> (procesamiento de pago QR) — monto y referencia del pago.</li>
-        <li><strong>QuickBooks Online</strong> (si el Cliente lo conecta) — datos contables que el Cliente autorice sincronizar.</li>
         <li><strong>Resend / proveedores de correo</strong> — para enviar notificaciones transaccionales (confirmación de pickup, recibo).</li>
         <li><strong>Vercel</strong> (hosting) — necesariamente procesa solicitudes web pero no accede al contenido de las bases de datos del Cliente.</li>
       </ul>

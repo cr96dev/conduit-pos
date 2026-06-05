@@ -228,8 +228,8 @@ export default function CasoJulia() {
             Con la operación estable, Julia Bakery activa el módulo de PWA
             Pickup en las próximas dos semanas — los clientes podrán ordenar
             café y pastelería desde el celular y pasar a recoger sin esperar
-            cola. Sigue después la integración con QuickBooks Online para
-            cerrar el flujo contable completo.
+            cola. Sigue después la afinación del módulo de recetas y costeo
+            para visualizar márgenes reales por producto.
           </p>
         </article>
 
