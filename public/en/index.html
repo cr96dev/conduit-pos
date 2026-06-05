@@ -419,17 +419,33 @@
       color: var(--ink-mute);
     }
     .clients .names {
-      display: flex; gap: 64px; align-items: center; flex-wrap: wrap;
+      display: flex; gap: 56px; align-items: center; flex-wrap: wrap;
       justify-content: center;
       font-family: var(--font-display); font-style: italic; font-weight: 500;
       font-size: 26px; color: var(--ink);
-      opacity: 0.75;
     }
-    .clients .names span:last-child {
+    .clients .names .client-logo {
+      display: inline-block;
+      transition: transform 0.25s var(--ease-quick), opacity 0.25s;
+      opacity: 0.85;
+    }
+    .clients .names .client-logo:hover {
+      opacity: 1;
+      transform: translateY(-2px);
+    }
+    .clients .names .client-logo img {
+      height: 96px;
+      width: auto;
+      display: block;
+    }
+    .clients .names span {
       color: var(--primary); opacity: 1;
       font-style: normal; font-weight: 600;
-      font-size: 18px; padding: 6px 14px;
+      font-size: 14px; padding: 8px 16px;
       border: 1.5px dashed var(--primary); border-radius: 999px;
+      letter-spacing: 0.02em;
+      font-family: var(--font-mono);
+      text-transform: uppercase;
     }
 
     /* ════════════════════════════════════════════════════════════
@@ -1178,7 +1194,9 @@
     <div class="container">
       <span class="label">Businesses already running on Conduit</span>
       <div class="names">
-        <span>Julia Bakery</span>
+        <a href="/casos/julia-bakery" class="client-logo" aria-label="Julia Bakery — case study">
+          <img src="/img/clients/julia-bakery.png" alt="Julia Bakery" width="160" height="160" loading="lazy" />
+        </a>
         <span>+ your business</span>
       </div>
     </div>
