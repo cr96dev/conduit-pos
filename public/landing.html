@@ -26,11 +26,16 @@
   <meta property="og:locale" content="es_GT">
   <meta property="og:url" content="https://conduitgt.net/">
   <meta property="og:site_name" content="Conduit POS">
+  <meta property="og:image" content="https://conduitgt.net/img/landing/pos-qr-cafe.jpg">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="896">
+  <meta property="og:image:alt" content="Terminal Conduit POS con código QR y café">
 
   <!-- Twitter -->
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="Conduit POS — El POS para los que sí venden">
   <meta name="twitter:description" content="POS + FEL Guatemala + Recurrente QR + pickup PWA.">
+  <meta name="twitter:image" content="https://conduitgt.net/img/landing/pos-qr-cafe.jpg">
 
   <!-- Fonts: Cabinet Grotesk (display) + Switzer (body) + JetBrains Mono -->
   <link rel="preconnect" href="https://api.fontshare.com" crossorigin>
@@ -256,11 +261,20 @@
     .btn-ghost::after { content: '→'; margin-left: 2px; transition: transform 0.2s; }
     .btn-ghost:hover::after { transform: translateX(4px); }
 
-    /* HERO STAGE — POS device illustration */
+    /* HERO STAGE — POS photo */
     .hero-stage {
       position: relative;
       aspect-ratio: 4/5;
-      max-height: 620px;
+      max-height: 680px;
+      overflow: hidden;
+      border-radius: 24px;
+      background: #050505;
+    }
+    .hero-img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
     }
     .hero-stage .surface {
       position: absolute; inset: 0;
@@ -559,6 +573,42 @@
       color: rgba(251, 247, 240, 0.6);
     }
 
+    /* Bento tiles con foto de fondo */
+    .bento-tile.with-photo {
+      padding: 0;
+      position: relative;
+      overflow: hidden;
+      min-height: 320px;
+    }
+    .bento-tile.with-photo > img {
+      position: absolute; inset: 0;
+      width: 100%; height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+    .bento-tile.with-photo .tile-overlay {
+      position: relative; z-index: 1;
+      margin-top: auto;
+      padding: 24px;
+      background: linear-gradient(to top, rgba(31, 20, 17, 0.92) 0%, rgba(31, 20, 17, 0.7) 70%, transparent 100%);
+      color: var(--cream);
+    }
+    .bento-tile.with-photo .tile-overlay h3 {
+      font-family: var(--font-display); font-size: 22px;
+      font-weight: 600; letter-spacing: -0.01em;
+      margin-bottom: 6px; line-height: 1.15;
+    }
+    .bento-tile.with-photo .tile-overlay p {
+      font-size: 13px; color: rgba(251, 247, 240, 0.78);
+      line-height: 1.5;
+    }
+    .bento-tile.with-photo:hover > img {
+      transform: scale(1.04);
+    }
+    .bento-tile.with-photo > img {
+      transition: transform 0.4s var(--ease-smooth);
+    }
+
     /* Bento layout assignments */
     .bento-tile.span-4 { grid-column: span 4; }
     .bento-tile.span-3 { grid-column: span 3; }
@@ -622,14 +672,18 @@
       border-radius: 24px;
       overflow: hidden;
       position: relative;
-      background:
-        radial-gradient(ellipse 70% 60% at 60% 35%, rgba(215, 70, 28, 0.3) 0%, transparent 55%),
-        linear-gradient(140deg, #3A2A22 0%, #1F1411 50%, #0E0807 100%);
+      background: var(--espresso);
+    }
+    .story-visual img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
     }
     .story-visual::after {
       content: ''; position: absolute; inset: 0;
-      background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='100' height='100'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='1.5' /></filter><rect width='100' height='100' filter='url(%23n)' opacity='0.08'/></svg>");
-      mix-blend-mode: overlay;
+      background: linear-gradient(to top, rgba(0,0,0,0.75) 0%, rgba(0,0,0,0.3) 40%, transparent 100%);
+      pointer-events: none;
     }
     .story-visual .quote {
       position: absolute; bottom: 32px; left: 32px; right: 32px;
@@ -747,15 +801,14 @@
     .hardware-visual {
       aspect-ratio: 4/5;
       border-radius: 24px;
-      background:
-        linear-gradient(150deg, var(--cream-deep) 0%, var(--cream-darker) 100%);
       position: relative; overflow: hidden;
-      display: flex; align-items: center; justify-content: center;
+      background: var(--espresso);
     }
-    .hardware-visual::before {
-      content: ''; position: absolute; inset: 0;
-      background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='40' height='40'><circle cx='1' cy='1' r='1' fill='%23DDD3C1'/></svg>");
-      background-size: 32px 32px;
+    .hardware-visual img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
     }
     .hw-stack {
       position: relative; width: 60%; aspect-ratio: 3/4;
@@ -1106,38 +1159,15 @@
           </div>
         </div>
 
-        <!-- POS device illustration -->
+        <!-- POS photo — hero -->
         <div class="hero-stage">
-          <div class="surface">
-            <div class="device">
-              <div class="device-screen">
-                <div class="row1">
-                  <span>POS · Caja 1</span>
-                  <span class="chip">EN TURNO</span>
-                </div>
-                <h4>Venta actual</h4>
-                <div class="cart-line"><strong>Cinnamon roll</strong><span>Q 47.00</span></div>
-                <div class="cart-line"><strong>Cappuccino</strong><span>Q 22.00</span></div>
-                <div class="cart-line"><strong>Croissant ×2</strong><span>Q 36.00</span></div>
-                <div class="total"><strong>Total</strong><span>Q 105.00</span></div>
-                <div class="pay-btn">Cobrar Q 105.00</div>
-              </div>
-            </div>
-            <div class="receipt">
-              <div class="r-head">
-                <svg viewBox="0 0 120 120" fill="currentColor" aria-hidden="true">
-                  <path d="M 95.355 25.355 A 50 50 0 1 0 95.355 94.645 L 84.041 83.331 A 34 34 0 1 1 84.041 36.669 Z"/>
-                  <rect x="40" y="52" width="80" height="16" rx="2"/>
-                </svg>
-                <strong>JULIA BAKERY</strong>
-              </div>
-              <div class="r-row"><span>Cinnamon roll</span><span>Q47</span></div>
-              <div class="r-row"><span>Cappuccino</span><span>Q22</span></div>
-              <div class="r-row"><span>Croissant ×2</span><span>Q36</span></div>
-              <div class="r-total"><span>TOTAL</span><span>Q105</span></div>
-            </div>
-            <div class="meta-label">CAJERO · DALIA · 18:31 · QR APROBADO</div>
-          </div>
+          <img src="/img/landing/hero-pos-glow.jpg"
+               alt="Terminal POS Conduit con glow tomato sobre fondo negro"
+               loading="eager"
+               fetchpriority="high"
+               width="928"
+               height="1152"
+               class="hero-img" />
         </div>
       </div>
     </div>
@@ -1218,21 +1248,13 @@
 
       <div class="bento">
         <!-- FEL Infile -->
-        <div class="bento-tile span-3">
-          <div class="tile-icon">
-            <svg viewBox="0 0 24 24" aria-hidden="true">
-              <path d="M9 12h6m-6 4h6M7 21V5a2 2 0 0 1 2-2h8.5l3.5 3.5V21a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2z"/>
-            </svg>
-          </div>
-          <div>
+        <div class="bento-tile span-3 with-photo fel-tile">
+          <img src="/img/landing/receipt-fel.jpg" alt="Factura electrónica certificada por Conduit" loading="lazy" width="1376" height="768" />
+          <div class="tile-overlay">
             <h3>Facturación electrónica Infile nativa.</h3>
-            <p>
-              Emite, certifica y archiva la facturación electrónica. Si la SAT audita,
-              toda la documentación está en orden. Si la SAT actualiza requisitos,
-              los implementamos sin intervención del cliente.
-            </p>
+            <p>Emite, certifica y archiva la FEL. Si la SAT audita, todo está en orden. Si actualiza requisitos, los implementamos sin intervención del cliente.</p>
+            <div class="tile-detail" style="color: rgba(251, 247, 240, 0.55); margin-top: 14px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.12);">CERT. INFILE · UUID SAT · QR público</div>
           </div>
-          <div class="tile-detail">CERT. INFILE · UUID SAT · QR público</div>
         </div>
 
         <!-- Recurrente QR -->
@@ -1306,14 +1328,9 @@
         </div>
 
         <!-- PWA Pickup -->
-        <div class="bento-tile span-2 primary">
-          <div class="tile-icon">
-            <svg viewBox="0 0 24 24" aria-hidden="true">
-              <rect x="5" y="2" width="14" height="20" rx="3"/>
-              <path d="M11 18h2"/>
-            </svg>
-          </div>
-          <div>
+        <div class="bento-tile span-2 with-photo pwa-tile">
+          <img src="/img/landing/pwa-phone.jpg" alt="App de pickup Conduit en celular" loading="lazy" width="1024" height="1024" />
+          <div class="tile-overlay">
             <h3>App de pickup con su marca.</h3>
             <p>El cliente ordena desde su teléfono. Paga por QR. Pasa a recoger. Sin aplicaciones de terceros.</p>
           </div>
@@ -1665,6 +1682,11 @@
     <div class="container">
       <div class="story-grid">
         <div class="story-visual">
+          <img src="/img/landing/pos-qr-cafe.jpg"
+               alt="Terminal Conduit POS con código QR Recurrente, ticket impreso y café"
+               loading="lazy"
+               width="1200"
+               height="896" />
           <div class="quote">
             "Antes hacía el cuadre tres veces y nunca cuadraba.
             Con Conduit lo cierro en dos minutos. Y duermo."
@@ -1752,24 +1774,11 @@
           </div>
         </div>
         <div class="hardware-visual">
-          <div class="hw-stack">
-            <div class="hw-device k2">
-              <div class="screen">
-                <span>POS</span>
-                <span>Q 105</span>
-                <div class="pill">Cobrar</div>
-              </div>
-            </div>
-            <div class="hw-device ipad">
-              <div class="screen">
-                <span>COMANDAS</span>
-                <span>#0042</span>
-                <span>Cappuccino</span>
-                <span>Cinnamon roll</span>
-                <div class="pill" style="background:var(--success)">Listo</div>
-              </div>
-            </div>
-          </div>
+          <img src="/img/landing/hardware-ecosystem.jpg"
+               alt="Conduit POS · impresora térmica, terminal POS, iPad y producto"
+               loading="lazy"
+               width="1376"
+               height="768" />
         </div>
       </div>
     </div>

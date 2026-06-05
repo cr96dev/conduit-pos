@@ -26,11 +26,16 @@
   <meta property="og:locale" content="en_US">
   <meta property="og:url" content="https://conduitgt.net/">
   <meta property="og:site_name" content="Conduit POS">
+  <meta property="og:image" content="https://conduitgt.net/img/landing/pos-qr-cafe.jpg">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="896">
+  <meta property="og:image:alt" content="Conduit POS terminal with QR code and coffee">
 
   <!-- Twitter -->
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="Conduit POS — El POS para los que sí venden">
   <meta name="twitter:description" content="POS + FEL Guatemala + Recurrente QR + pickup PWA.">
+  <meta name="twitter:image" content="https://conduitgt.net/img/landing/pos-qr-cafe.jpg">
 
   <!-- Fonts: Cabinet Grotesk (display) + Switzer (body) + JetBrains Mono -->
   <link rel="preconnect" href="https://api.fontshare.com" crossorigin>
@@ -747,15 +752,14 @@
     .hardware-visual {
       aspect-ratio: 4/5;
       border-radius: 24px;
-      background:
-        linear-gradient(150deg, var(--cream-deep) 0%, var(--cream-darker) 100%);
       position: relative; overflow: hidden;
-      display: flex; align-items: center; justify-content: center;
+      background: var(--espresso);
     }
-    .hardware-visual::before {
-      content: ''; position: absolute; inset: 0;
-      background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='40' height='40'><circle cx='1' cy='1' r='1' fill='%23DDD3C1'/></svg>");
-      background-size: 32px 32px;
+    .hardware-visual img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
     }
     .hw-stack {
       position: relative; width: 60%; aspect-ratio: 3/4;
@@ -1106,38 +1110,15 @@
           </div>
         </div>
 
-        <!-- POS device illustration -->
+        <!-- POS photo — hero -->
         <div class="hero-stage">
-          <div class="surface">
-            <div class="device">
-              <div class="device-screen">
-                <div class="row1">
-                  <span>POS · Register 1</span>
-                  <span class="chip">ON SHIFT</span>
-                </div>
-                <h4>Current sale</h4>
-                <div class="cart-line"><strong>Cinnamon roll</strong><span>Q 47.00</span></div>
-                <div class="cart-line"><strong>Cappuccino</strong><span>Q 22.00</span></div>
-                <div class="cart-line"><strong>Croissant ×2</strong><span>Q 36.00</span></div>
-                <div class="total"><strong>Total</strong><span>Q 105.00</span></div>
-                <div class="pay-btn">Charge Q 105.00</div>
-              </div>
-            </div>
-            <div class="receipt">
-              <div class="r-head">
-                <svg viewBox="0 0 120 120" fill="currentColor" aria-hidden="true">
-                  <path d="M 95.355 25.355 A 50 50 0 1 0 95.355 94.645 L 84.041 83.331 A 34 34 0 1 1 84.041 36.669 Z"/>
-                  <rect x="40" y="52" width="80" height="16" rx="2"/>
-                </svg>
-                <strong>JULIA BAKERY</strong>
-              </div>
-              <div class="r-row"><span>Cinnamon roll</span><span>Q47</span></div>
-              <div class="r-row"><span>Cappuccino</span><span>Q22</span></div>
-              <div class="r-row"><span>Croissant ×2</span><span>Q36</span></div>
-              <div class="r-total"><span>TOTAL</span><span>Q105</span></div>
-            </div>
-            <div class="meta-label">CASHIER · DALIA · 18:31 · QR APPROVED</div>
-          </div>
+          <img src="/img/landing/hero-pos-glow.jpg"
+               alt="Conduit POS terminal with tomato glow on black background"
+               loading="eager"
+               fetchpriority="high"
+               width="928"
+               height="1152"
+               class="hero-img" />
         </div>
       </div>
     </div>
@@ -1665,6 +1646,11 @@
     <div class="container">
       <div class="story-grid">
         <div class="story-visual">
+          <img src="/img/landing/pos-qr-cafe.jpg"
+               alt="Conduit POS terminal with Recurrente QR code, printed ticket and coffee"
+               loading="lazy"
+               width="1200"
+               height="896" />
           <div class="quote">
             "Before, I ran the reconciliation three times and it never matched. With Conduit I close it in two minutes. And I sleep."
             <span class="quoter">Dalia Mishel · Cashier · Julia Bakery</span>
@@ -1751,14 +1737,12 @@
           </div>
         </div>
         <div class="hardware-visual">
-          <div class="hw-stack">
-            <div class="hw-device k2">
-              <div class="screen">
-                <span>POS</span>
-                <span>Q 105</span>
-                <div class="pill">Cobrar</div>
-              </div>
-            </div>
+          <img src="/img/landing/hardware-ecosystem.jpg"
+               alt="Conduit POS · thermal printer, POS terminal, iPad and product"
+               loading="lazy"
+               width="1376"
+               height="768" />
+        </div>
             <div class="hw-device ipad">
               <div class="screen">
                 <span>COMANDAS</span>
