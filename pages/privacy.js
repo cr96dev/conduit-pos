@@ -131,7 +131,7 @@ export default function Privacy() {
         <strong>Conduit POS</strong><br/>
         Ciudad de Guatemala, Guatemala<br/>
         Correo: privacidad@conduitgt.net<br/>
-        WhatsApp: <Link href="https://wa.me/50200000000" style={{ color: tokens.primary }}>+502 0000-0000</Link>
+        WhatsApp: <Link href="https://wa.me/50252400222" style={{ color: tokens.primary }}>+502 5240-0222</Link>
       </p>
     </div>
   )
