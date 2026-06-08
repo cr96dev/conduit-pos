@@ -38,7 +38,7 @@ export default function Privacy() {
         Política de Privacidad
       </h1>
       <p style={{ color: tokens.inkSoft, fontSize: 14, marginBottom: 48 }}>
-        Última actualización: 5 de junio de 2026 · Vigente desde la fecha de publicación
+        Última actualización: 8 de junio de 2026 · Vigente desde la fecha de publicación
       </p>
 
       <h2 style={h2}>1. Quiénes somos</h2>
@@ -124,7 +124,20 @@ export default function Privacy() {
       <h2 style={h2}>11. Cambios a esta política</h2>
       <p>Cualquier cambio sustancial a esta política será notificado a los Clientes con al menos 30 días de anticipación a través del correo registrado y mediante un aviso en la plataforma. Los cambios menores (correcciones de redacción, actualizaciones de contactos) entrarán en vigor desde su publicación.</p>
 
-      <h2 style={h2}>12. Contacto</h2>
+      <h2 style={h2}>12. Aplicaciones móviles y dispositivos POS</h2>
+      <p>Conduit distribuye aplicaciones Android específicas para cada Cliente (por ejemplo, Hidrocom POS, Julia Bakery POS) instaladas en dispositivos certificados Sunmi mediante distribución privada (no disponibles públicamente en Google Play).</p>
+      <p>Estas aplicaciones son únicamente envolventes (wrappers) de la plataforma web del Cliente correspondiente, accesible solo desde dispositivos autorizados por número de serie:</p>
+      <ul style={ul}>
+        <li><strong>Permisos solicitados</strong>: acceso a Internet, estado de red, lector de código de barras integrado, impresora térmica Sunmi y servicio NeoPOS (cuando aplica). No solicitamos ubicación, cámara, contactos, micrófono, almacenamiento externo ni acceso a redes sociales.</li>
+        <li><strong>Datos generados en el dispositivo</strong>: códigos de barras escaneados durante una venta, datos de la transacción (productos, montos, método de pago, NIT receptor). Estos datos se transmiten a la base de datos del Cliente y no se almacenan localmente en el dispositivo después de cerrada la sesión.</li>
+        <li><strong>Sin telemetría externa</strong>: las aplicaciones no envían analíticas, eventos o crash reports a terceros (Google Analytics, Firebase, Crashlytics, etc.). Los logs operativos quedan en la base de datos del Cliente.</li>
+        <li><strong>Sin tracking entre apps</strong>: no leemos identificadores del dispositivo (IDFA, Advertising ID) ni perfilamos al usuario.</li>
+        <li><strong>Distribución y actualizaciones</strong>: las aplicaciones se entregan exclusivamente a través de la Sunmi App Store privada del Cliente, autorizadas por número de serie del dispositivo. Las actualizaciones siguen el mismo canal — no hay descargas desde fuentes públicas.</li>
+        <li><strong>Verificación de integridad</strong>: las builds release verifican que el APK haya sido firmado con el certificado oficial. Si el APK fue alterado, la app no inicia.</li>
+      </ul>
+      <p>Para solicitar la eliminación de su dispositivo de la lista de autorizados o reportar incidentes de seguridad relacionados a la aplicación móvil, contactarnos por los medios indicados abajo.</p>
+
+      <h2 style={h2}>13. Contacto</h2>
       <p>Para preguntas, solicitudes o reclamos relacionados con esta política, contactarnos:</p>
       <p style={{ marginTop: 12 }}>
         <strong>Conduit POS</strong><br/>
